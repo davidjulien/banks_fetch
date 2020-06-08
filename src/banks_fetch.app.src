@@ -1,0 +1,16 @@
+{application, banks_fetch,
+ [{description, "An OTP application to fetch banks accounts and transactions"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {banks_fetch_app, []}},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {maintainers, ["David JULIEN"]},
+  {licenses, ["BSD"]},
+  {links, []}
+ ]}.
