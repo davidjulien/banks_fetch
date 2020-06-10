@@ -9,4 +9,4 @@
 
 %% Callbacks required
 
--callback connect(unicode:unicode_binary(), any()) -> {ok, bank_auth()}.
+-callback connect(string(), any()) -> {ok, bank_auth()}.

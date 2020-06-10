@@ -37,7 +37,7 @@ should_not_authenticate_again_if_token_is_available(_Config) ->
                 {ok, {{'fakeversion', 200, 'fakereason'}, [{"ingdf-auth-token", "AUTH_TOKEN"}], 'fakebody'}}
                }
               ]),
-  {ok, "AUTH_TOKEN"} = banks_fetch_bank_ing:connect(?CLIENT_ID, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}),
+  {ok, {bank_auth, banks_fetch_bank_ing, "AUTH_TOKEN"}} = banks_fetch_bank_ing:connect(?CLIENT_ID, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}),
   true = meck:validate(httpc),
   true = meck:validate(banks_fetch_bank_ing_keypad),
   1 = meck:num_calls(httpc, request, '_'),
@@ -89,7 +89,7 @@ should_connect(_Config) ->
                       ],
   NbrHttpcExpectations = length(HttpcExpectations),
   meck:expect(httpc, request, HttpcExpectations),
-  {ok, AuthToken} = banks_fetch_bank_ing:connect(?CLIENT_ID, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}),
+  {ok, {bank_auth, banks_fetch_bank_ing, AuthToken}} = banks_fetch_bank_ing:connect(?CLIENT_ID, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}),
   true = meck:validate(httpc),
   true = meck:validate(banks_fetch_bank_ing_keypad),
   NbrHttpcExpectations = meck:num_calls(httpc, request, '_'),
