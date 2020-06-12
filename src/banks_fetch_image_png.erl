@@ -5,6 +5,8 @@
          decode/1
         ]).
 
+-export_type([image_info/0]).
+
 -type image_info() :: {image, Width :: non_neg_integer(), Height :: non_neg_integer(), Pixels :: [ [non_neg_integer()] ]}.
 
 %% PNG always starts with 137 80 78 71 13 10 26 10 
