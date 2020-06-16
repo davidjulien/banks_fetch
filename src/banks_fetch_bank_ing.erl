@@ -7,7 +7,8 @@
 -behaviour(banks_fetch_bank).
 
 -export([
-         connect/2
+         connect/2,
+         fetch_accounts/1
         ]).
 
 -define(USER_AGENT, "Mozilla/5.0 (Linux; Android 7.0; SM-A520F Build/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/65.0.3325.109 Mobile Safari/537.36").
@@ -52,7 +53,7 @@ connect(ClientId, {ClientPassword, ClientBirthDate}) ->
       end
   end.
 
-
+%% @doc internal function to decode error message in body
 decode_body_error(BodyError) ->
   JSON = jsx:decode(list_to_binary(BodyError)),
   {_, Error} = lists:keyfind(<<"error">>, 1, JSON),
@@ -61,3 +62,34 @@ decode_body_error(BodyError) ->
     <<"AUTHENTICATION.INVALID_CIF_AND_BIRTHDATE_COMBINATION">> -> {error, invalid_birthdate};
     <<"SCA.WRONG_AUTHENTICATION">> -> {error, invalid_password}
   end.
+
+%%
+%% @doc Fetch accounts
+%%
+-spec fetch_accounts(ing_bank_auth()) -> {unicode:unicode_binary(), [banks_fetch_bank:account()]}.
+fetch_accounts({bank_auth, ?MODULE, AuthToken}) ->
+  {JSON, R} = request_json(AuthToken, "https://m.ing.fr/secure/api-v1/accounts"),
+  #{ <<"accounts">> := AccountInfoList} = R,
+  {JSON, [ account_transform(AccountInfo) || AccountInfo <- AccountInfoList ]}.
+
+account_transform(#{ <<"uid">> := UID, <<"ledgerBalance">> := Balance, <<"label">> := Label, <<"owner">> := Owner, <<"type">> := #{ <<"code">> := Code, <<"label">> := TypeLabel },
+                  <<"ownership">> := #{<<"code">> := OwnershipCode } }) ->
+  AccountType = case Code of
+                  <<"CA">> -> current;
+                  <<"LDD">> -> savings;
+                  <<"HOME_LOAN_PURCHASE">> -> home_loan
+                end,
+  Ownership = case OwnershipCode of
+                <<"JOINT">> -> joint;
+                <<"JOINT_WITH_SPOUSE">> -> joint;
+                <<"SINGLE">> -> single
+              end,
+  #{ id => UID, link => list_to_binary(["/accounts/",UID]), balance => Balance, number => Label, owner => Owner, ownership => Ownership, type => AccountType, name => TypeLabel }.
+
+%%
+%% @doc Internal function to fetch data
+%%
+request_json(AuthToken, URL) ->
+    {ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(get, {URL, [{"ingdf-auth-token", AuthToken} | ?HEADERS]}, [], []),
+    Bin = list_to_binary(Body),
+    {Bin, jsx:decode(Bin,[return_maps])}.

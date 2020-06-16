@@ -4,12 +4,17 @@
          all/0,
          init_per_testcase/2,
          end_per_testcase/2,
+
          should_not_authenticate_again_if_token_is_available/1,
          should_not_authenticate_if_birthdate_and_client_id_mismatched/1,
          should_not_authenticate_if_password_is_invalid/1,
+
          should_connect_without_net_keypad/1,
          should_connect_without_net/1,
-         should_connect/1
+
+         should_fetch_accounts_without_net/1,
+
+         test_with_real_credential/1
         ]).
 
 all() ->
@@ -17,10 +22,18 @@ all() ->
    should_not_authenticate_again_if_token_is_available,
    should_not_authenticate_if_birthdate_and_client_id_mismatched,
    should_not_authenticate_if_password_is_invalid,
+
+
    should_connect_without_net_keypad,
    should_connect_without_net,
-   should_connect
+
+   should_fetch_accounts_without_net,
+
+   test_with_real_credential
   ].
+
+init_per_testcase(test_with_real_credential, Config) ->
+  Config;
 
 init_per_testcase(should_connect_without_net_keypad, Config) ->
   meck:new(httpc),
@@ -28,8 +41,6 @@ init_per_testcase(should_connect_without_net_keypad, Config) ->
   Config;
 init_per_testcase(should_connect_without_net, Config) ->
   meck:new(httpc),
-  Config;
-init_per_testcase(should_connect, Config) ->
   Config;
 
 init_per_testcase(should_not_authenticate_again_if_token_is_available, Config) ->
@@ -43,7 +54,15 @@ init_per_testcase(should_not_authenticate_if_birthdate_and_client_id_mismatched,
 init_per_testcase(should_not_authenticate_if_password_is_invalid, Config) ->
   meck:new(httpc),
   meck:new(banks_fetch_bank_ing_keypad),
+  Config;
+
+init_per_testcase(should_fetch_accounts_without_net, Config) ->
+  meck:new(httpc),
   Config.
+
+
+end_per_testcase(test_with_real_credential, _Config) ->
+  ok;
 
 end_per_testcase(should_connect_without_net_keypad, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
@@ -52,8 +71,7 @@ end_per_testcase(should_connect_without_net_keypad, _Config) ->
 end_per_testcase(should_connect_without_net, _Config) ->
   meck:unload(httpc),
   ok;
-end_per_testcase(should_connect, _Config) ->
-  ok;
+
 end_per_testcase(should_not_authenticate_again_if_token_is_available, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
   meck:unload(httpc),
@@ -64,6 +82,10 @@ end_per_testcase(should_not_authenticate_if_birthdate_and_client_id_mismatched, 
   ok;
 end_per_testcase(should_not_authenticate_if_password_is_invalid, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
+  meck:unload(httpc),
+  ok;
+
+end_per_testcase(should_fetch_accounts_without_net, _Config) ->
   meck:unload(httpc),
   ok.
 
@@ -266,7 +288,47 @@ should_connect_without_net(Config) ->
 
   ok.
 
-should_connect(Config) ->
+
+%%
+%% Fetch accounts
+%%
+should_fetch_accounts_without_net(Config) ->
+  ct:comment("Load accounts examples"),
+  {ok, AccountsJSON} = file:read_file(filename:join([?config(data_dir, Config), "accounts.json"])),
+
+  FakeToken = fake_authtoken,
+
+  meck:expect(httpc, request, fun(MockMethod, {MockURL, MockHeaders}, MockHTTPOptions, MockOptions) ->
+                                  get = MockMethod,
+                                  "https://m.ing.fr/secure/api-v1/accounts" = MockURL,
+                                  [{"ingdf-auth-token", FakeToken}|_] = MockHeaders,
+                                  [] = MockHTTPOptions,
+                                  [] = MockOptions,
+                                  {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', binary_to_list(AccountsJSON)}}
+                              end),
+
+  {JSON, Accounts} = banks_fetch_bank_ing:fetch_accounts({bank_auth, banks_fetch_bank_ing, FakeToken}),
+
+  ExpectedAccounts = [
+                      #{balance => 3445.19,id => <<"MyAccount1">>, link => <<"/accounts/MyAccount1">>, name => <<"Compte Courant">>, number => <<"XXXX ACC1">>,owner => <<"M ING CLIENT">>, ownership => joint, type => current},
+                      #{balance => 6044.09,id => <<"MyAccount2">>, link => <<"/accounts/MyAccount2">>, name => <<"Livret Développement Durable"/utf8>>, number => <<"XXXX ACC2">>,owner => <<"M. ING CLIENT">>, ownership => single, type => savings},
+                      #{balance => 493795.02,id => <<"MyAccount3">>, link => <<"/accounts/MyAccount3">>, name => <<"Crédit Immobilier"/utf8>>,number => <<"XXXX ACC3">>, owner => <<"ING CLIENT 1 et 2">>, ownership => joint, type => home_loan}
+                     ],
+  NbrExpectedAccounts = length(ExpectedAccounts),
+  NbrExpectedAccounts = length(Accounts),
+  ExpectedAccounts = Accounts,
+
+  AccountsJSON = JSON,
+
+  true = meck:validate(httpc),
+
+  ok.
+
+
+%%
+%% Test with real credential
+%%
+test_with_real_credential(Config) ->
   ct:comment("Load credential"),
   case file:consult(filename:join([?config(data_dir, Config), "ing_real_credential.hrl"])) of
     {error, enoent} ->
@@ -275,6 +337,12 @@ should_connect(Config) ->
     {ok, [{ClientId, {ClientPwd, ClientBirthDate}}]} ->
       ct:comment("Connect to ing account"),
       ok = httpc:set_options([{cookies,enabled}]),
-      {ok, {bank_auth, banks_fetch_bank_ing, _AuthToken}} = banks_fetch_bank_ing:connect(ClientId, {ClientPwd, ClientBirthDate}),
+      {ok, Auth} = banks_fetch_bank_ing:connect(ClientId, {ClientPwd, ClientBirthDate}),
+
+      {bank_auth, banks_fetch_bank_ing, _AuthToken} = Auth,
+
+      {_, Accounts} = banks_fetch_bank_ing:fetch_accounts(Auth),
+      true = length(Accounts) > 0,
+
       ok
   end.
