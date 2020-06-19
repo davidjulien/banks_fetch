@@ -6,7 +6,8 @@
 -module(banks_fetch_bank).
 
 -export_type([
-              account/0
+              account/0,
+              transaction/0
              ]).
 
 -type bank_auth() :: {bank_auth, BankModuleName :: atom(), Auth :: any()}.
@@ -23,7 +24,16 @@
                       type => account_type(),
                       name => unicode:unicode_binary() }.
 
+-type transaction_type() :: 'card_debit' | 'card_withdrawal' | 'check' | 'sepa_debit' | 'transfer'.
+-type transaction() :: #{ id => unicode:unicode_binary(),
+                          accounting_date => calendar:date(),
+                          effective_date => calendar:date(),
+                          amount => float(),
+                          description => unicode:unicode_binary(),
+                          type => transaction_type()
+                        }.
 %% Callbacks required
 
 -callback connect(string(), any()) -> {ok, bank_auth()}.
 -callback fetch_accounts(bank_auth()) -> {unicode:unicode_binary(), [account()]}.
+-callback fetch_transactions(bank_auth(), unicode:unicode_binary(), first_call | unicode:unicode_binary()) -> [banks_fetch_bank:transaction()].
