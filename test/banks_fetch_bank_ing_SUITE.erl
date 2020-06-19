@@ -14,6 +14,10 @@
 
          should_fetch_accounts_without_net/1,
 
+         should_fetch_transactions_without_net/1,
+         should_fetch_transactions_until_without_net/1,
+         should_fetch_transactions_single_case_without_net/1,
+
          test_with_real_credential/1
         ]).
 
@@ -28,6 +32,9 @@ all() ->
    should_connect_without_net,
 
    should_fetch_accounts_without_net,
+   should_fetch_transactions_without_net,
+   should_fetch_transactions_until_without_net,
+   should_fetch_transactions_single_case_without_net,
 
    test_with_real_credential
   ].
@@ -58,8 +65,17 @@ init_per_testcase(should_not_authenticate_if_password_is_invalid, Config) ->
 
 init_per_testcase(should_fetch_accounts_without_net, Config) ->
   meck:new(httpc),
-  Config.
+  Config;
 
+init_per_testcase(should_fetch_transactions_without_net, Config) ->
+  meck:new(httpc),
+  Config;
+init_per_testcase(should_fetch_transactions_until_without_net, Config) ->
+  meck:new(httpc),
+  Config;
+init_per_testcase(should_fetch_transactions_single_case_without_net, Config) ->
+  meck:new(httpc),
+  Config.
 
 end_per_testcase(test_with_real_credential, _Config) ->
   ok;
@@ -86,6 +102,16 @@ end_per_testcase(should_not_authenticate_if_password_is_invalid, _Config) ->
   ok;
 
 end_per_testcase(should_fetch_accounts_without_net, _Config) ->
+  meck:unload(httpc),
+  ok;
+
+end_per_testcase(should_fetch_transactions_without_net, _Config) ->
+  meck:unload(httpc),
+  ok;
+end_per_testcase(should_fetch_transactions_until_without_net, _Config) ->
+  meck:unload(httpc),
+  ok;
+end_per_testcase(should_fetch_transactions_single_case_without_net, _Config) ->
   meck:unload(httpc),
   ok.
 
@@ -324,6 +350,169 @@ should_fetch_accounts_without_net(Config) ->
 
   ok.
 
+%%
+%% Fetch transactions
+%%
+should_fetch_transactions_without_net(Config) ->
+  ct:comment("Load transactions examples"),
+  {ok, TransactionsJSON_1} = file:read_file(filename:join([?config(data_dir, Config), "transactions_1.json"])),
+  {ok, TransactionsJSON_2} = file:read_file(filename:join([?config(data_dir, Config), "transactions_2.json"])),
+  TransactionsJSON_3 = <<"[]">>,
+
+  FakeToken = fake_authtoken,
+  FakeAccountId = <<"FAKEACCOUNT">>,
+
+  URL_1 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/0/limit/50",
+  URL_2 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/12714/limit/50",
+  URL_3 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/12541/limit/50",
+
+  HttpcExpectations = [
+                      {[get, {URL_1, [{"ingdf-auth-token", FakeToken}|'_']}, [], []],
+                       {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', binary_to_list(TransactionsJSON_1)}}
+                      },
+                      {[get, {URL_2, [{"ingdf-auth-token", FakeToken}|'_']}, [], []],
+                       {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', binary_to_list(TransactionsJSON_2)}}
+                      },
+                      {[get, {URL_3, [{"ingdf-auth-token", FakeToken}|'_']}, [], []],
+                       {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', binary_to_list(TransactionsJSON_3)}}
+                      }
+                     ],
+  NbrHttpcExpectations = length(HttpcExpectations),
+
+  meck:expect(httpc, request, HttpcExpectations),
+
+  ct:comment("Fetch transactions"),
+  Transactions = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, first_call),
+
+  ExpectedTransactions =
+  [
+   #{accounting_date => {2020,6,16}, amount => -34.0,description => <<"PRLV SEPA XXX">>, effective_date => {2020,6,16}, id => <<"12875">>,type => sepa_debit},
+   #{accounting_date => {2020,6,16}, amount => -51.94, description => <<"PAIEMENT PAR CARTE 14/06/2020 XXX">>, effective_date => {2020,6,16}, id => <<"12854">>,type => card_debit},
+   #{accounting_date => {2020,6,16}, amount => -116.32, description => <<"VIREMENT SEPA EMIS VERS  123456789 XXX">>, effective_date => {2020,6,16}, id => <<"12850">>,type => transfer},
+   #{accounting_date => {2020,6,15}, amount => -50.0, description => <<"PAIEMENT D'UN CHÈQUE 9999999"/utf8>>, effective_date => {2020,6,15}, id => <<"12848">>,type => check},
+   #{accounting_date => {2020,6,15}, amount => -118.0,description => <<"PRLV SEPA XXX">>, effective_date => {2020,6,15}, id => <<"12843">>,type => sepa_debit},
+   #{accounting_date => {2020,6,15}, amount => -74.0, description => <<"PAIEMENT PAR CARTE 13/06/2020 XXX">>, effective_date => {2020,6,15}, id => <<"12819">>,type => card_debit},
+   #{accounting_date => {2020,6,9}, amount => -41.58, description => <<"PAIEMENT D'UN CHÈQUE 9999999"/utf8>>, effective_date => {2020,6,9}, id => <<"12740">>,type => check},
+   #{accounting_date => {2020,6,9}, amount => -3.8, description => <<"PAIEMENT PAR CARTE 05/06/2020 XXX">>, effective_date => {2020,6,9}, id => <<"12732">>,type => card_debit},
+   #{accounting_date => {2020,6,9}, amount => -23.99, description => <<"PAIEMENT PAR CARTE 05/06/2020 XXX">>, effective_date => {2020,6,9}, id => <<"12729">>,type => card_debit},
+   #{accounting_date => {2020,6,8}, amount => -117.25,description => <<"PRLV SEPA XXX">>, effective_date => {2020,6,8}, id => <<"12725">>,type => sepa_debit},
+   #{accounting_date => {2020,6,8}, amount => -60.00,description => <<"RETRAIT DAB EN EURO ZONE EURO 07/06/2020 GAB XXX">>, effective_date => {2020,6,8}, id => <<"12722">>,type => card_withdrawal},
+   #{accounting_date => {2020,6,8}, amount => -22.3,description => <<"PRLV SEPA XXX">>, effective_date => {2020,6,8}, id => <<"12720">>,type => sepa_debit},
+   #{accounting_date => {2020,6,6}, amount => -32.0, description => <<"PAIEMENT PAR CARTE 05/06/2020 XXX">>, effective_date => {2020,6,6}, id => <<"12714">>,type => card_debit},
+   #{accounting_date => {2020,6,5}, amount => 641.8,description => <<"VIREMENT SEPA RECU XXX">>, effective_date => {2020,6,5}, id => <<"12710">>,type => transfer},
+   #{accounting_date => {2020,6,5}, amount => 2567.42,description => <<"VIREMENT SEPA RECU XXX">>, effective_date => {2020,6,5}, id => <<"12704">>,type => transfer},
+   #{accounting_date => {2020,6,5}, amount => -357.0, description => <<"VIREMENT SEPA EMIS VERS  999999 XXX">>, effective_date => {2020,6,5}, id => <<"12683">>,type => transfer},
+   #{accounting_date => {2020,6,1}, amount => 3420.0,description => <<"VIREMENT SEPA RECU XXX">>, effective_date => {2020,6,1}, id => <<"12624">>,type => transfer},
+   #{accounting_date => {2020,6,1}, amount => -135.0, description => <<"VIREMENT SEPA EMIS VERS XXX">>, effective_date => {2020,6,1}, id => <<"12619">>,type => transfer},
+   #{accounting_date => {2020,6,1}, amount => -500.0, description => <<"VIREMENT SEPA EMIS VERS XXX">>, effective_date => {2020,6,1}, id => <<"12603">>,type => transfer},
+   #{accounting_date => {2020,5,29}, amount => -23.66,description => <<"PRLV SEPA XXX">>, effective_date => {2020,5,29}, id => <<"12589">>,type => sepa_debit},
+   #{accounting_date => {2020,5,28}, amount => -2.93, description => <<"PAIEMENT PAR CARTE 27/05/2020 XXX">>, effective_date => {2020,5,28}, id => <<"12582">>,type => card_debit},
+   #{accounting_date => {2020,5,27}, amount => 2978.11,description => <<"VIREMENT SEPA RECU XXX">>, effective_date => {2020,5,27}, id => <<"12579">>,type => transfer},
+   #{accounting_date => {2020,5,27}, amount => -150.58, description => <<"PAIEMENT PAR CARTE 26/05/2020 XXX">>, effective_date => {2020,5,27}, id => <<"12541">>,type => card_debit},
+   #{accounting_date => {2020,5,26}, amount => -14.9, description => <<"PAIEMENT PAR CARTE 24/05/2020 XXX">>, effective_date => {2020,5,26}, id => <<"12537">>,type => card_debit}
+  ],
+
+  ct:comment("Verify transactions count"),
+  NbrExpectedTransactions = length(ExpectedTransactions),
+  NbrExpectedTransactions = length(Transactions),
+  lists:foreach(fun({E1,R1}) -> E1 = R1 end, lists:zip(ExpectedTransactions, Transactions)),
+
+  ct:comment("Verify httpc calls"),
+  true = meck:validate(httpc),
+  NbrHttpcExpectations = meck:num_calls(httpc, request, '_'),
+
+  ok.
+
+
+%%
+%% Fetch transactions until last transaction fetch
+%%
+should_fetch_transactions_until_without_net(Config) ->
+  ct:comment("Load transactions examples"),
+  {ok, TransactionsJSON_1} = file:read_file(filename:join([?config(data_dir, Config), "transactions_1.json"])),
+
+  FakeToken = fake_authtoken,
+  FakeAccountId = <<"FAKEACCOUNT">>,
+
+  URL_1 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/0/limit/50",
+
+  HttpcExpectations = [
+                      {[get, {URL_1, [{"ingdf-auth-token", FakeToken}|'_']}, [], []],
+                       {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', binary_to_list(TransactionsJSON_1)}}
+                      }
+                     ],
+  NbrHttpcExpectations = length(HttpcExpectations),
+
+  meck:expect(httpc, request, HttpcExpectations),
+
+  ct:comment("Fetch transactions"),
+  Transactions = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, <<"12819">>),
+
+  ExpectedTransactions =
+  [
+   #{accounting_date => {2020,6,16}, amount => -34.0,description => <<"PRLV SEPA XXX">>, effective_date => {2020,6,16}, id => <<"12875">>,type => sepa_debit},
+   #{accounting_date => {2020,6,16}, amount => -51.94, description => <<"PAIEMENT PAR CARTE 14/06/2020 XXX">>, effective_date => {2020,6,16}, id => <<"12854">>,type => card_debit},
+   #{accounting_date => {2020,6,16}, amount => -116.32, description => <<"VIREMENT SEPA EMIS VERS  123456789 XXX">>, effective_date => {2020,6,16}, id => <<"12850">>,type => transfer},
+   #{accounting_date => {2020,6,15}, amount => -50.0, description => <<"PAIEMENT D'UN CHÈQUE 9999999"/utf8>>, effective_date => {2020,6,15}, id => <<"12848">>,type => check},
+   #{accounting_date => {2020,6,15}, amount => -118.0,description => <<"PRLV SEPA XXX">>, effective_date => {2020,6,15}, id => <<"12843">>,type => sepa_debit}
+  ],
+
+  ct:comment("Verify transactions count"),
+  NbrExpectedTransactions = length(ExpectedTransactions),
+  NbrExpectedTransactions = length(Transactions),
+  lists:foreach(fun({E1,R1}) -> E1 = R1 end, lists:zip(ExpectedTransactions, Transactions)),
+
+  ct:comment("Verify httpc calls"),
+  true = meck:validate(httpc),
+  NbrHttpcExpectations = meck:num_calls(httpc, request, '_'),
+
+  ok.
+
+%%
+%% Fetch transactions (single result case)
+%%
+should_fetch_transactions_single_case_without_net(_Config) ->
+  TransactionsJSON_1 = <<"[{ \"id\": \"12875\", \"effectiveDate\": \"2020-06-16\", \"accountingDate\": \"2020-06-16\", \"detail\": \"INTÉRÊTS PAYÉS\", \"amount\": 34.25, \"transcodeNeedCustomerAction\": false, \"type\": \"OTHER\", \"isOldBankCode\": false, \"sameMonthAsPrevious\": false, \"sameDateAsPrevious\": false, \"sameDateAsNext\": true }]"/utf8>>,
+  TransactionsJSON_2 = <<"[]">>,
+
+  FakeToken = fake_authtoken,
+  FakeAccountId = <<"FAKEACCOUNT">>,
+
+  URL_1 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/0/limit/50",
+  URL_2 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/12875/limit/50",
+
+  HttpcExpectations = [
+                      {[get, {URL_1, [{"ingdf-auth-token", FakeToken}|'_']}, [], []],
+                       {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', binary_to_list(TransactionsJSON_1)}}
+                      },
+                      {[get, {URL_2, [{"ingdf-auth-token", FakeToken}|'_']}, [], []],
+                       {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', binary_to_list(TransactionsJSON_2)}}
+                      }
+                     ],
+  NbrHttpcExpectations = length(HttpcExpectations),
+
+  meck:expect(httpc, request, HttpcExpectations),
+
+  ct:comment("Fetch transactions"),
+  Transactions = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, first_call),
+
+  ExpectedTransactions = [
+                          #{accounting_date => {2020,6,16}, amount => 34.25,description => <<"INTÉRÊTS PAYÉS"/utf8>>, effective_date => {2020,6,16}, id => <<"12875">>,type => interests}
+                         ],
+
+  ct:comment("Verify transactions count"),
+  NbrExpectedTransactions = length(ExpectedTransactions),
+  NbrExpectedTransactions = length(Transactions),
+  lists:foreach(fun({E1,R1}) -> E1 = R1 end, lists:zip(ExpectedTransactions, Transactions)),
+
+  ct:comment("Verify httpc calls"),
+  true = meck:validate(httpc),
+  NbrHttpcExpectations = meck:num_calls(httpc, request, '_'),
+
+  ok.
+
+
+
 
 %%
 %% Test with real credential
@@ -341,8 +530,19 @@ test_with_real_credential(Config) ->
 
       {bank_auth, banks_fetch_bank_ing, _AuthToken} = Auth,
 
+      ct:comment("Fetch accounts"),
       {_, Accounts} = banks_fetch_bank_ing:fetch_accounts(Auth),
       true = length(Accounts) > 0,
+
+      lists:foreach(fun(#{ id := AccountId, type := Type } = Account) ->
+                        ct:comment("Fetch transactions for account ~1000p", [Account]),
+                        Transactions = banks_fetch_bank_ing:fetch_transactions(Auth, AccountId, first_call),
+                        NbrTransactions = length(Transactions),
+                        ct:pal("~p : ~B transactions fetched", [Account, NbrTransactions]),
+                        if Type =/= home_loan -> true = NbrTransactions > 0;
+                           true -> ok
+                        end
+                    end, Accounts),
 
       ok
   end.

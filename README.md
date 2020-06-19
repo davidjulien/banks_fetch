@@ -9,7 +9,7 @@ Current status of banks modules :
 
 | Banks         | connect       | accounts  | transactions |
 | ------------- |:-------------:|:---------:|:------------:|
-| ING           | OK            | OK        | -            |
+| ING           | OK            | OK        | OK           |
 
 
 Build

@@ -8,7 +8,8 @@
 
 -export([
          connect/2,
-         fetch_accounts/1
+         fetch_accounts/1,
+         fetch_transactions/3
         ]).
 
 -define(USER_AGENT, "Mozilla/5.0 (Linux; Android 7.0; SM-A520F Build/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/65.0.3325.109 Mobile Safari/537.36").
@@ -85,6 +86,64 @@ account_transform(#{ <<"uid">> := UID, <<"ledgerBalance">> := Balance, <<"label"
                 <<"SINGLE">> -> single
               end,
   #{ id => UID, link => list_to_binary(["/accounts/",UID]), balance => Balance, number => Label, owner => Owner, ownership => Ownership, type => AccountType, name => TypeLabel }.
+
+
+%%
+%% @doc Fetch transactions
+%%
+-spec fetch_transactions(ing_bank_auth(), unicode:unicode_binary(), first_call | unicode:unicode_binary()) -> [banks_fetch_bank:transaction()].
+fetch_transactions(AuthToken, AccountId, first_call) ->
+  fetch_transactions(AuthToken, AccountId, <<"0">>);
+fetch_transactions({bank_auth, ?MODULE, AuthToken}, AccountId, LastKnownTransactionId) ->
+  Transactions0 = transactions(AuthToken, AccountId, LastKnownTransactionId, <<"0">>, []),
+  Transactions1 = [ transaction_transform(T) || T <- Transactions0 ],
+  Transactions1.
+
+transactions(AuthToken, AccountId, LastKnownTransactionId, NextCallId, AccTransactions) ->
+    URL = "https://m.ing.fr/secure/api-v1/accounts/"++binary_to_list(AccountId)++"/transactions/after/"++binary_to_list(NextCallId)++"/limit/50",
+    case request_json(AuthToken, URL) of
+      {_JSON, []} -> AccTransactions;
+      {_JSON, Transactions0} ->
+        {Transactions1, Remaining} = lists:splitwith(fun(T) -> #{ <<"id">> := TID } = T, TID =/= LastKnownTransactionId end, Transactions0),
+        if Remaining =/= [] ->
+             AccTransactions++Transactions1;
+           true ->
+             NbrTransactions = length(Transactions0),
+
+             % Reverse engineering of ING API shows that API uses second to last transaction to fetch next transactions.
+             % We don't test if we have less than 50 transactions to stop because APIs are not always reliable
+             NextCallTransaction = if NbrTransactions < 2 -> lists:last(Transactions0);                 % last transaction
+                                      true -> lists:nth(length(Transactions0)-1,Transactions0)          % second to last transaction
+                                   end,
+             #{ <<"id">> := NewNextCallId } = NextCallTransaction,
+             transactions(AuthToken, AccountId, LastKnownTransactionId, NewNextCallId, AccTransactions++Transactions0)
+        end
+    end.
+
+transaction_transform(#{ <<"id">> := ID, <<"effectiveDate">> := EffectiveDateStr, <<"accountingDate">> := AccountingDateStr, <<"detail">> := Detail, <<"amount">> := Amount, <<"type">> := TypeStr } = _Transaction) ->
+  EffectiveDate = string_to_date(EffectiveDateStr),
+  AccountingDate = string_to_date(AccountingDateStr),
+  Type = case TypeStr of
+           <<"SEPA_DEBIT">> -> sepa_debit;
+           <<"PURCHASE_CARD">> -> card_debit;
+           <<"TRANSFER">> -> transfer;
+           <<"CHECK">> -> check;
+           <<"CARD_WITHDRAWAL">> -> card_withdrawal;
+           <<"OTHER">> when Detail =:= <<"INTÉRÊTS PAYÉS"/utf8>> -> interests
+           %_ -> io:format("T=~p", [_Transaction])
+         end,
+  #{ id => ID, effective_date => EffectiveDate, accounting_date => AccountingDate, amount => Amount, description => Detail, type => Type }.
+
+
+%%
+%% @doc Internal function to convert date from string
+%%
+-spec string_to_date(unicode:unicode_binary()) -> calendar:date().
+string_to_date(DateStr) ->
+  case re:run(DateStr, "([0-9]{4})-([0-9]{2})-([0-9]{2})", [{capture, all_but_first, list}]) of
+    {match, [YearStr, MonthStr, DayStr]} ->
+      {list_to_integer(YearStr), list_to_integer(MonthStr), list_to_integer(DayStr)}
+  end.
 
 %%
 %% @doc Internal function to fetch data
