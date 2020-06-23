@@ -8,7 +8,7 @@
 -export_type([
               bank_id/0,
               client_id/0,
-              client_credential/0,
+              client_credential/1,
               account/0,
               transaction/0
              ]).
@@ -19,7 +19,7 @@
 %% Banks data datatypes
 -type bank_id() :: {bank_id, unicode:unicode_binary()}.
 -type client_id() :: {client_id, string()}.
--type client_credential() :: {client_credential, any()}.
+-type client_credential(A) :: {client_credential, A}.
 
 -type account_type() :: current | savings | home_loan.
 -type account_ownership() :: single | joint.
@@ -42,6 +42,6 @@
 
 %% Callbacks required
 
--callback connect(client_id(), client_credential()) -> {ok, bank_auth()}.
+-callback connect(client_id(), client_credential(_)) -> {ok, bank_auth()}.
 -callback fetch_accounts(bank_auth()) -> {unicode:unicode_binary(), [account()]}.
 -callback fetch_transactions(bank_auth(), unicode:unicode_binary(), first_call | unicode:unicode_binary()) -> [banks_fetch_bank:transaction()].

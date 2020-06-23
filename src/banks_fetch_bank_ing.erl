@@ -21,8 +21,9 @@
                   {"Content-Type", "application/json;charset=UTF-8"}]).
 
 -type ing_bank_auth() :: {bank_auth, ?MODULE, string()}.
+-type ing_client_credential() :: banks_fetch_bank:client_credential({string(), string()}).
 
--spec connect(banks_fetch_bank:client_id(), {client_credential, {string(), string()}}) -> {ok, ing_bank_auth()}.
+-spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()}.
 connect({client_id, ClientId}, {client_credential, {ClientPassword, ClientBirthDate}}) ->
   {ok, {{_Version0, 200, _ReasonPhrase0}, Headers0, _Body0}} = httpc:request(get, {"https://m.ing.fr/", ?HEADERS}, [{timeout,60000}], []),
   case lists:keyfind("ingdf-auth-token", 1, Headers0) of
