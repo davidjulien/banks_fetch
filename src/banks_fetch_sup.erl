@@ -28,10 +28,19 @@ start_link() ->
 %%                  modules => modules()}   % optional
 -spec init([]) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
 init([]) ->
-    SupFlags = #{strategy => one_for_all,
-                 intensity => 0,
-                 period => 1},
-    ChildSpecs = [],
-    {ok, {SupFlags, ChildSpecs}}.
+    SupFlags = #{strategy => one_for_one,
+                 intensity => 1,
+                 period => 60},
+    ClientSupSpec = #{
+      id => banks_fetch_client_sup,
+      start => {banks_fetch_client_sup, start_link, []},
+      restart => permanent,
+      shutdown => 1,
+      type => supervisor,
+      modules => [banks_fetch_client_sup]
+     },
+    {ok, {SupFlags, [ClientSupSpec]}}.
 
-%% internal functions
+%%====================================================================
+%% Internal functions
+%%====================================================================
