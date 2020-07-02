@@ -1,7 +1,10 @@
 -module(banks_fetch_client_manager_SUITE).
 -include_lib("common_test/include/ct.hrl").
 -export([all/0, init_per_testcase/2, end_per_testcase/2 ]).
--export([should_launch_all_client_servers_on_init/1]).
+-export([
+         should_handle_cast_do_nothing/1,
+         should_launch_all_client_servers_on_init/1
+        ]).
 
 -define(BANK_CLIENTS, 
         [
@@ -11,18 +14,26 @@
         ]).
 
 all() -> [
+          should_handle_cast_do_nothing,
           should_launch_all_client_servers_on_init
          ].
 
+init_per_testcase(should_handle_cast_do_nothing, Config) ->
+  Config;
 init_per_testcase(should_launch_all_client_servers_on_init, Config) ->
   meck:new(banks_fetch_storage),
   meck:new(banks_fetch_client_server_sup),
   Config.
 
+end_per_testcase(should_handle_cast_do_nothing, _Config) ->
+  ok;
 end_per_testcase(should_launch_all_client_servers_on_init, _Config) ->
   meck:unload(banks_fetch_client_server_sup),
   meck:unload(banks_fetch_storage).
 
+should_handle_cast_do_nothing(_Config) ->
+  {noreply, dummystate} = banks_fetch_client_manager:handle_cast(dummycall, dummystate),
+  ok.
 
 
 should_launch_all_client_servers_on_init(_Config) ->
