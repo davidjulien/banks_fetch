@@ -18,7 +18,7 @@
 
 %% Banks data datatypes
 -type bank_id() :: {bank_id, unicode:unicode_binary()}.
--type client_id() :: {client_id, string()}.
+-type client_id() :: {client_id, unicode:unicode_binary()}.
 -type client_credential(A) :: {client_credential, A}.
 
 -type account_type() :: current | savings | home_loan.

@@ -115,7 +115,7 @@ end_per_testcase(should_fetch_transactions_single_case_without_net, _Config) ->
   meck:unload(httpc),
   ok.
 
--define(CLIENT_ID_VAL, "123456789").
+-define(CLIENT_ID_VAL, <<"123456789">>).
 -define(CLIENT_ID, {client_id, ?CLIENT_ID_VAL}).
 -define(CLIENT_PWD, "234567").
 -define(CLIENT_BIRTHDATE, "230378").
@@ -151,7 +151,7 @@ should_not_authenticate_if_birthdate_and_client_id_mismatched(_Config) ->
                        },
                        % Login
                        {
-                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++?CLIENT_ID_VAL++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
+                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(?CLIENT_ID_VAL)++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
                         {ok,{{"HTTP/1.1",412,"Precondition Failed"},
                              fake_headers,
                              "{\"error\":{\"code\":\"AUTHENTICATION.INVALID_CIF_AND_BIRTHDATE_COMBINATION\",\"message\":\"Votre numéro de client et votre date de naissance ne correspondent pas. Veuillez réessayer.\",\"values\":{}}}"}}
@@ -188,7 +188,7 @@ should_not_authenticate_if_password_is_invalid(_Config) ->
                        },
                        % Login
                        {
-                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++?CLIENT_ID_VAL++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
+                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(?CLIENT_ID_VAL)++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
                         {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', 'fakebody'}}
                        },
                        % Get keypad info
@@ -244,7 +244,7 @@ should_connect_without_net_keypad(_Config) ->
                        },
                        % Login
                        {
-                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++?CLIENT_ID_VAL++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
+                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(?CLIENT_ID_VAL)++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
                         {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', 'fakebody'}}
                        },
                        % Get keypad info
@@ -289,7 +289,7 @@ should_connect_without_net(Config) ->
                        },
                        % Login
                        {
-                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++?CLIENT_ID_VAL++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
+                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(?CLIENT_ID_VAL)++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
                         {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', 'fakebody'}}
                        },
                        % Get keypad info

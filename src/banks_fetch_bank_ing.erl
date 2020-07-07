@@ -24,12 +24,12 @@
 -type ing_client_credential() :: banks_fetch_bank:client_credential({string(), string()}).
 
 -spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()}.
-connect({client_id, ClientId}, {client_credential, {ClientPassword, ClientBirthDate}}) ->
+connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBirthDate}}) ->
   {ok, {{_Version0, 200, _ReasonPhrase0}, Headers0, _Body0}} = httpc:request(get, {"https://m.ing.fr/", ?HEADERS}, [{timeout,60000}], []),
   case lists:keyfind("ingdf-auth-token", 1, Headers0) of
     {_, AuthToken} -> {ok, {bank_auth, ?MODULE, AuthToken}};
     false ->
-      case httpc:request(post, {"https://m.ing.fr/secure/api-v1/login/cif", ?HEADERS, "application/json;charset=UTF-8", "{\"cif\":\""++ClientId++"\",\"birthDate\":\""++ClientBirthDate++"\"}"}, [{timeout,60000}], []) of
+      case httpc:request(post, {"https://m.ing.fr/secure/api-v1/login/cif", ?HEADERS, "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(ClientIdVal)++"\",\"birthDate\":\""++ClientBirthDate++"\"}"}, [{timeout,60000}], []) of
         {ok,{{"HTTP/1.1",412,"Precondition Failed"}, _Headers1, BodyError}} ->
           decode_body_error(BodyError);
         {ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, _Body1}} ->
