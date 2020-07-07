@@ -1,9 +1,9 @@
 -module(banks_fetch_client_sup_SUITE).
 -include_lib("common_test/include/ct.hrl").
 -export([all/0, init_per_testcase/2, end_per_testcase/2]).
--export([white_box_tests/1, black_box_tests/1]).
+-export([should_returns_valid_specs/1, white_box_tests/1, black_box_tests/1]).
 
-all() -> [white_box_tests, black_box_tests].
+all() -> [should_returns_valid_specs, black_box_tests].
 
 init_per_testcase(black_box_tests, Config) ->
   meck:new(banks_fetch_client_server_sup),
@@ -19,22 +19,7 @@ end_per_testcase(black_box_tests, _Config) ->
 end_per_testcase(_, _Config) ->
   ok.
 
-white_box_tests(_Config) ->
-  ct:log(sys_state, "white_box_tests: start~n"),
-
-  % check start_link/0
-  ct:log(sys_state, "white_box_tests: start supervisor~n"),
-  {ok, SuperPid} = banks_fetch_client_sup:start_link(),
-
-  receive after 100 -> nil end, % let start
-
-  % clean up the instance we just started (as a 'side effect')
-  ct:log(sys_state, "white_box_tests: stopping the supervisor~n"),
-  exit(SuperPid, normal),
-
-  receive after 200 -> nil end, % let stop
-
-  % check init/1
+should_returns_valid_specs(_Config) ->
   ExpectedSupervisorSpec = #{strategy => one_for_all, intensity => 1, period => 60},
 
   ExpectedChildSpec = [
@@ -54,12 +39,27 @@ white_box_tests(_Config) ->
                         }
                       ],
 
-  ct:log(sys_state, "white_box_tests: call supervisor init directly (may often make no sense)~n"),
+  ct:comment("Call supervisor init directly"),
   {ok, {ExpectedSupervisorSpec, ExpectedChildSpec}} = banks_fetch_client_sup:init([]),
 
-  % check child spec syntax
-  ct:log(sys_state, "white_box_tests: check expected child specs~n"),
+  ct:log("Check child specs"),
   ok = supervisor:check_childspecs(ExpectedChildSpec),
+
+  ok.
+
+
+white_box_tests(_Config) ->
+  % check start_link/0
+  ct:log("Start supervisor"),
+  {ok, SuperPid} = banks_fetch_client_sup:start_link(),
+
+  receive after 100 -> nil end, % let start
+
+  % clean up the instance we just started (as a 'side effect')
+  ct:log("Stop supervisor~n"),
+  exit(SuperPid, normal),
+
+  receive after 200 -> nil end, % let stop
 
   ok.
 
@@ -85,6 +85,9 @@ black_box_tests(_Config) ->
   2 = length(ChildrenList1),
   {_,ClientServerSupPid1, supervisor, [banks_fetch_client_server_sup]} = lists:keyfind(banks_fetch_client_server_sup, 1, ChildrenList1),
   {_,ClientManagerPid1, worker, [banks_fetch_client_manager]} = lists:keyfind(banks_fetch_client_manager, 1, ChildrenList1),
+
+  true = meck:validate(banks_fetch_client_manager),
+  true = meck:validate(banks_fetch_client_server_sup),
 
   % ------------------------------------------------
   ct:comment("Kill client manager ~p", [ClientManagerPid1]),
@@ -124,5 +127,8 @@ black_box_tests(_Config) ->
   ct:comment("Verify calls to start processes"),
   2 = meck:num_calls(banks_fetch_client_manager, start_link, '_'),
   2 = meck:num_calls(banks_fetch_client_server_sup, start_link, '_'),
+
+  true = meck:validate(banks_fetch_client_manager),
+  true = meck:validate(banks_fetch_client_server_sup),
 
   ok.
