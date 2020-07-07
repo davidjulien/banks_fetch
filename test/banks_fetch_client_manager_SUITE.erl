@@ -6,9 +6,9 @@
          should_launch_all_client_servers_on_init/1
         ]).
 
--define(BANK_CLIENTS, 
+-define(BANK_CLIENTS,
         [
-         {bank_id_1, client_id_1, client_credential_1}, 
+         {bank_id_1, client_id_1, client_credential_1},
          {bank_id_1, client_id_2, client_credential_2},
          {bank_id_2, client_id_3, client_credential_3}
         ]).
@@ -55,12 +55,12 @@ should_launch_all_client_servers_on_init(_Config) ->
   ct:comment("Verify that we have triggered client_servers"),
   true = meck:validate(banks_fetch_client_server_sup),
 
+  ct:comment("Verify clients pid"),
+  [{bank_id_1, client_id_1, pid_1}, {bank_id_1, client_id_2, pid_2}, {bank_id_2, client_id_3, pid_3}] = lists:sort(banks_fetch_client_manager:get_clients_pids()),
+
   ct:comment("Verify that we have started all required clients"),
   NbrBankClients = length(?BANK_CLIENTS),
   NbrBankClients = meck:num_calls(banks_fetch_client_server_sup, start_child, '_'),
-
-  ct:comment("Verify clients pid"),
-  [{bank_id_1, client_id_1, pid_1}, {bank_id_1, client_id_2, pid_2}, {bank_id_2, client_id_3, pid_3}] = lists:sort(banks_fetch_client_manager:get_clients_pids()),
 
   exit(ClientsManagerPID, normal),
 
