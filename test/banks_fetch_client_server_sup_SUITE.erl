@@ -94,7 +94,7 @@ black_box_tests(_Config) ->
                                                         fake_auth_b -> {ok, ?BANK_CLIENT_B_ACCOUNTS}
                                                       end
                                                   end),
-  meck:expect(banks_fetch_storage, store_accounts, fun(MockBankName, MockClientId, MockAccounts) ->
+  meck:expect(banks_fetch_storage, store_accounts, fun(MockBankName, MockClientId, _MockFetchingAt, MockAccounts) ->
                                                        case MockClientId of
                                                          ?BANK_CLIENT_ID_A ->
                                                            ?BANK_ID = MockBankName,

@@ -33,6 +33,7 @@
 -define(BANK_ID_1, <<"bank1">>).
 -define(CLIENT_ID_1, <<"client1">>).
 -define(CLIENT_CREDENTIAL_1, {<<"credential1">>}).
+-define(FETCHING_AT_1, {{2020,7,7},{12,0,0}}).
 -define(ACCOUNTS_1, [
                      #{ id => <<"ACCOUNT1">>, balance => 234.12, number => <<"NUMBER1">>, owner => <<"OWNER">>, ownership => single, type => current, name => <<"CURRENT">> },
                      #{ id => <<"ACCOUNT2">>, balance => 4321.78, number => <<"NUMBER2">>, owner => <<"OWNER">>, ownership => single, type => savings, name => <<"LDD">> }
@@ -281,8 +282,8 @@ should_nodb_store_accounts(_Config) ->
 
   ct:comment("Store accounts"),
   ExpectedQueriesForAccounts = [
-                                {[<<"INSERT INTO accounts(bank_id, client_id, account_id, balance, number, owner, ownership, type, name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9);">>,
-                                  [?BANK_ID_1, ?CLIENT_ID_1, AccountId, Balance, Number, Owner, atom_to_binary(Ownership,'utf8'), atom_to_binary(Type,'utf8'), Name], fake_connection],
+                                {[<<"INSERT INTO accounts(bank_id, client_id, fetching_at, account_id, balance, number, owner, ownership, type, name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);">>,
+                                  [?BANK_ID_1, ?CLIENT_ID_1, ?FETCHING_AT_1, AccountId, Balance, Number, Owner, atom_to_binary(Ownership,'utf8'), atom_to_binary(Type,'utf8'), Name], fake_connection],
                                  {{insert, 0, 1}, []}
                                 }
                                 || #{ id := AccountId, balance := Balance, number := Number, owner := Owner, ownership := Ownership, type := Type, name := Name } <- ?ACCOUNTS_1
@@ -297,7 +298,7 @@ should_nodb_store_accounts(_Config) ->
                                                }
                                               ]),
   meck:expect(pgsql_connection, extended_query, ExpectedQueriesForAccounts),
-  ok = banks_fetch_storage:store_accounts(?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNTS_1),
+  ok = banks_fetch_storage:store_accounts(?BANK_ID_1, ?CLIENT_ID_1, ?FETCHING_AT_1, ?ACCOUNTS_1),
 
   ct:comment("Verify pgsql_connection calls"),
   true = meck:validate(pgsql_connection),
@@ -325,18 +326,18 @@ should_db_get_clients(_Config) ->
 
 should_db_store_accounts(Config) ->
   ct:comment("Store accounts"),
-  ok = banks_fetch_storage:store_accounts(?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNTS_1),
+  ok = banks_fetch_storage:store_accounts(?BANK_ID_1, ?CLIENT_ID_1, ?FETCHING_AT_1, ?ACCOUNTS_1),
 
   ct:comment("Load accounts from database"),
   {db_connection, Connection} = lists:keyfind(db_connection, 1, Config),
-  {{select, Nbr}, AccountsList} = pgsql_connection:simple_query(<<"SELECT bank_id, client_id, account_id, balance, number, owner, ownership, type, name FROM accounts">>, Connection),
+  {{select, Nbr}, AccountsList} = pgsql_connection:simple_query(<<"SELECT bank_id, client_id, fetching_at, account_id, balance, number, owner, ownership, type, name FROM accounts">>, Connection),
 
   ct:comment("Verify number of accounts"),
   NbrExpectedAccounts = length(?ACCOUNTS_1),
   NbrExpectedAccounts = Nbr,
 
   ct:comment("Verify accounts data"),
-  ExpectedDataList = [ {?BANK_ID_1, ?CLIENT_ID_1, ExpectedAccountId, ExpectedBalance, ExpectedNumber, ExpectedOwner, {e_account_ownership, atom_to_binary(ExpectedOwnerShip,'utf8')}, {e_account_type, atom_to_binary(ExpectedType,'utf8')}, ExpectedName} || #{ id := ExpectedAccountId, balance := ExpectedBalance, number := ExpectedNumber, owner := ExpectedOwner, ownership := ExpectedOwnerShip, type := ExpectedType, name := ExpectedName } <- ?ACCOUNTS_1 ],
+  ExpectedDataList = [ {?BANK_ID_1, ?CLIENT_ID_1, ?FETCHING_AT_1, ExpectedAccountId, ExpectedBalance, ExpectedNumber, ExpectedOwner, {e_account_ownership, atom_to_binary(ExpectedOwnerShip,'utf8')}, {e_account_type, atom_to_binary(ExpectedType,'utf8')}, ExpectedName} || #{ id := ExpectedAccountId, balance := ExpectedBalance, number := ExpectedNumber, owner := ExpectedOwner, ownership := ExpectedOwnerShip, type := ExpectedType, name := ExpectedName } <- ?ACCOUNTS_1 ],
 
   lists:foreach(fun({Expected, Account}) -> Expected = Account end, lists:zip(ExpectedDataList, AccountsList)),
 

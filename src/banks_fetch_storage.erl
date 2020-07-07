@@ -14,7 +14,7 @@
 
 -export([
          get_clients/0,
-         store_accounts/3,
+         store_accounts/4,
          stop/0
         ]).
 
@@ -29,9 +29,9 @@
 get_clients() ->
   gen_server:call(?MODULE, get_clients).
 
--spec store_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), [banks_fetch_bank:account()]) -> ok.
-store_accounts(BankId, ClientId, AccountsList) ->
-  gen_server:call(?MODULE, {store_accounts, BankId, ClientId, AccountsList}).
+-spec store_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), calendar:datetime(), [banks_fetch_bank:account()]) -> ok.
+store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
+  gen_server:call(?MODULE, {store_accounts, BankId, ClientId, FetchingAt, AccountsList}).
 
 -spec stop() -> ok.
 stop() ->
@@ -49,8 +49,8 @@ init(Credential) ->
 handle_call(get_clients, _From, #state{ } = State0) ->
   R = do_get_clients(State0),
   {reply, R, State0};
-handle_call({store_accounts, BankId, ClientId, AccountsList}, _From, #state{ } = State0) ->
-  R = do_store_accounts(BankId, ClientId, AccountsList, State0),
+handle_call({store_accounts, BankId, ClientId, FetchingAt, AccountsList}, _From, #state{ } = State0) ->
+  R = do_store_accounts(BankId, ClientId, FetchingAt, AccountsList, State0),
   {reply, R, State0};
 handle_call(stop, _From, State0) ->
   {stop, normal, stopped, State0}.
@@ -88,19 +88,19 @@ do_get_clients(#state{ connection = Connection }) ->
 %%
 %% @doc Store accounts
 %%
-do_store_accounts(BankId, ClientId, AccountsList, #state{ connection = Connection }) ->
+do_store_accounts(BankId, ClientId, FetchingAt, AccountsList, #state{ connection = Connection }) ->
   {'begin', []} = pgsql_connection:simple_query(<<"BEGIN TRANSACTION">>, Connection),
-  ok = do_store_accounts_aux(BankId, ClientId, AccountsList, Connection),
+  ok = do_store_accounts_aux(BankId, ClientId, FetchingAt, AccountsList, Connection),
   {'commit', []} = pgsql_connection:simple_query(<<"COMMIT">>, Connection),
   ok.
 
-do_store_accounts_aux(_BankId, _ClientId, [], _Connection) ->
+do_store_accounts_aux(_BankId, _ClientId, _FetchingAt, [], _Connection) ->
   ok;
-do_store_accounts_aux(BankId, ClientId, [#{ id := AccountId, balance := Balance, number := Number, owner := Owner, ownership := Ownership, type := Type, name := Name } | NextAccounts], Connection) ->
-  case pgsql_connection:extended_query(<<"INSERT INTO accounts(bank_id, client_id, account_id, balance, number, owner, ownership, type, name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9);">>, 
-                                       [BankId, ClientId, AccountId, Balance, Number, Owner, atom_to_binary(Ownership,'utf8'), atom_to_binary(Type,'utf8'), Name], Connection) of
+do_store_accounts_aux(BankId, ClientId, FetchingAt, [#{ id := AccountId, balance := Balance, number := Number, owner := Owner, ownership := Ownership, type := Type, name := Name } | NextAccounts], Connection) ->
+  case pgsql_connection:extended_query(<<"INSERT INTO accounts(bank_id, client_id, fetching_at, account_id, balance, number, owner, ownership, type, name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);">>, 
+                                       [BankId, ClientId, FetchingAt, AccountId, Balance, Number, Owner, atom_to_binary(Ownership,'utf8'), atom_to_binary(Type,'utf8'), Name], Connection) of
     {{insert,_,1},[]} ->
-      do_store_accounts_aux(BankId, ClientId, NextAccounts, Connection)
+      do_store_accounts_aux(BankId, ClientId, FetchingAt, NextAccounts, Connection)
   end.
 
 

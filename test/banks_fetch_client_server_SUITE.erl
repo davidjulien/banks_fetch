@@ -39,9 +39,13 @@ should_fetch_data(_Config) ->
                                                         fake_auth = MockAuth,
                                                         {ok, FakeAccounts} 
                                                     end),
-  meck:expect(banks_fetch_storage, store_accounts, fun(MockBankId, MockClientId, MockAccounts) ->
+  BeforeFetchingDateTime = calendar:universal_time(),
+  meck:expect(banks_fetch_storage, store_accounts, fun(MockBankId, MockClientId, MockFetchingAt, MockAccounts) ->
                                                        ?BANK_ID = MockBankId,
                                                        ?CLIENT_ID = MockClientId,
+                                                       AfterFetchingDatetime = calendar:universal_time(),
+                                                       true = BeforeFetchingDateTime =< MockFetchingAt,
+                                                       true = MockFetchingAt =< AfterFetchingDatetime,
                                                        FakeAccounts = MockAccounts,
                                                        ok
                                                    end),
