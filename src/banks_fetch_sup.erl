@@ -13,6 +13,8 @@
 
 -define(SERVER, ?MODULE).
 
+-define(DATABASE_PARAMS, {"bank_accounts","bank_accounts","bank_accounts"}).
+
 -spec start_link() -> supervisor:startlink_ret().
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
@@ -39,7 +41,15 @@ init([]) ->
       type => supervisor,
       modules => [banks_fetch_client_sup]
      },
-    {ok, {SupFlags, [ClientSupSpec]}}.
+    StorageSup = #{
+      id => banks_fetch_storage,
+      start => {banks_fetch_storage, start_link, [?DATABASE_PARAMS]},
+      restart => permanent,
+      shutdown => 1,
+      type => worker,
+      modules => [banks_fetch_storage]
+     },
+    {ok, {SupFlags, [ClientSupSpec, StorageSup]}}.
 
 %%====================================================================
 %% Internal functions
