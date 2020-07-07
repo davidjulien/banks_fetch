@@ -25,6 +25,7 @@
 start_link() ->
   supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
+-spec start_child(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())) -> supervisor:startchild_ret().
 start_child(BankId, ClientId, ClientCredential) ->
   supervisor:start_child(banks_fetch_client_server_sup, [BankId, ClientId, ClientCredential]).
 
