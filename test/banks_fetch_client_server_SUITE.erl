@@ -32,8 +32,8 @@ should_handle_cast_do_nothing(_Config) ->
 should_fetch_data(_Config) ->
   FakeAccounts = [account1, account2],
   meck:expect(banks_fetch_bank_ing, connect, fun(MockClientId, MockCredential) -> 
-                                                 ?CLIENT_ID = {client_id, MockClientId},
-                                                 ?CLIENT_CREDENTIAL = MockCredential, 
+                                                 ?CLIENT_ID = MockClientId,
+                                                 ?CLIENT_CREDENTIAL = MockCredential,
                                                  {ok, fake_auth} end),
   meck:expect(banks_fetch_bank_ing, fetch_accounts, fun(MockAuth) -> 
                                                         fake_auth = MockAuth,

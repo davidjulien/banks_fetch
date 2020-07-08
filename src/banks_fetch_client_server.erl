@@ -46,12 +46,12 @@ handle_info(fetch_data, State0) ->
 
 %%
 %%
-
-do_fetch_data(#state{ bank_module = BankModule, bank_id = BankId, client_id = {client_id, ClientIdValue} = ClientId, client_credential = ClientCredential } = State0) ->
-  {ok, Auth} = BankModule:connect(ClientIdValue, ClientCredential),
+-spec do_fetch_data(#state{}) -> #state{}.
+do_fetch_data(#state{ bank_module = BankModule, bank_id = BankId, client_id = ClientId, client_credential = ClientCredential } = State0) ->
+  {ok, Auth} = banks_fetch_bank:connect(BankModule, ClientId, ClientCredential),
 
   FetchingAt = calendar:universal_time(),
-  {ok, Accounts} =  BankModule:fetch_accounts(Auth),
+  {ok, Accounts} =  banks_fetch_bank:fetch_accounts(BankModule, Auth),
   banks_fetch_storage:store_accounts(BankId, ClientId, FetchingAt, Accounts),
 
   State0#state{ accounts = Accounts }.

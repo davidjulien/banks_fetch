@@ -335,7 +335,7 @@ should_fetch_accounts_without_net(Config) ->
                                   {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', binary_to_list(AccountsJSON)}}
                               end),
 
-  {JSON, Accounts} = banks_fetch_bank_ing:fetch_accounts({bank_auth, banks_fetch_bank_ing, FakeToken}),
+  {ok, Accounts} = banks_fetch_bank_ing:fetch_accounts({bank_auth, banks_fetch_bank_ing, FakeToken}),
 
   ExpectedAccounts = [
                       #{balance => 3445.19,id => <<"MyAccount1">>, link => <<"/accounts/MyAccount1">>, name => <<"Compte Courant">>, number => <<"XXXX ACC1">>,owner => <<"M ING CLIENT">>, ownership => joint, type => current},
@@ -345,8 +345,6 @@ should_fetch_accounts_without_net(Config) ->
   NbrExpectedAccounts = length(ExpectedAccounts),
   NbrExpectedAccounts = length(Accounts),
   ExpectedAccounts = Accounts,
-
-  AccountsJSON = JSON,
 
   true = meck:validate(httpc),
 
@@ -384,7 +382,7 @@ should_fetch_transactions_without_net(Config) ->
   meck:expect(httpc, request, HttpcExpectations),
 
   ct:comment("Fetch transactions"),
-  Transactions = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, first_call),
+  {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, first_call),
 
   ExpectedTransactions =
   [
@@ -448,7 +446,7 @@ should_fetch_transactions_until_without_net(Config) ->
   meck:expect(httpc, request, HttpcExpectations),
 
   ct:comment("Fetch transactions"),
-  Transactions = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, <<"12819">>),
+  {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, <<"12819">>),
 
   ExpectedTransactions =
   [
@@ -496,7 +494,7 @@ should_fetch_transactions_single_case_without_net(_Config) ->
   meck:expect(httpc, request, HttpcExpectations),
 
   ct:comment("Fetch transactions"),
-  Transactions = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, first_call),
+  {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, first_call),
 
   ExpectedTransactions = [
                           #{accounting_date => {2020,6,16}, amount => 34.25,description => <<"INTÉRÊTS PAYÉS"/utf8>>, effective_date => {2020,6,16}, id => <<"12875">>,type => interests}

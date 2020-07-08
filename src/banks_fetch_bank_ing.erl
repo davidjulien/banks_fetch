@@ -68,11 +68,11 @@ decode_body_error(BodyError) ->
 %%
 %% @doc Fetch accounts
 %%
--spec fetch_accounts(ing_bank_auth()) -> {unicode:unicode_binary(), [banks_fetch_bank:account()]}.
+-spec fetch_accounts(ing_bank_auth()) -> {ok, [banks_fetch_bank:account()]}.
 fetch_accounts({bank_auth, ?MODULE, AuthToken}) ->
-  {JSON, R} = request_json(AuthToken, "https://m.ing.fr/secure/api-v1/accounts"),
+  {_JSON, R} = request_json(AuthToken, "https://m.ing.fr/secure/api-v1/accounts"),
   #{ <<"accounts">> := AccountInfoList} = R,
-  {JSON, [ account_transform(AccountInfo) || AccountInfo <- AccountInfoList ]}.
+  {ok, [ account_transform(AccountInfo) || AccountInfo <- AccountInfoList ]}.
 
 account_transform(#{ <<"uid">> := UID, <<"ledgerBalance">> := Balance, <<"label">> := Label, <<"owner">> := Owner, <<"type">> := #{ <<"code">> := Code, <<"label">> := TypeLabel },
                   <<"ownership">> := #{<<"code">> := OwnershipCode } }) ->
@@ -92,13 +92,13 @@ account_transform(#{ <<"uid">> := UID, <<"ledgerBalance">> := Balance, <<"label"
 %%
 %% @doc Fetch transactions
 %%
--spec fetch_transactions(ing_bank_auth(), unicode:unicode_binary(), first_call | unicode:unicode_binary()) -> [banks_fetch_bank:transaction()].
+-spec fetch_transactions(ing_bank_auth(), unicode:unicode_binary(), first_call | unicode:unicode_binary()) -> {ok, [banks_fetch_bank:transaction()]}.
 fetch_transactions(AuthToken, AccountId, first_call) ->
   fetch_transactions(AuthToken, AccountId, <<"0">>);
 fetch_transactions({bank_auth, ?MODULE, AuthToken}, AccountId, LastKnownTransactionId) ->
   Transactions0 = transactions(AuthToken, AccountId, LastKnownTransactionId, <<"0">>, []),
   Transactions1 = [ transaction_transform(T) || T <- Transactions0 ],
-  Transactions1.
+  {ok, Transactions1}.
 
 transactions(AuthToken, AccountId, LastKnownTransactionId, NextCallId, AccTransactions) ->
     URL = "https://m.ing.fr/secure/api-v1/accounts/"++binary_to_list(AccountId)++"/transactions/after/"++binary_to_list(NextCallId)++"/limit/50",

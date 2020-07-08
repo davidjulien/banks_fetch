@@ -57,9 +57,9 @@ white_box_tests(_Config) ->
 
 -define(BANK_ID, {bank_id, <<"fakebank">>}).
 -define(BANK_CLIENT_ID_A, {client_id, <<"12345">>}).
--define(BANK_CREDENTIAL_A, {client_credential, client_a}).
+-define(BANK_CREDENTIAL_A, {client_credential, credential_a}).
 -define(BANK_CLIENT_ID_B, {client_id, <<"67890">>}).
--define(BANK_CREDENTIAL_B, {client_credential, client_b}).
+-define(BANK_CREDENTIAL_B, {client_credential, credential_b}).
 -define(BANK_CLIENT_A_ACCOUNTS, [client_a_account_1]).
 -define(BANK_CLIENT_B_ACCOUNTS, [client_b_account_1]).
 
@@ -79,7 +79,7 @@ black_box_tests(_Config) ->
   % ------------------------------------------------
   ct:comment("Start 2 client servers from supervisor"),
   meck:expect(banks_fetch_bank_fakebank, connect, fun(MockClientId, MockCredential) ->
-                                                      case {client_id, MockClientId} of
+                                                      case MockClientId of
                                                         ?BANK_CLIENT_ID_A -> 
                                                           ?BANK_CREDENTIAL_A = MockCredential,
                                                           {ok, fake_auth_a};

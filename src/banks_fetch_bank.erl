@@ -5,6 +5,12 @@
 
 -module(banks_fetch_bank).
 
+-export([
+         connect/3,
+         fetch_accounts/2,
+         fetch_transactions/4
+        ]).
+
 -export_type([
               bank_id/0,
               client_id/0,
@@ -42,6 +48,19 @@
 
 %% Callbacks required
 
--callback connect(client_id(), client_credential(_)) -> {ok, bank_auth()}.
--callback fetch_accounts(bank_auth()) -> {unicode:unicode_binary(), [account()]}.
--callback fetch_transactions(bank_auth(), unicode:unicode_binary(), first_call | unicode:unicode_binary()) -> [banks_fetch_bank:transaction()].
+-callback connect(ClientId :: client_id(), ClientCredential :: client_credential(_)) -> {ok, BankAuth :: bank_auth()}.
+-callback fetch_accounts(BankAuth :: bank_auth()) -> {ok, Accounts :: [account()]}.
+-callback fetch_transactions(BankAuth :: bank_auth(), AcountId :: unicode:unicode_binary(), FirstCallOrLastFetchedTransactionId :: first_call | unicode:unicode_binary()) -> {ok, Transactions :: [banks_fetch_bank:transaction()]}.
+
+-spec connect(BankModule :: module(), ClientId :: client_id(), ClientCredential :: client_credential(_)) -> {ok, BankAuth :: bank_auth()}.
+connect(BankModule, ClientId, ClientCredential) ->
+  BankModule:connect(ClientId, ClientCredential).
+
+-spec fetch_accounts(BankModule :: module(), BankAuth :: bank_auth()) -> {ok, Accounts :: [account()]}.
+fetch_accounts(BankModule, BankAuth) ->
+  BankModule:fetch_accounts(BankAuth).
+
+-spec fetch_transactions(BankModule :: module(), BankAuth :: bank_auth(), AccountId :: unicode:unicode_binary(), FirstCallOrLastFetchedTransactionId :: first_call | unicode:unicode_binary()) -> 
+  {ok, Transactions :: [banks_fetch_bank:transaction()]}.
+fetch_transactions(Module, BankAuth, AccountId, FirstCallOrLastFetchedTransactionId) ->
+  Module:fetch_transactions(BankAuth, AccountId, FirstCallOrLastFetchedTransactionId).
