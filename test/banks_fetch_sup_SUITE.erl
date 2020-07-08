@@ -6,7 +6,7 @@
 
 all() -> [should_returns_valid_specs, black_box_tests].
 
--define(DATABASE_PARAMS, {"bank_accounts","bank_accounts","bank_accounts"}).
+-define(DATABASE_PARAMS, {"banks_fetch","banks_fetch_user",""}).
 
 init_per_testcase(black_box_tests, Config) ->
   meck:new(banks_fetch_client_sup),
@@ -28,21 +28,21 @@ should_returns_valid_specs(_Config) ->
   ExpectedChildSpecs =
   [
    #{
-      id => banks_fetch_client_sup,
-      start => {banks_fetch_client_sup, start_link, []},
-      restart => permanent,
-      shutdown => 1,
-      type => supervisor,
-      modules => [banks_fetch_client_sup]
-   },
-   #{
       id => banks_fetch_storage,
       start => {banks_fetch_storage, start_link, [?DATABASE_PARAMS]},
       restart => permanent,
       shutdown => 1,
       type => worker,
       modules => [banks_fetch_storage]
-     }
+   },
+   #{
+      id => banks_fetch_client_sup,
+      start => {banks_fetch_client_sup, start_link, []},
+      restart => permanent,
+      shutdown => 1,
+      type => supervisor,
+      modules => [banks_fetch_client_sup]
+   }
   ],
   {ok, {ExpectedSupervisorSpec, ExpectedChildSpecs}} = banks_fetch_sup:init([]),
 

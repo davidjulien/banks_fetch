@@ -13,7 +13,11 @@
 
 -define(SERVER, ?MODULE).
 
--define(DATABASE_PARAMS, {"bank_accounts","bank_accounts","bank_accounts"}).
+% CREATE ROLE banks_fetch_user WITH LOGIN;
+% CREATE DATABASE banks_fetch;
+% GRANT ALL PRIVILEGES ON DATABASE banks_fetch TO banks_fetch_user;
+% ALTER DATABASE banks_fetch OWNER TO banks_fetch_user;
+-define(DATABASE_PARAMS, {"banks_fetch","banks_fetch_user",""}).
 
 -spec start_link() -> supervisor:startlink_ret().
 start_link() ->
@@ -49,7 +53,7 @@ init([]) ->
       type => worker,
       modules => [banks_fetch_storage]
      },
-    {ok, {SupFlags, [ClientSupSpec, StorageSup]}}.
+    {ok, {SupFlags, [StorageSup, ClientSupSpec]}}.
 
 %%====================================================================
 %% Internal functions
