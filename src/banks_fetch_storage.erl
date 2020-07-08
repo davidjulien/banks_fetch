@@ -75,6 +75,7 @@ handle_info(init_db, State0) ->
 %%
 %% Database initialisation
 %%
+-spec do_init_db(#state{}) -> #state{}.
 do_init_db(#state{ credential = {DatabaseName, Username, Password}, connection = undefined } = State0) ->
   State1 = State0#state{ connection = pgsql_connection:open(DatabaseName,Username,Password) },
   do_init_db(State1);
@@ -87,6 +88,7 @@ do_init_db(#state{ credential = {DatabaseName, _Username, _Password}, connection
 %%
 %% @doc Get clients from database
 %%
+-spec do_get_clients(#state{}) -> {value, [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())}]}.
 do_get_clients(#state{ connection = Connection }) ->
   case pgsql_connection:simple_query(<<"SELECT bank_id, client_id, client_credential FROM clients;">>, Connection) of
     {{select, _N}, List0} ->
@@ -111,6 +113,7 @@ do_insert_client({bank_id, BankIdValue}, {client_id, ClientIdValue}, {client_cre
 %%
 %% @doc Store accounts
 %%
+-spec do_store_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), calendar:datetime(), [banks_fetch_bank:account()], #state{}) -> ok.
 do_store_accounts(BankId, ClientId, FetchingAt, AccountsList, #state{ connection = Connection }) ->
   {'begin', []} = pgsql_connection:simple_query(<<"BEGIN TRANSACTION">>, Connection),
   ok = do_store_accounts_aux(BankId, ClientId, FetchingAt, AccountsList, Connection),
