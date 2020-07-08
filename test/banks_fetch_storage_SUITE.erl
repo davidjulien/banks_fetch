@@ -20,9 +20,12 @@
          should_nodb_start_with_db_upgrade/1,
          should_nodb_start_with_db_upgrade_error/1,
          should_nodb_get_clients/1,
+         should_nodb_insert_client/1,
          should_nodb_store_accounts/1,
 
          should_db_get_clients/1,
+         should_db_insert_client/1,
+         should_db_not_insert_client_already_existing/1,
          should_db_store_accounts/1
         ]).
 
@@ -43,6 +46,9 @@
 -define(CLIENT_ID_2, <<"client2">>).
 -define(CLIENT_CREDENTIAL_2, {<<"credential2">>}).
 
+-define(BANK_ID_3, <<"bank3">>).
+-define(CLIENT_ID_3, <<"client3">>).
+-define(CLIENT_CREDENTIAL_3, {<<"credential3">>}).
 
 all() ->
   [
@@ -53,8 +59,8 @@ all() ->
 
 groups() ->
   [
-   {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_store_accounts ]},
-   {tests_with_db, [], [ should_db_get_clients, should_db_store_accounts ]}
+   {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_insert_client, should_nodb_store_accounts ]},
+   {tests_with_db, [], [ should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing, should_db_store_accounts ]}
   ].
 
 % Init per group
@@ -95,6 +101,14 @@ init_per_testcase(should_db_get_clients, Config) ->
 
   [{storage_pid, PID}|Config];
 
+init_per_testcase(should_db_insert_client, Config) ->
+  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
+  [{storage_pid, PID}|Config];
+
+init_per_testcase(should_db_not_insert_client_already_existing, Config) ->
+  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
+  [{storage_pid, PID}|Config];
+
 init_per_testcase(should_db_store_accounts, Config) ->
   {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   [{storage_pid, PID}|Config];
@@ -104,6 +118,12 @@ init_per_testcase(_, Config) ->
 
 % End per testcase
 end_per_testcase(should_db_get_clients, _Config) ->
+  banks_fetch_storage:stop(),
+  ok;
+end_per_testcase(should_db_insert_client, _Config) ->
+  banks_fetch_storage:stop(),
+  ok;
+end_per_testcase(should_db_not_insert_client_already_existing, _Config) ->
   banks_fetch_storage:stop(),
   ok;
 end_per_testcase(should_db_store_accounts, _Config) ->
@@ -258,6 +278,47 @@ should_nodb_get_clients(_Config) ->
   ok.
 
 
+should_nodb_insert_client(_Config) ->
+  ct:comment("Launch storage server"),
+  meck:expect(pgsql_connection, open, fun(MockDatabase, MockUser, MockPassword) ->
+                                          ?DB_NAME = MockDatabase,
+                                          ?DB_USER = MockUser,
+                                          ?DB_PASSWORD = MockPassword,
+                                          fake_connection
+                                      end),
+  meck:expect(pgsql_connection, extended_query,
+              fun(MockQuery, MockParams, MockConnection) ->
+                  <<"SELECT description FROM pg_shdescription JOIN pg_database on objoid = pg_database.oid WHERE datname = $1">> = MockQuery,
+                  ["banks_fetch_test"] = MockParams,
+                  fake_connection = MockConnection,
+                  {{select, 1}, [{<<"0.0.1">>}]}
+              end),
+
+  {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
+
+  ct:comment("Wait initialisation"),
+  meck:wait(pgsql_connection, extended_query, '_', 1000),
+  true = meck:validate(pgsql_connection),
+
+  ct:comment("Insert client"),
+  meck:expect(pgsql_connection, extended_query, fun(MockQuery, MockParameters, MockConnection) ->
+                                                  fake_connection = MockConnection,
+                                                  <<"INSERT INTO clients(bank_id, client_id, client_credential) VALUES($1,$2,$3);">> = MockQuery,
+                                                  ExpectedParameters = [?BANK_ID_1, ?CLIENT_ID_1, term_to_binary(?CLIENT_CREDENTIAL_1)],
+                                                  ExpectedParameters = MockParameters,
+                                                  {{insert, 0, 1}, []}
+                                              end),
+  ok = banks_fetch_storage:insert_client({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_1}, {client_credential, ?CLIENT_CREDENTIAL_1}),
+
+  ct:comment("Verify pgsql_connection calls"),
+  true = meck:validate(pgsql_connection),
+
+  ct:comment("Stop storage"),
+  banks_fetch_storage:stop(),
+
+  ok.
+
+
 should_nodb_store_accounts(_Config) ->
   ct:comment("Launch storage server"),
   meck:reset(pgsql_connection),
@@ -323,6 +384,39 @@ should_db_get_clients(_Config) ->
   ct:comment("Verify returned clients"),
   {value, [{{bank_id, ?BANK_ID_1},{client_id, ?CLIENT_ID_1},{client_credential, ?CLIENT_CREDENTIAL_1}}]} = Clients,
   ok.
+
+
+should_db_insert_client(Config) ->
+  ct:comment("Insert client"),
+  ok = banks_fetch_storage:insert_client({bank_id, ?BANK_ID_2}, {client_id, ?CLIENT_ID_2}, {client_credential, ?CLIENT_CREDENTIAL_2}),
+
+  ct:comment("Load clients from database"),
+  {db_connection, Connection} = lists:keyfind(db_connection, 1, Config),
+  {{select, Nbr}, ClientsList} = pgsql_connection:simple_query(<<"SELECT bank_id, client_id, client_credential FROM clients">>, Connection),
+
+  ct:comment("Verify number of clients"),
+  2 = Nbr,
+
+  ct:comment("Verify client data"),
+  ExpectedClientsList = [ {?BANK_ID_1, ?CLIENT_ID_1, term_to_binary(?CLIENT_CREDENTIAL_1)}, {?BANK_ID_2, ?CLIENT_ID_2, term_to_binary(?CLIENT_CREDENTIAL_2)} ],
+  ExpectedClientsList = ClientsList,
+
+  ok.
+
+should_db_not_insert_client_already_existing(Config) ->
+  ct:comment("Load clients from database"),
+  {db_connection, Connection} = lists:keyfind(db_connection, 1, Config),
+  {{select, Nbr}, ClientsList} = pgsql_connection:simple_query(<<"SELECT bank_id, client_id, client_credential FROM clients">>, Connection),
+
+  ct:comment("Insert new client"),
+  {error, already_inserted} = banks_fetch_storage:insert_client({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_1}, {client_credential, ?CLIENT_CREDENTIAL_1}),
+
+  ct:comment("Verify that clients have not been modified in database"),
+  {db_connection, Connection} = lists:keyfind(db_connection, 1, Config),
+  {{select, Nbr}, ClientsList} = pgsql_connection:simple_query(<<"SELECT bank_id, client_id, client_credential FROM clients">>, Connection),
+
+  ok.
+
 
 should_db_store_accounts(Config) ->
   ct:comment("Store accounts"),

@@ -14,6 +14,8 @@
 
 -export([
          get_clients/0,
+         insert_client/3,
+
          store_accounts/4,
          stop/0
         ]).
@@ -28,6 +30,10 @@
 -spec get_clients() -> {value, [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())}]}.
 get_clients() ->
   gen_server:call(?MODULE, get_clients).
+
+-spec insert_client(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())) -> ok | {error, already_inserted}.
+insert_client(BankId, ClientId, ClientCredential) ->
+  gen_server:call(?MODULE, {insert_client, BankId, ClientId, ClientCredential}).
 
 -spec store_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), calendar:datetime(), [banks_fetch_bank:account()]) -> ok.
 store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
@@ -48,6 +54,9 @@ init(Credential) ->
 
 handle_call(get_clients, _From, #state{ } = State0) ->
   R = do_get_clients(State0),
+  {reply, R, State0};
+handle_call({insert_client, BankId, ClientId, ClientCredential},  _From, #state{ } = State0) ->
+  R = do_insert_client(BankId, ClientId, ClientCredential, State0),
   {reply, R, State0};
 handle_call({store_accounts, BankId, ClientId, FetchingAt, AccountsList}, _From, #state{ } = State0) ->
   R = do_store_accounts(BankId, ClientId, FetchingAt, AccountsList, State0),
@@ -84,6 +93,20 @@ do_get_clients(#state{ connection = Connection }) ->
       List1 = [ {{bank_id, BankIdVal}, {client_id, ClientIdVal}, {client_credential, binary_to_term(ClientCredentialBin)}} || {BankIdVal, ClientIdVal, ClientCredentialBin} <- List0 ],
       {value, List1}
   end.
+
+%%
+%% @doc Insert new client in database
+%%
+-spec do_insert_client(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any()), #state{}) -> ok | {error, already_inserted}.
+do_insert_client({bank_id, BankIdValue}, {client_id, ClientIdValue}, {client_credential, ClientCredentialValue}, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"INSERT INTO clients(bank_id, client_id, client_credential) VALUES($1,$2,$3);">>, [BankIdValue, ClientIdValue, term_to_binary(ClientCredentialValue)], Connection) of
+    {{insert, _, 1}, []} ->
+      ok;
+    {error, Error} ->
+      true = pgsql_error:is_integrity_constraint_violation(Error),
+      {error, already_inserted}
+  end.
+
 
 %%
 %% @doc Store accounts
