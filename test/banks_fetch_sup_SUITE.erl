@@ -6,13 +6,14 @@
 
 all() -> [should_returns_valid_specs, black_box_tests].
 
--define(DATABASE_PARAMS, {"banks_fetch","banks_fetch_user",""}).
+-define(DATABASE_PARAMS, {"banks_fetch_test","banks_fetch_user",""}).
 
 init_per_testcase(black_box_tests, Config) ->
   meck:new(banks_fetch_client_sup),
   meck:new(banks_fetch_storage),
   Config;
 init_per_testcase(_, Config) ->
+  application:set_env(banks_fetch, storage, ?DATABASE_PARAMS),
   Config.
 
 end_per_testcase(black_box_tests, _Config) ->

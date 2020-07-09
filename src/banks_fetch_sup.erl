@@ -13,12 +13,6 @@
 
 -define(SERVER, ?MODULE).
 
-% CREATE ROLE banks_fetch_user WITH LOGIN;
-% CREATE DATABASE banks_fetch;
-% GRANT ALL PRIVILEGES ON DATABASE banks_fetch TO banks_fetch_user;
-% ALTER DATABASE banks_fetch OWNER TO banks_fetch_user;
--define(DATABASE_PARAMS, {"banks_fetch","banks_fetch_user",""}).
-
 -spec start_link() -> supervisor:startlink_ret().
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
@@ -34,6 +28,7 @@ start_link() ->
 %%                  modules => modules()}   % optional
 -spec init([]) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
 init([]) ->
+    {ok, DatabaseParameters} = application:get_env(banks_fetch, storage),
     SupFlags = #{strategy => one_for_one,
                  intensity => 1,
                  period => 60},
@@ -47,7 +42,7 @@ init([]) ->
      },
     StorageSup = #{
       id => banks_fetch_storage,
-      start => {banks_fetch_storage, start_link, [?DATABASE_PARAMS]},
+      start => {banks_fetch_storage, start_link, [DatabaseParameters]},
       restart => permanent,
       shutdown => 1,
       type => worker,
