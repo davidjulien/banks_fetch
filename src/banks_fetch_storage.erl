@@ -1,6 +1,13 @@
 %%%-----------------------------------------------------------------------
 %% @doc banks_fetch_storage manages data storage in a PostgesSQL database.
 %% When the gen_server is started, it calls itself to init/upgrade database schema if necessary.
+%%
+%% Instructions in pgsql shell to initialize user and database:
+%% CREATE ROLE banks_fetch_user WITH LOGIN;
+%% CREATE DATABASE banks_fetch;
+%% GRANT ALL PRIVILEGES ON DATABASE banks_fetch TO banks_fetch_user;
+%% ALTER DATABASE banks_fetch OWNER TO banks_fetch_user;
+%%
 %% @end
 %%%-----------------------------------------------------------------------
 
