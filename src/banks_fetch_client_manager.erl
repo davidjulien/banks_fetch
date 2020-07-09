@@ -5,12 +5,18 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
 -export([
+         add_client/3,
+
          get_clients_pids/0
         ]).
 
 -record(state, {
           clients_pids :: [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), pid()}]
          }).
+
+-spec add_client(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())) -> ok | {error, already_defined}.
+add_client(BankId, ClientId, ClientCredential) ->
+  gen_server:call(?MODULE, {add_client, BankId, ClientId, ClientCredential}).
 
 get_clients_pids() ->
   gen_server:call(?MODULE, get_clients_pids).
@@ -23,6 +29,9 @@ init(none) ->
   self() ! load_clients,
   {ok, #state{ clients_pids = [] } }.
 
+handle_call({add_client, BankId, ClientId, ClientCredential}, _From, #state{} = State0) ->
+  {R, State1} = do_add_client(BankId, ClientId, ClientCredential, State0),
+  {reply, R, State1};
 handle_call(get_clients_pids, _From, #state{ clients_pids = ClientsPIDs } = State0) ->
   {reply, ClientsPIDs, State0}.
 
@@ -39,4 +48,15 @@ handle_info(load_clients, State0) ->
   {noreply, State1}.
 
 %%
+%% Internal functions
 %%
+
+-spec do_add_client(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any()), #state{}) -> {ok|{error, already_defined}, #state{}}.
+do_add_client(BankId, ClientId, ClientCredential, #state{ clients_pids = ClientsPids0 } = State0) ->
+  case banks_fetch_storage:insert_client(BankId, ClientId, ClientCredential) of
+    {error, already_inserted} -> {{error, already_defined}, State0};
+    ok ->
+      {ok, PID} = banks_fetch_client_server_sup:start_child(BankId, ClientId, ClientCredential),
+      State1 = State0#state{ clients_pids = [{BankId, ClientId, PID}|ClientsPids0] },
+      {ok, State1}
+  end.
