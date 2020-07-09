@@ -25,6 +25,8 @@
 
 -spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()}.
 connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBirthDate}}) ->
+  ok = httpc:set_options([{cookies,enabled}]),
+
   {ok, {{_Version0, 200, _ReasonPhrase0}, Headers0, _Body0}} = httpc:request(get, {"https://m.ing.fr/", ?HEADERS}, [{timeout,60000}], []),
   case lists:keyfind("ingdf-auth-token", 1, Headers0) of
     {_, AuthToken} -> {ok, {bank_auth, ?MODULE, AuthToken}};

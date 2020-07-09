@@ -127,6 +127,7 @@ end_per_testcase(should_fetch_transactions_single_case_without_net, _Config) ->
 
 should_not_authenticate_again_if_token_is_available(_Config) ->
   ct:comment("Connect to ing account"),
+  meck:expect(httpc, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(httpc, request,
               [
                {
@@ -158,7 +159,10 @@ should_not_authenticate_if_birthdate_and_client_id_mismatched(_Config) ->
                        }
                       ],
   NbrHttpcExpectations = length(HttpcExpectations),
+
+  meck:expect(httpc, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(httpc, request, HttpcExpectations),
+
   {error, invalid_birthdate} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
   true = meck:validate(httpc),
   true = meck:validate(banks_fetch_bank_ing_keypad),
@@ -181,6 +185,7 @@ should_not_authenticate_if_password_is_invalid(_Config) ->
                                                                ?CLIENT_PWD = MockClientPassword,
                                                                ClickPositions
                                                            end),
+
   HttpcExpectations = [
                        % Main page
                        { [get, {"https://m.ing.fr/", '_'}, '_', []],
@@ -209,8 +214,12 @@ should_not_authenticate_if_password_is_invalid(_Config) ->
                        }
                       ],
   NbrHttpcExpectations = length(HttpcExpectations),
+
+  meck:expect(httpc, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(httpc, request, HttpcExpectations),
+
   {error, invalid_password} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+
   true = meck:validate(httpc),
   true = meck:validate(banks_fetch_bank_ing_keypad),
   NbrHttpcExpectations = meck:num_calls(httpc, request, '_'),
@@ -237,6 +246,7 @@ should_connect_without_net_keypad(_Config) ->
                                                                ?CLIENT_PWD = MockClientPassword,
                                                                ClickPositions
                                                            end),
+
   HttpcExpectations = [
                        % Main page
                        { [get, {"https://m.ing.fr/", '_'}, '_', []],
@@ -264,8 +274,12 @@ should_connect_without_net_keypad(_Config) ->
                        }
                       ],
   NbrHttpcExpectations = length(HttpcExpectations),
+
+  meck:expect(httpc, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(httpc, request, HttpcExpectations),
+
   {ok, {bank_auth, banks_fetch_bank_ing, AuthToken}} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+
   true = meck:validate(httpc),
   true = meck:validate(banks_fetch_bank_ing_keypad),
   NbrHttpcExpectations = meck:num_calls(httpc, request, '_'),
@@ -309,8 +323,12 @@ should_connect_without_net(Config) ->
                        }
                       ],
   NbrHttpcExpectations = length(HttpcExpectations),
+
+  meck:expect(httpc, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(httpc, request, HttpcExpectations),
+
   {ok, {bank_auth, banks_fetch_bank_ing, AuthToken}} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+
   true = meck:validate(httpc),
   NbrHttpcExpectations = meck:num_calls(httpc, request, '_'),
 
@@ -326,6 +344,7 @@ should_fetch_accounts_without_net(Config) ->
 
   FakeToken = fake_authtoken,
 
+  meck:expect(httpc, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(httpc, request, fun(MockMethod, {MockURL, MockHeaders}, MockHTTPOptions, MockOptions) ->
                                   get = MockMethod,
                                   "https://m.ing.fr/secure/api-v1/accounts" = MockURL,
@@ -379,6 +398,7 @@ should_fetch_transactions_without_net(Config) ->
                      ],
   NbrHttpcExpectations = length(HttpcExpectations),
 
+  meck:expect(httpc, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(httpc, request, HttpcExpectations),
 
   ct:comment("Fetch transactions"),
@@ -443,6 +463,7 @@ should_fetch_transactions_until_without_net(Config) ->
                      ],
   NbrHttpcExpectations = length(HttpcExpectations),
 
+  meck:expect(httpc, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(httpc, request, HttpcExpectations),
 
   ct:comment("Fetch transactions"),
@@ -477,6 +498,8 @@ should_fetch_transactions_single_case_without_net(_Config) ->
 
   FakeToken = fake_authtoken,
   FakeAccountId = <<"FAKEACCOUNT">>,
+
+  meck:expect(httpc, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
 
   URL_1 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/0/limit/50",
   URL_2 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/12875/limit/50",
@@ -523,20 +546,19 @@ test_with_real_credential(Config) ->
     {error, enoent} ->
       ct:comment("No credential, no real test"),
       ok;
-    {ok, [{ClientId, {ClientPwd, ClientBirthDate}}]} ->
+    {ok, [{ClientId, ClientCredential}]} ->
       ct:comment("Connect to ing account"),
-      ok = httpc:set_options([{cookies,enabled}]),
-      {ok, Auth} = banks_fetch_bank_ing:connect(ClientId, {ClientPwd, ClientBirthDate}),
+      {ok, Auth} = banks_fetch_bank_ing:connect(ClientId, ClientCredential),
 
       {bank_auth, banks_fetch_bank_ing, _AuthToken} = Auth,
 
       ct:comment("Fetch accounts"),
-      {_, Accounts} = banks_fetch_bank_ing:fetch_accounts(Auth),
+      {ok, Accounts} = banks_fetch_bank_ing:fetch_accounts(Auth),
       true = length(Accounts) > 0,
 
       lists:foreach(fun(#{ id := AccountId, type := Type } = Account) ->
                         ct:comment("Fetch transactions for account ~1000p", [Account]),
-                        Transactions = banks_fetch_bank_ing:fetch_transactions(Auth, AccountId, first_call),
+                        {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions(Auth, AccountId, first_call),
                         NbrTransactions = length(Transactions),
                         ct:pal("~p : ~B transactions fetched", [Account, NbrTransactions]),
                         if Type =/= home_loan -> true = NbrTransactions > 0;
