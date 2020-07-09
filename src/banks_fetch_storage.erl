@@ -17,6 +17,7 @@
          insert_client/3,
 
          store_accounts/4,
+         get_accounts/2,
          stop/0
         ]).
 
@@ -39,6 +40,10 @@ insert_client(BankId, ClientId, ClientCredential) ->
 store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
   gen_server:call(?MODULE, {store_accounts, BankId, ClientId, FetchingAt, AccountsList}).
 
+-spec get_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id()) -> {ok, [banks_fetch_bank:account()]}.
+get_accounts(BankId, ClientId) ->
+  gen_server:call(?MODULE, {get_accounts, BankId, ClientId}).
+
 -spec stop() -> ok.
 stop() ->
   gen_server:call(?MODULE, stop).
@@ -60,6 +65,9 @@ handle_call({insert_client, BankId, ClientId, ClientCredential},  _From, #state{
   {reply, R, State0};
 handle_call({store_accounts, BankId, ClientId, FetchingAt, AccountsList}, _From, #state{ } = State0) ->
   R = do_store_accounts(BankId, ClientId, FetchingAt, AccountsList, State0),
+  {reply, R, State0};
+handle_call({get_accounts, BankId, ClientId}, _From, #state{ } = State0) ->
+  R = do_get_accounts(BankId, ClientId, State0),
   {reply, R, State0};
 handle_call(stop, _From, State0) ->
   {stop, normal, stopped, State0}.
@@ -128,6 +136,15 @@ do_store_accounts_aux(BankId, ClientId, FetchingAt, [#{ id := AccountId, balance
     {{insert,_,1},[]} ->
       do_store_accounts_aux(BankId, ClientId, FetchingAt, NextAccounts, Connection)
   end.
+
+%%
+%% @doc Get accounts
+%%
+-spec do_get_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), #state{}) -> {ok, [banks_fetch_bank:account()]}.
+do_get_accounts(BankId, ClientId, #state{ connection = Connection }) ->
+  {{select, _Nbr}, Accounts} = pgsql_connection:simple_query(<<"SELECT distinct on (bank_id, client_id, account_id) bank_id, client_id, account_id, balance, number, owner, ownership, type, name FROM accounts ORDER BY bank_id, client_id, account_id, fetching_at DESC">>, [BankId, ClientId], Connection),
+  {ok, [#{ id => AccountId, balance => Balance, number => Number, owner => Owner, ownership => binary_to_atom(Ownership), type => binary_to_atom(Type), name => Name } 
+        || {_BankId, _ClientId, AccountId, Balance, Number, Owner, {e_account_ownership, Ownership}, {e_account_type, Type}, Name} <- Accounts ]}.
 
 
 %%

@@ -26,7 +26,8 @@
          should_db_get_clients/1,
          should_db_insert_client/1,
          should_db_not_insert_client_already_existing/1,
-         should_db_store_accounts/1
+         should_db_store_accounts/1,
+         should_db_get_accounts/1
         ]).
 
 -define(DB_NAME, "banks_fetch_test").
@@ -60,7 +61,7 @@ all() ->
 groups() ->
   [
    {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_insert_client, should_nodb_store_accounts ]},
-   {tests_with_db, [], [ should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing, should_db_store_accounts ]}
+   {tests_with_db, [], [ should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing, should_db_store_accounts, should_db_get_accounts ]}
   ].
 
 % Init per group
@@ -113,6 +114,10 @@ init_per_testcase(should_db_store_accounts, Config) ->
   {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   [{storage_pid, PID}|Config];
 
+init_per_testcase(should_db_get_accounts, Config) ->
+  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
+  [{storage_pid, PID}|Config];
+
 init_per_testcase(_, Config) ->
   Config.
 
@@ -127,6 +132,9 @@ end_per_testcase(should_db_not_insert_client_already_existing, _Config) ->
   banks_fetch_storage:stop(),
   ok;
 end_per_testcase(should_db_store_accounts, _Config) ->
+  banks_fetch_storage:stop(),
+  ok;
+end_per_testcase(should_db_get_accounts, _Config) ->
   banks_fetch_storage:stop(),
   ok;
 end_per_testcase(_, _Config) ->
@@ -434,5 +442,17 @@ should_db_store_accounts(Config) ->
   ExpectedDataList = [ {?BANK_ID_1, ?CLIENT_ID_1, ?FETCHING_AT_1, ExpectedAccountId, ExpectedBalance, ExpectedNumber, ExpectedOwner, {e_account_ownership, atom_to_binary(ExpectedOwnerShip,'utf8')}, {e_account_type, atom_to_binary(ExpectedType,'utf8')}, ExpectedName} || #{ id := ExpectedAccountId, balance := ExpectedBalance, number := ExpectedNumber, owner := ExpectedOwner, ownership := ExpectedOwnerShip, type := ExpectedType, name := ExpectedName } <- ?ACCOUNTS_1 ],
 
   lists:foreach(fun({Expected, Account}) -> Expected = Account end, lists:zip(ExpectedDataList, AccountsList)),
+
+  ok.
+
+should_db_get_accounts(_Config) ->
+  ct:comment("Get accounts"),
+  ExpectedAccounts = ?ACCOUNTS_1,
+  NbrExpectedAccounts = length(ExpectedAccounts),
+  {ok, Accounts} = banks_fetch_storage:get_accounts(?BANK_ID_1, ?CLIENT_ID_1),
+
+  ct:comment("Verify returned accounts"),
+  NbrExpectedAccounts = length(Accounts),
+  ExpectedAccounts = Accounts,
 
   ok.
