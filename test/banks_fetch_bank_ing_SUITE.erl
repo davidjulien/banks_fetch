@@ -40,7 +40,13 @@ all() ->
   ].
 
 init_per_testcase(test_with_real_credential, Config) ->
-  Config;
+  ct:comment("Load credential"),
+  case file:consult(filename:join([?config(data_dir, Config), "ing_real_credential.hrl"])) of
+    {error, enoent} ->
+      {skip, "You may add a banks_fetch_bank_ing_SUITE_data/ing_real_credential.hrl file with your ing credential to launch a test with a real connection"};
+    {ok, [{ClientId, ClientCredential}]} ->
+      [{client_info, {ClientId, ClientCredential}} | Config]
+  end;
 
 init_per_testcase(should_connect_without_net_keypad, Config) ->
   meck:new(httpc),
@@ -541,30 +547,24 @@ should_fetch_transactions_single_case_without_net(_Config) ->
 %% Test with real credential
 %%
 test_with_real_credential(Config) ->
-  ct:comment("Load credential"),
-  case file:consult(filename:join([?config(data_dir, Config), "ing_real_credential.hrl"])) of
-    {error, enoent} ->
-      ct:comment("No credential, no real test"),
-      ok;
-    {ok, [{ClientId, ClientCredential}]} ->
-      ct:comment("Connect to ing account"),
-      {ok, Auth} = banks_fetch_bank_ing:connect(ClientId, ClientCredential),
+  {client_info, {ClientId, ClientCredential}} = lists:keyfind(client_info,1, Config),
 
-      {bank_auth, banks_fetch_bank_ing, _AuthToken} = Auth,
+  ct:comment("Connect to ing account"),
+  {ok, Auth} = banks_fetch_bank_ing:connect(ClientId, ClientCredential),
 
-      ct:comment("Fetch accounts"),
-      {ok, Accounts} = banks_fetch_bank_ing:fetch_accounts(Auth),
-      true = length(Accounts) > 0,
+  {bank_auth, banks_fetch_bank_ing, _AuthToken} = Auth,
 
-      lists:foreach(fun(#{ id := AccountId, type := Type } = Account) ->
-                        ct:comment("Fetch transactions for account ~1000p", [Account]),
-                        {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions(Auth, AccountId, first_call),
-                        NbrTransactions = length(Transactions),
-                        ct:pal("~p : ~B transactions fetched", [Account, NbrTransactions]),
-                        if Type =/= home_loan -> true = NbrTransactions > 0;
-                           true -> ok
-                        end
-                    end, Accounts),
+  ct:comment("Fetch accounts"),
+  {ok, Accounts} = banks_fetch_bank_ing:fetch_accounts(Auth),
+  true = length(Accounts) > 0,
 
-      ok
-  end.
+  lists:foreach(fun(#{ id := AccountId, type := Type } = Account) ->
+                    ct:comment("Fetch transactions for account ~1000p", [Account]),
+                    {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions(Auth, AccountId, first_call),
+                    NbrTransactions = length(Transactions),
+                    ct:pal("~p : ~B transactions fetched", [Account, NbrTransactions]),
+                    if Type =/= home_loan -> true = NbrTransactions > 0;
+                       true -> ok
+                    end
+                end, Accounts),
+  ok.
