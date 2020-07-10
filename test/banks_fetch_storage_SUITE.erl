@@ -34,7 +34,7 @@
 -define(DB_USER, "banks_fetch_test").
 -define(DB_PASSWORD, "banks_fetch_test").
 
--define(BANK_ID_1, <<"bank1">>).
+-define(BANK_ID_1, <<"ing">>).
 -define(CLIENT_ID_1, <<"client1">>).
 -define(CLIENT_CREDENTIAL_1, {<<"credential1">>}).
 -define(FETCHING_AT_1, {{2020,7,7},{12,0,0}}).
@@ -43,11 +43,11 @@
                      #{ id => <<"ACCOUNT2">>, balance => 4321.78, number => <<"NUMBER2">>, owner => <<"OWNER">>, ownership => single, type => savings, name => <<"LDD">> }
                     ]).
 
--define(BANK_ID_2, <<"bank2">>).
+-define(BANK_ID_2, <<"ing">>).
 -define(CLIENT_ID_2, <<"client2">>).
 -define(CLIENT_CREDENTIAL_2, {<<"credential2">>}).
 
--define(BANK_ID_3, <<"bank3">>).
+-define(BANK_ID_3, <<"ing">>).
 -define(CLIENT_ID_3, <<"client3">>).
 -define(CLIENT_CREDENTIAL_3, {<<"credential3">>}).
 
@@ -203,7 +203,7 @@ should_nodb_start_with_db_upgrade(_Config) ->
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   meck:wait(pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
-  9 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  10 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 
