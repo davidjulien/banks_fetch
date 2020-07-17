@@ -6,6 +6,12 @@
 -module(banks_fetch_bank).
 
 -export([
+         setup/0
+        ]).
+
+%% Callback functions
+-export([
+         setup/1,
          connect/3,
          fetch_accounts/2,
          fetch_transactions/4
@@ -46,11 +52,16 @@
                           type => transaction_type()
                         }.
 
-%% Callbacks required
+%% Callbacks required by all modules implementing banks_fetch_bank behavior
 
+-callback setup() -> ok.
 -callback connect(ClientId :: client_id(), ClientCredential :: client_credential(_)) -> {ok, BankAuth :: bank_auth()}.
 -callback fetch_accounts(BankAuth :: bank_auth()) -> {ok, Accounts :: [account()]}.
 -callback fetch_transactions(BankAuth :: bank_auth(), AcountId :: unicode:unicode_binary(), FirstCallOrLastFetchedTransactionId :: first_call | unicode:unicode_binary()) -> {ok, Transactions :: [banks_fetch_bank:transaction()]}.
+
+-spec setup(BankModule :: module()) -> ok.
+setup(BankModule) ->
+  BankModule:setup().
 
 -spec connect(BankModule :: module(), ClientId :: client_id(), ClientCredential :: client_credential(_)) -> {ok, BankAuth :: bank_auth()}.
 connect(BankModule, ClientId, ClientCredential) ->
@@ -64,3 +75,12 @@ fetch_accounts(BankModule, BankAuth) ->
   {ok, Transactions :: [banks_fetch_bank:transaction()]}.
 fetch_transactions(Module, BankAuth, AccountId, FirstCallOrLastFetchedTransactionId) ->
   Module:fetch_transactions(BankAuth, AccountId, FirstCallOrLastFetchedTransactionId).
+
+%%
+%% Common functions for all banks modules
+%%
+
+% Setup all banks modules
+-spec setup() -> ok.
+setup() ->
+  banks_fetch_bank_ing:setup().

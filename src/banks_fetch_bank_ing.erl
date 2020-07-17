@@ -7,6 +7,7 @@
 -behaviour(banks_fetch_bank).
 
 -export([
+         setup/0,
          connect/2,
          fetch_accounts/1,
          fetch_transactions/3
@@ -22,6 +23,11 @@
 
 -type ing_bank_auth() :: {bank_auth, ?MODULE, string()}.
 -type ing_client_credential() :: banks_fetch_bank:client_credential({string(), string()}).
+
+-spec setup() -> ok.
+setup() ->
+  banks_fetch_http:setup_monitoring("m.ing.fr"),
+  ok.
 
 -spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()}.
 connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBirthDate}}) ->

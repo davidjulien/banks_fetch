@@ -11,7 +11,10 @@
 
 -spec start(normal | {takeover, node()} | {failover, node()}, any()) -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
 start(_StartType, _StartArgs) ->
-    banks_fetch_sup:start_link().
+  banks_fetch_http:setup(),
+  banks_fetch_bank:setup(),
+
+  banks_fetch_sup:start_link().
 
 -spec stop(any()) -> ok.
 stop(_State) ->

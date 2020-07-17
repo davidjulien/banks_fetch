@@ -28,6 +28,9 @@ init_per_testcase(should_fetch_data_from_a_bank_and_store_them, Config) ->
       ct:comment("Start pgsql"),
       ok = application:start(pgsql),
 
+      ct:comment("Start prometheus"),
+      ok = application:start(prometheus),
+
       ct:comment("Reset test database"),
       Connection = pgsql_connection:open("127.0.0.1", "postgres", ?DB_USER, ?DB_PASSWORD),
 
@@ -42,6 +45,9 @@ init_per_testcase(should_fetch_data_from_a_bank_and_store_them, Config) ->
       ct:comment("Start banks_fetch application"),
       ok = application:start(banks_fetch),
 
+      banks_fetch_http:setup(),
+      banks_fetch_bank_ing:setup(),
+
       % Mecking banks_fetch_storage allows to wait for store_accounts call
       ok = meck:new(banks_fetch_storage, [passthrough]),
 
@@ -51,6 +57,7 @@ init_per_testcase(should_fetch_data_from_a_bank_and_store_them, Config) ->
 end_per_testcase(should_fetch_data_from_a_bank_and_store_them, _Config) ->
   meck:unload(banks_fetch_storage),
   application:stop(banks_fetch),
+  application:stop(prometheus),
   application:stop(pgsql),
   ok.
 

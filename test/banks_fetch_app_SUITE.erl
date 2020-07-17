@@ -7,10 +7,12 @@
 all() -> [should_launch_app_supervisor].
 
 init_per_testcase(should_launch_app_supervisor, Config) ->
+  application:start(prometheus),
   meck:new(banks_fetch_sup),
   Config.
 
 end_per_testcase(should_launch_app_supervisor, _Config) ->
+  application:stop(prometheus),
   meck:unload(banks_fetch_sup).
 
 should_launch_app_supervisor(_Config) ->

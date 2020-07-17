@@ -45,6 +45,7 @@ init_per_testcase(test_with_real_credential, Config) ->
     {error, enoent} ->
       {skip, "You may add a banks_fetch_bank_ing_SUITE_data/ing_real_credential.hrl file with your ing credential to launch a test with a real connection"};
     {ok, [{ClientId, ClientCredential}]} ->
+      ok = application:start(prometheus),
       [{client_info, {ClientId, ClientCredential}} | Config]
   end;
 
@@ -84,6 +85,7 @@ init_per_testcase(should_fetch_transactions_single_case_without_net, Config) ->
   Config.
 
 end_per_testcase(test_with_real_credential, _Config) ->
+  application:stop(prometheus),
   ok;
 
 end_per_testcase(should_connect_without_net_keypad, _Config) ->
@@ -548,6 +550,10 @@ should_fetch_transactions_single_case_without_net(_Config) ->
 %%
 test_with_real_credential(Config) ->
   {client_info, {ClientId, ClientCredential}} = lists:keyfind(client_info,1, Config),
+
+  ct:comment("Setup"),
+  ok = banks_fetch_http:setup(),
+  ok = banks_fetch_bank:setup(banks_fetch_bank_ing),
 
   ct:comment("Connect to ing account"),
   {ok, Auth} = banks_fetch_bank_ing:connect(ClientId, ClientCredential),
