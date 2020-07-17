@@ -12,7 +12,7 @@ all() ->
    {group, ing_keypads}
   ].
 
-groups() -> 
+groups() ->
   [
    {ing_keypads, [parallel], [ should_decode_ing_keypads_1, should_decode_ing_keypads_2, should_decode_ing_keypads_3 ]}
   ].
