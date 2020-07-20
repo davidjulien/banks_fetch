@@ -1,7 +1,11 @@
 -module(banks_fetch_client_server_SUITE).
 -include_lib("common_test/include/ct.hrl").
 -export([all/0, init_per_testcase/2, end_per_testcase/2 ]).
--export([should_fetch_data_without_bank_storage/1, should_handle_cast_do_nothing/1]).
+-export([
+         should_handle_cast_do_nothing/1,
+         should_fetch_data_without_bank_storage/1,
+         should_not_fetch_data_if_connection_failed_without_bank_storage/1
+        ]).
 
 -define(BANK_ID, {bank_id, <<"ing">>}).
 -define(CLIENT_ID, {client_id, <<"123456789">>}).
@@ -9,7 +13,8 @@
 
 all() -> [
           should_handle_cast_do_nothing,
-          should_fetch_data_without_bank_storage
+          should_fetch_data_without_bank_storage,
+          should_not_fetch_data_if_connection_failed_without_bank_storage
          ].
 
 init_per_testcase(should_handle_cast_do_nothing, Config) ->
@@ -17,11 +22,18 @@ init_per_testcase(should_handle_cast_do_nothing, Config) ->
 init_per_testcase(should_fetch_data_without_bank_storage, Config) ->
   meck:new(banks_fetch_bank_ing),
   meck:new(banks_fetch_storage),
+  Config;
+init_per_testcase(should_not_fetch_data_if_connection_failed_without_bank_storage, Config) ->
+  meck:new(banks_fetch_bank_ing),
+  meck:new(banks_fetch_storage),
   Config.
 
 end_per_testcase(should_handle_cast_do_nothing, _Config) ->
   ok;
 end_per_testcase(should_fetch_data_without_bank_storage, _Config) ->
+  meck:unload(banks_fetch_storage),
+  meck:unload(banks_fetch_bank_ing);
+end_per_testcase(should_not_fetch_data_if_connection_failed_without_bank_storage, _Config) ->
   meck:unload(banks_fetch_storage),
   meck:unload(banks_fetch_bank_ing).
 
@@ -62,5 +74,30 @@ should_fetch_data_without_bank_storage(_Config) ->
   ct:comment("Verify that client server contain fetched accounts"),
   NewAccounts = banks_fetch_client_server:accounts(BanksPID),
   FakeAccounts = NewAccounts,
+
+  ok.
+
+should_not_fetch_data_if_connection_failed_without_bank_storage(_Config) ->
+  meck:expect(banks_fetch_bank_ing, connect, fun(MockClientId, MockCredential) ->
+                                                 ?CLIENT_ID = MockClientId,
+                                                 ?CLIENT_CREDENTIAL = MockCredential,
+                                                 {error, invalid_credential} end),
+
+  {ok, BanksPID} = banks_fetch_client_server:start_link(?BANK_ID, ?CLIENT_ID, ?CLIENT_CREDENTIAL),
+
+  ct:comment("Verify that we don't try to fetch accounts"),
+  try
+    meck:wait(banks_fetch_bank_ing, fetch_acccounts, '_', 1000)
+  catch error:timeout ->
+          ok
+  end,
+
+  ct:comment("Verify that expected functions has been called"),
+  true = meck:validate(banks_fetch_bank_ing),
+  true = meck:validate(banks_fetch_storage),
+
+  ct:comment("Verify that client server does not contain accounts"),
+  NewAccounts = banks_fetch_client_server:accounts(BanksPID),
+  [] = NewAccounts,
 
   ok.
