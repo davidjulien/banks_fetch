@@ -5,6 +5,7 @@
          init_per_testcase/2,
          end_per_testcase/2,
 
+         should_call_setup/1,
          should_call_connect/1,
          should_call_fetch_accounts/1,
          should_call_fetch_transactions/1
@@ -12,6 +13,7 @@
 
 all() ->
   [
+   should_call_setup,
    should_call_connect,
    should_call_fetch_accounts,
    should_call_fetch_transactions
@@ -29,6 +31,17 @@ end_per_testcase(_, _Config) ->
 
 -define(CLIENT_ID, {client_id, <<"client1">>}).
 -define(CLIENT_CREDENTIAL, {client_credential, <<"credential1">>}).
+
+should_call_setup(_Config) ->
+  meck:expect(banks_fetch_bank_test, setup, fun() -> ok end),
+
+  ct:comment("Verify setup"),
+  ok = banks_fetch_bank:setup(banks_fetch_bank_test),
+
+  true = meck:validate(banks_fetch_bank_test),
+
+  ok.
+
 
 should_call_connect(_Config) ->
   BankAuth = {bank_auth, banks_fetch_bank_test, "AUTH_TOKEN"},
