@@ -18,6 +18,7 @@
         ]).
 
 -export_type([
+              connection_error/0,
               bank_id/0,
               client_id/0,
               client_credential/1,
@@ -52,10 +53,12 @@
                           type => transaction_type()
                         }.
 
+-type connection_error() :: invalid_credential | account_locked.
+
 %% Callbacks required by all modules implementing banks_fetch_bank behavior
 
 -callback setup() -> ok.
--callback connect(ClientId :: client_id(), ClientCredential :: client_credential(_)) -> {ok, BankAuth :: bank_auth()}.
+-callback connect(ClientId :: client_id(), ClientCredential :: client_credential(_)) -> {ok, BankAuth :: bank_auth()} | {error, connection_error()}.
 -callback fetch_accounts(BankAuth :: bank_auth()) -> {ok, Accounts :: [account()]}.
 -callback fetch_transactions(BankAuth :: bank_auth(), AcountId :: unicode:unicode_binary(), FirstCallOrLastFetchedTransactionId :: first_call | unicode:unicode_binary()) -> {ok, Transactions :: [banks_fetch_bank:transaction()]}.
 
@@ -63,7 +66,7 @@
 setup(BankModule) ->
   BankModule:setup().
 
--spec connect(BankModule :: module(), ClientId :: client_id(), ClientCredential :: client_credential(_)) -> {ok, BankAuth :: bank_auth()}.
+-spec connect(BankModule :: module(), ClientId :: client_id(), ClientCredential :: client_credential(_)) -> {ok, BankAuth :: bank_auth()} | {error, connection_error()}.
 connect(BankModule, ClientId, ClientCredential) ->
   BankModule:connect(ClientId, ClientCredential).
 

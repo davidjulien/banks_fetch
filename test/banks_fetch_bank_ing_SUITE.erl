@@ -8,6 +8,7 @@
          should_not_authenticate_again_if_token_is_available/1,
          should_not_authenticate_if_birthdate_and_client_id_mismatched/1,
          should_not_authenticate_if_password_is_invalid/1,
+         should_not_authenticate_if_account_is_locked/1,
 
          should_connect_without_net_keypad/1,
          should_connect_without_net/1,
@@ -26,6 +27,7 @@ all() ->
    should_not_authenticate_again_if_token_is_available,
    should_not_authenticate_if_birthdate_and_client_id_mismatched,
    should_not_authenticate_if_password_is_invalid,
+   should_not_authenticate_if_account_is_locked,
 
 
    should_connect_without_net_keypad,
@@ -69,6 +71,10 @@ init_per_testcase(should_not_authenticate_if_password_is_invalid, Config) ->
   meck:new(banks_fetch_http),
   meck:new(banks_fetch_bank_ing_keypad),
   Config;
+init_per_testcase(should_not_authenticate_if_account_is_locked, Config) ->
+  meck:new(banks_fetch_http),
+  meck:new(banks_fetch_bank_ing_keypad),
+  Config;
 
 init_per_testcase(should_fetch_accounts_without_net, Config) ->
   meck:new(banks_fetch_http),
@@ -105,6 +111,10 @@ end_per_testcase(should_not_authenticate_if_birthdate_and_client_id_mismatched, 
   meck:unload(banks_fetch_http),
   ok;
 end_per_testcase(should_not_authenticate_if_password_is_invalid, _Config) ->
+  meck:unload(banks_fetch_bank_ing_keypad),
+  meck:unload(banks_fetch_http),
+  ok;
+end_per_testcase(should_not_authenticate_if_account_is_locked, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
   meck:unload(banks_fetch_http),
   ok;
@@ -171,7 +181,7 @@ should_not_authenticate_if_birthdate_and_client_id_mismatched(_Config) ->
   meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(banks_fetch_http, request, HttpExpectations),
 
-  {error, invalid_birthdate} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+  {error, invalid_credential} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
   true = meck:validate(banks_fetch_http),
   true = meck:validate(banks_fetch_bank_ing_keypad),
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
@@ -226,13 +236,42 @@ should_not_authenticate_if_password_is_invalid(_Config) ->
   meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(banks_fetch_http, request, HttpExpectations),
 
-  {error, invalid_password} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+  {error, invalid_credential} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
 
   true = meck:validate(banks_fetch_http),
   true = meck:validate(banks_fetch_bank_ing_keypad),
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
 
   ok.
+
+should_not_authenticate_if_account_is_locked(_Config) ->
+  ct:comment("Connect to ing account"),
+
+  HttpExpectations = [
+                       % Main page
+                       { [get, {"https://m.ing.fr/", '_'}, '_', []],
+                         {ok, {{'fakeversion', 200, 'fakereason'}, [], 'fakebody'}}
+                       },
+                       % Login
+                       {
+                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(?CLIENT_ID_VAL)++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
+                        {ok,{{"HTTP/1.1",412,"Precondition Failed"},
+                             fake_headers,
+                             "{\"error\":{\"code\":\"SCA.ACCOUNT_LOCKED\",\"message\":\"Votre compte est bloqué.\",\"values\":{}}}"}}
+                       }
+                      ],
+  NbrHttpExpectations = length(HttpExpectations),
+
+  meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
+  meck:expect(banks_fetch_http, request, HttpExpectations),
+
+  {error, account_locked} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+  true = meck:validate(banks_fetch_http),
+  true = meck:validate(banks_fetch_bank_ing_keypad),
+  NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+
+  ok.
+
 
 %%
 %% Should connect cases

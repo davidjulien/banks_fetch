@@ -29,7 +29,7 @@ setup() ->
   banks_fetch_http:setup_monitoring("m.ing.fr"),
   ok.
 
--spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()}.
+-spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()} | {error, banks_fetch_bank:connection_error()}.
 connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBirthDate}}) ->
   ok = banks_fetch_http:set_options([{cookies,enabled}]),
 
@@ -69,8 +69,9 @@ decode_body_error(BodyError) ->
   {_, Error} = lists:keyfind(<<"error">>, 1, JSON),
   {_, Code} = lists:keyfind(<<"code">>, 1, Error),
   case Code of
-    <<"AUTHENTICATION.INVALID_CIF_AND_BIRTHDATE_COMBINATION">> -> {error, invalid_birthdate};
-    <<"SCA.WRONG_AUTHENTICATION">> -> {error, invalid_password}
+    <<"AUTHENTICATION.INVALID_CIF_AND_BIRTHDATE_COMBINATION">> -> {error, invalid_credential};
+    <<"SCA.WRONG_AUTHENTICATION">> -> {error, invalid_credential};
+    <<"SCA.ACCOUNT_LOCKED">> -> {error, account_locked}
   end.
 
 %%
