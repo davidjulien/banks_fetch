@@ -48,7 +48,7 @@ rebar3 shell
 banks_fetch_client_manager:add_client({bank_id, <<"ing">>}, {client_id, <<"YOUR_CLIENT_ID">>}, {client_credential, {"YOUR_PASSWORD","YOUR_BIRTHDATE_DDMMYYYY"}}).
 ```
 
-It will connect to your bank and fetch accounts data (only one time). Credential (and accounts data) will be stored in postgres database and client will be started again automatically each time rebar shell is started.
+It will connect to your bank and fetch accounts data every 4 hours. Credential (and accounts data) will be stored in postgres database and client will be started again automatically each time rebar shell is started.
 
 Tests
 -----

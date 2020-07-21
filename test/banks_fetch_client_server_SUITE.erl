@@ -22,18 +22,22 @@ init_per_testcase(should_handle_cast_do_nothing, Config) ->
 init_per_testcase(should_fetch_data_without_bank_storage, Config) ->
   meck:new(banks_fetch_bank_ing),
   meck:new(banks_fetch_storage),
+  meck:new(timer, [unstick]), % because timer resides in sticky dir
   Config;
 init_per_testcase(should_not_fetch_data_if_connection_failed_without_bank_storage, Config) ->
   meck:new(banks_fetch_bank_ing),
   meck:new(banks_fetch_storage),
+  meck:new(timer, [unstick]), % because timer resides in sticky dir
   Config.
 
 end_per_testcase(should_handle_cast_do_nothing, _Config) ->
   ok;
 end_per_testcase(should_fetch_data_without_bank_storage, _Config) ->
+  meck:unload(timer),
   meck:unload(banks_fetch_storage),
   meck:unload(banks_fetch_bank_ing);
 end_per_testcase(should_not_fetch_data_if_connection_failed_without_bank_storage, _Config) ->
+  meck:unload(timer),
   meck:unload(banks_fetch_storage),
   meck:unload(banks_fetch_bank_ing).
 
@@ -51,6 +55,11 @@ should_fetch_data_without_bank_storage(_Config) ->
                                                         fake_auth = MockAuth,
                                                         {ok, FakeAccounts}
                                                     end),
+  meck:expect(timer, send_after, fun(MockTime, MockCall) ->
+                                     4 * 60 * 60 * 1000 = MockTime,
+                                     fetch_data = MockCall,
+                                     {ok, tref}
+                                 end),
   BeforeFetchingDateTime = calendar:universal_time(),
   meck:expect(banks_fetch_storage, store_accounts, fun(MockBankId, MockClientId, MockFetchingAt, MockAccounts) ->
                                                        ?BANK_ID = MockBankId,
@@ -70,6 +79,7 @@ should_fetch_data_without_bank_storage(_Config) ->
   ct:comment("Verify that expected functions has been called"),
   true = meck:validate(banks_fetch_bank_ing),
   true = meck:validate(banks_fetch_storage),
+  true = meck:validate(timer),
 
   ct:comment("Verify that client server contain fetched accounts"),
   NewAccounts = banks_fetch_client_server:accounts(BanksPID),
@@ -95,6 +105,7 @@ should_not_fetch_data_if_connection_failed_without_bank_storage(_Config) ->
   ct:comment("Verify that expected functions has been called"),
   true = meck:validate(banks_fetch_bank_ing),
   true = meck:validate(banks_fetch_storage),
+  true = meck:validate(timer),
 
   ct:comment("Verify that client server does not contain accounts"),
   NewAccounts = banks_fetch_client_server:accounts(BanksPID),

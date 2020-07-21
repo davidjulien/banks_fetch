@@ -56,5 +56,7 @@ do_fetch_data(#state{ bank_module = BankModule, bank_id = BankId, client_id = Cl
       {ok, Accounts} =  banks_fetch_bank:fetch_accounts(BankModule, Auth),
       banks_fetch_storage:store_accounts(BankId, ClientId, FetchingAt, Accounts),
 
+      {ok, _} = timer:send_after(4*60*60*1000, fetch_data),
+
       State0#state{ accounts = Accounts }
   end.
