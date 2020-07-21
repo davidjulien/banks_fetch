@@ -62,32 +62,40 @@ init_per_testcase(should_connect_without_net, Config) ->
 init_per_testcase(should_not_authenticate_again_if_token_is_available, Config) ->
   meck:new(banks_fetch_http),
   meck:new(banks_fetch_bank_ing_keypad),
+  meck:new(prometheus_counter),
   Config;
 init_per_testcase(should_not_authenticate_if_birthdate_and_client_id_mismatched, Config) ->
   meck:new(banks_fetch_http),
   meck:new(banks_fetch_bank_ing_keypad),
+  meck:new(prometheus_counter),
   Config;
 init_per_testcase(should_not_authenticate_if_password_is_invalid, Config) ->
   meck:new(banks_fetch_http),
   meck:new(banks_fetch_bank_ing_keypad),
+  meck:new(prometheus_counter),
   Config;
 init_per_testcase(should_not_authenticate_if_account_is_locked, Config) ->
   meck:new(banks_fetch_http),
   meck:new(banks_fetch_bank_ing_keypad),
+  meck:new(prometheus_counter),
   Config;
 
 init_per_testcase(should_fetch_accounts_without_net, Config) ->
   meck:new(banks_fetch_http),
+  meck:new(prometheus_counter),
   Config;
 
 init_per_testcase(should_fetch_transactions_without_net, Config) ->
   meck:new(banks_fetch_http),
+  meck:new(prometheus_counter),
   Config;
 init_per_testcase(should_fetch_transactions_until_without_net, Config) ->
   meck:new(banks_fetch_http),
+  meck:new(prometheus_counter),
   Config;
 init_per_testcase(should_fetch_transactions_single_case_without_net, Config) ->
   meck:new(banks_fetch_http),
+  meck:new(prometheus_counter),
   Config.
 
 end_per_testcase(test_with_real_credential, _Config) ->
@@ -97,40 +105,50 @@ end_per_testcase(test_with_real_credential, _Config) ->
 end_per_testcase(should_connect_without_net_keypad, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok;
 end_per_testcase(should_connect_without_net, _Config) ->
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok;
 
 end_per_testcase(should_not_authenticate_again_if_token_is_available, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok;
 end_per_testcase(should_not_authenticate_if_birthdate_and_client_id_mismatched, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok;
 end_per_testcase(should_not_authenticate_if_password_is_invalid, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok;
 end_per_testcase(should_not_authenticate_if_account_is_locked, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok;
 
 end_per_testcase(should_fetch_accounts_without_net, _Config) ->
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok;
 
 end_per_testcase(should_fetch_transactions_without_net, _Config) ->
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok;
 end_per_testcase(should_fetch_transactions_until_without_net, _Config) ->
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok;
 end_per_testcase(should_fetch_transactions_single_case_without_net, _Config) ->
   meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
   ok.
 
 -define(CLIENT_ID_VAL, <<"123456789">>).
@@ -145,6 +163,11 @@ end_per_testcase(should_fetch_transactions_single_case_without_net, _Config) ->
 
 should_not_authenticate_again_if_token_is_available(_Config) ->
   ct:comment("Connect to ing account"),
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_already_count'],ok}
+              ]),
   meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(banks_fetch_http, request,
               [
@@ -154,15 +177,24 @@ should_not_authenticate_again_if_token_is_available(_Config) ->
                }
               ]),
   {ok, {bank_auth, banks_fetch_bank_ing, "AUTH_TOKEN"}} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+
+  ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
   true = meck:validate(banks_fetch_http),
   true = meck:validate(banks_fetch_bank_ing_keypad),
+  true = meck:validate(prometheus_counter),
   1 = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 
 should_not_authenticate_if_birthdate_and_client_id_mismatched(_Config) ->
   ct:comment("Connect to ing account"),
 
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_invalid_cif_birthdate_count'],ok}
+              ]),
   HttpExpectations = [
                        % Main page
                        { [get, {"https://m.ing.fr/", '_'}, '_', []],
@@ -182,9 +214,13 @@ should_not_authenticate_if_birthdate_and_client_id_mismatched(_Config) ->
   meck:expect(banks_fetch_http, request, HttpExpectations),
 
   {error, invalid_credential} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+
+  ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
   true = meck:validate(banks_fetch_http),
   true = meck:validate(banks_fetch_bank_ing_keypad),
+  true = meck:validate(prometheus_counter),
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 
@@ -197,6 +233,11 @@ should_not_authenticate_if_password_is_invalid(_Config) ->
 
   ct:comment("Connect to ing account"),
 
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_wrong_authentication_count'],ok}
+              ]),
   meck:expect(banks_fetch_bank_ing_keypad, resolve_keypad, fun(MockKeypadImage, MockPinPositions, MockClientPassword) ->
                                                                KeypadImage = binary_to_list(MockKeypadImage),
                                                                PinPositions = MockPinPositions,
@@ -238,15 +279,23 @@ should_not_authenticate_if_password_is_invalid(_Config) ->
 
   {error, invalid_credential} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
 
+  ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
   true = meck:validate(banks_fetch_http),
   true = meck:validate(banks_fetch_bank_ing_keypad),
+  true = meck:validate(prometheus_counter),
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 
 should_not_authenticate_if_account_is_locked(_Config) ->
   ct:comment("Connect to ing account"),
 
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_account_locked_count'],ok}
+              ]),
   HttpExpectations = [
                        % Main page
                        { [get, {"https://m.ing.fr/", '_'}, '_', []],
@@ -266,9 +315,13 @@ should_not_authenticate_if_account_is_locked(_Config) ->
   meck:expect(banks_fetch_http, request, HttpExpectations),
 
   {error, account_locked} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+
+  ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
   true = meck:validate(banks_fetch_http),
   true = meck:validate(banks_fetch_bank_ing_keypad),
+  true = meck:validate(prometheus_counter),
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 
@@ -286,6 +339,12 @@ should_connect_without_net_keypad(_Config) ->
   AuthToken = "fake_authtoken",
 
   ct:comment("Connect to ing account"),
+
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_ok_count'],ok}
+              ]),
 
   meck:expect(banks_fetch_bank_ing_keypad, resolve_keypad, fun(MockKeypadImage, MockPinPositions, MockClientPassword) ->
                                                                KeypadImage = binary_to_list(MockKeypadImage),
@@ -327,9 +386,12 @@ should_connect_without_net_keypad(_Config) ->
 
   {ok, {bank_auth, banks_fetch_bank_ing, AuthToken}} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
 
+  ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
   true = meck:validate(banks_fetch_http),
   true = meck:validate(banks_fetch_bank_ing_keypad),
+  true = meck:validate(prometheus_counter),
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 
@@ -342,6 +404,12 @@ should_connect_without_net(Config) ->
   AuthToken = "fake_authtoken",
 
   ct:comment("Connect to ing account"),
+
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_ok_count'],ok}
+              ]),
 
   HttpExpectations = [
                        % Main page
@@ -376,8 +444,11 @@ should_connect_without_net(Config) ->
 
   {ok, {bank_auth, banks_fetch_bank_ing, AuthToken}} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
 
+  ct:comment("Verify banks_fetch_http and monitoring calls"),
   true = meck:validate(banks_fetch_http),
+  true = meck:validate(prometheus_counter),
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 
@@ -391,6 +462,11 @@ should_fetch_accounts_without_net(Config) ->
 
   FakeToken = fake_authtoken,
 
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_accounts_total_count'],ok},
+               {['bank_ing_accounts_ok_count'],ok}
+              ]),
   meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
   meck:expect(banks_fetch_http, request, fun(MockMethod, {MockURL, MockHeaders}, MockHTTPOptions, MockOptions) ->
                                   get = MockMethod,
@@ -412,7 +488,10 @@ should_fetch_accounts_without_net(Config) ->
   NbrExpectedAccounts = length(Accounts),
   ExpectedAccounts = Accounts,
 
+  ct:comment("Verify banks_fetch_http and monitoring calls"),
   true = meck:validate(banks_fetch_http),
+  true = meck:validate(prometheus_counter),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 
@@ -432,6 +511,11 @@ should_fetch_transactions_without_net(Config) ->
   URL_2 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/12714/limit/50",
   URL_3 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/12541/limit/50",
 
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_transactions_total_count'],ok},
+               {['bank_ing_transactions_ok_count'],ok}
+              ]),
   HttpExpectations = [
                       {[get, {URL_1, [{"ingdf-auth-token", FakeToken}|'_']}, [], []],
                        {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', binary_to_list(TransactionsJSON_1)}}
@@ -484,9 +568,12 @@ should_fetch_transactions_without_net(Config) ->
   NbrExpectedTransactions = length(Transactions),
   lists:foreach(fun({E1,R1}) -> E1 = R1 end, lists:zip(ExpectedTransactions, Transactions)),
 
-  ct:comment("Verify banks_fetch_http calls"),
+  ct:comment("Verify banks_fetch_http and monitoring alls"),
   true = meck:validate(banks_fetch_http),
+  true = meck:validate(prometheus_counter),
+
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 
@@ -500,6 +587,12 @@ should_fetch_transactions_until_without_net(Config) ->
 
   FakeToken = fake_authtoken,
   FakeAccountId = <<"FAKEACCOUNT">>,
+
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_transactions_total_count'],ok},
+               {['bank_ing_transactions_ok_count'],ok}
+              ]),
 
   URL_1 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/0/limit/50",
 
@@ -530,9 +623,11 @@ should_fetch_transactions_until_without_net(Config) ->
   NbrExpectedTransactions = length(Transactions),
   lists:foreach(fun({E1,R1}) -> E1 = R1 end, lists:zip(ExpectedTransactions, Transactions)),
 
-  ct:comment("Verify banks_fetch_http calls"),
+  ct:comment("Verify banks_fetch_http and prometheus calls"),
   true = meck:validate(banks_fetch_http),
+  true = meck:validate(prometheus_counter),
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 
@@ -546,6 +641,11 @@ should_fetch_transactions_single_case_without_net(_Config) ->
   FakeToken = fake_authtoken,
   FakeAccountId = <<"FAKEACCOUNT">>,
 
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_transactions_total_count'],ok},
+               {['bank_ing_transactions_ok_count'],ok}
+              ]),
   meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
 
   URL_1 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/0/limit/50",
@@ -575,9 +675,11 @@ should_fetch_transactions_single_case_without_net(_Config) ->
   NbrExpectedTransactions = length(Transactions),
   lists:foreach(fun({E1,R1}) -> E1 = R1 end, lists:zip(ExpectedTransactions, Transactions)),
 
-  ct:comment("Verify banks_fetch_http calls"),
+  ct:comment("Verify banks_fetch_http and prometheus calls"),
   true = meck:validate(banks_fetch_http),
+  true = meck:validate(prometheus_counter),
   NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
 

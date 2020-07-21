@@ -27,15 +27,28 @@
 -spec setup() -> ok.
 setup() ->
   banks_fetch_http:setup_monitoring("m.ing.fr"),
+  prometheus_counter:declare([{name, "bank_ing_connect_total_count"}, {help, "Bank ING connect total count"}]),
+  prometheus_counter:declare([{name, "bank_ing_connect_ok_count"}, {help, "Bank ING connect ok count"}]),
+  prometheus_counter:declare([{name, "bank_ing_connect_already_count"}, {help, "Bank ING connect 'already connected' count"}]),
+  prometheus_counter:declare([{name, "bank_ing_connect_invalid_cif_birthdate_count"}, {help, "Bank ING connect error 'invalid cif/birthdate' count"}]),
+  prometheus_counter:declare([{name, "bank_ing_connect_wrong_authentication_count"}, {help, "Bank ING connect error 'wrong authentication' count"}]),
+  prometheus_counter:declare([{name, "bank_ing_connect_account_locked_count"}, {help, "Bank ING connect error 'account locked' count"}]),
+  prometheus_counter:declare([{name, "bank_ing_accounts_total_count"}, {help, "Bank ING accounts total count"}]),
+  prometheus_counter:declare([{name, "bank_ing_accounts_ok_count"}, {help, "Bank ING accounts ok count"}]),
+  prometheus_counter:declare([{name, "bank_ing_transactions_total_count"}, {help, "Bank ING transactions total count"}]),
+  prometheus_counter:declare([{name, "bank_ing_transactions_ok_count"}, {help, "Bank ING transactions ok count"}]),
   ok.
 
 -spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()} | {error, banks_fetch_bank:connection_error()}.
 connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBirthDate}}) ->
   ok = banks_fetch_http:set_options([{cookies,enabled}]),
 
+  prometheus_counter:inc('bank_ing_connect_total_count'),
   {ok, {{_Version0, 200, _ReasonPhrase0}, Headers0, _Body0}} = banks_fetch_http:request(get, {"https://m.ing.fr/", ?HEADERS}, [{timeout,60000}], []),
   case lists:keyfind("ingdf-auth-token", 1, Headers0) of
-    {_, AuthToken} -> {ok, {bank_auth, ?MODULE, AuthToken}};
+    {_, AuthToken} ->
+      prometheus_counter:inc('bank_ing_connect_already_count'),
+      {ok, {bank_auth, ?MODULE, AuthToken}};
     false ->
       case banks_fetch_http:request(post, {"https://m.ing.fr/secure/api-v1/login/cif", ?HEADERS, "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(ClientIdVal)++"\",\"birthDate\":\""++ClientBirthDate++"\"}"}, [{timeout,60000}], []) of
         {ok,{{"HTTP/1.1",412,"Precondition Failed"}, _Headers1, BodyError}} ->
@@ -57,6 +70,7 @@ connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBir
             {ok,{{"HTTP/1.1",412,"Precondition Failed"}, _Headers4, BodyError}} ->
               decode_body_error(BodyError);
             {ok, {{_Version4, 200, _ReasonPhrase4}, Headers4, _Body4}} ->
+              prometheus_counter:inc('bank_ing_connect_ok_count'),
               {_, AuthToken} = lists:keyfind("ingdf-auth-token", 1, Headers4),
               {ok, {bank_auth, ?MODULE, AuthToken}}
           end
@@ -69,9 +83,15 @@ decode_body_error(BodyError) ->
   {_, Error} = lists:keyfind(<<"error">>, 1, JSON),
   {_, Code} = lists:keyfind(<<"code">>, 1, Error),
   case Code of
-    <<"AUTHENTICATION.INVALID_CIF_AND_BIRTHDATE_COMBINATION">> -> {error, invalid_credential};
-    <<"SCA.WRONG_AUTHENTICATION">> -> {error, invalid_credential};
-    <<"SCA.ACCOUNT_LOCKED">> -> {error, account_locked}
+    <<"AUTHENTICATION.INVALID_CIF_AND_BIRTHDATE_COMBINATION">> ->
+      prometheus_counter:inc('bank_ing_connect_invalid_cif_birthdate_count'),
+      {error, invalid_credential};
+    <<"SCA.WRONG_AUTHENTICATION">> ->
+      prometheus_counter:inc('bank_ing_connect_wrong_authentication_count'),
+      {error, invalid_credential};
+    <<"SCA.ACCOUNT_LOCKED">> ->
+      prometheus_counter:inc('bank_ing_connect_account_locked_count'),
+      {error, account_locked}
   end.
 
 %%
@@ -79,7 +99,9 @@ decode_body_error(BodyError) ->
 %%
 -spec fetch_accounts(ing_bank_auth()) -> {ok, [banks_fetch_bank:account()]}.
 fetch_accounts({bank_auth, ?MODULE, AuthToken}) ->
+  prometheus_counter:inc('bank_ing_accounts_total_count'),
   {_JSON, R} = request_json(AuthToken, "https://m.ing.fr/secure/api-v1/accounts"),
+  prometheus_counter:inc('bank_ing_accounts_ok_count'),
   #{ <<"accounts">> := AccountInfoList} = R,
   {ok, [ account_transform(AccountInfo) || AccountInfo <- AccountInfoList ]}.
 
@@ -105,8 +127,10 @@ account_transform(#{ <<"uid">> := UID, <<"ledgerBalance">> := Balance, <<"label"
 fetch_transactions(AuthToken, AccountId, first_call) ->
   fetch_transactions(AuthToken, AccountId, <<"0">>);
 fetch_transactions({bank_auth, ?MODULE, AuthToken}, AccountId, LastKnownTransactionId) ->
+  prometheus_counter:inc('bank_ing_transactions_total_count'),
   Transactions0 = transactions(AuthToken, AccountId, LastKnownTransactionId, <<"0">>, []),
   Transactions1 = [ transaction_transform(T) || T <- Transactions0 ],
+  prometheus_counter:inc('bank_ing_transactions_ok_count'),
   {ok, Transactions1}.
 
 transactions(AuthToken, AccountId, LastKnownTransactionId, NextCallId, AccTransactions) ->
