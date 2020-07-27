@@ -137,9 +137,9 @@ do_store_accounts(BankId, ClientId, FetchingAt, AccountsList, #state{ connection
 
 do_store_accounts_aux(_BankId, _ClientId, _FetchingAt, [], _Connection) ->
   ok;
-do_store_accounts_aux(BankId, ClientId, FetchingAt, [#{ id := AccountId, balance := Balance, number := Number, owner := Owner, ownership := Ownership, type := Type, name := Name } | NextAccounts], Connection) ->
+do_store_accounts_aux({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue} = ClientId, FetchingAt, [#{ id := AccountId, balance := Balance, number := Number, owner := Owner, ownership := Ownership, type := Type, name := Name } | NextAccounts], Connection) ->
   case pgsql_connection:extended_query(<<"INSERT INTO accounts(bank_id, client_id, fetching_at, account_id, balance, number, owner, ownership, type, name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);">>, 
-                                       [BankId, ClientId, FetchingAt, AccountId, Balance, Number, Owner, atom_to_binary(Ownership,'utf8'), atom_to_binary(Type,'utf8'), Name], Connection) of
+                                       [BankIdValue, ClientIdValue, FetchingAt, AccountId, Balance, Number, Owner, atom_to_binary(Ownership,'utf8'), atom_to_binary(Type,'utf8'), Name], Connection) of
     {{insert,_,1},[]} ->
       do_store_accounts_aux(BankId, ClientId, FetchingAt, NextAccounts, Connection)
   end.
