@@ -1,9 +1,7 @@
 banks_fetch [![Build Status](https://travis-ci.com/davidjulien/banks_fetch.svg?branch=master)](https://travis-ci.com/davidjulien/banks_fetch)
 ===========
 
-An OTP application to fetch banks accounts and transactions.
-
-banks_fetch has no release yet but it can be started with rebar shell (see below).
+An OTP application to fetch banks accounts and transactions. Current version fetch only accounts.
 
 Current status of banks modules :
 
@@ -12,17 +10,10 @@ Current status of banks modules :
 | ING           | OK            | OK        | OK           |
 
 
-Build
+Configuration
 -----
 
-    $ rebar3 compile
-
-Run
------
-
-It is possible to run banks_fetch with rebar shell.
-
-1. Setup an empty banks_fetch database (if this database does not exist)
+Setup an empty `banks_fetch` database (if this database does not exist)
 
 ```console
 psql
@@ -36,19 +27,27 @@ GRANT ALL PRIVILEGES ON DATABASE banks_fetch TO banks_fetch_user;
 ALTER DATABASE banks_fetch OWNER TO banks_fetch_user;
 ```
 
-2. Start rebar shell
+Build and run
+-----
+
+1. Build release and start
 
 ```console
-rebar3 shell
+    rebar3 as prod release
+    ./_build/prod/rel/banks_fetch/bin/banks_fetch
 ```
 
-3. Add an ING bank account
+2. Add an ING bank account in console
+
+```console
+    ./_build/prod/rel/banks_fetch/bin/banks_fetch remote_console
+```
 
 ```erlang
 banks_fetch_client_manager:add_client({bank_id, <<"ing">>}, {client_id, <<"YOUR_CLIENT_ID">>}, {client_credential, {"YOUR_PASSWORD","YOUR_BIRTHDATE_DDMMYYYY"}}).
 ```
 
-It will connect to your bank and fetch accounts data every 4 hours. Credential (and accounts data) will be stored in postgres database and client will be started again automatically each time rebar shell is started.
+It will connect to your bank and fetch accounts data every 4 hours. Credential (and accounts data) will be stored in postgres database and client will be started again automatically each time `banks_fetch` is started.
 
 Tests
 -----
