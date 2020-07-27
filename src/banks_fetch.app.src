@@ -5,7 +5,12 @@
   {mod, {banks_fetch_app, []}},
   {applications,
    [kernel,
-    stdlib
+    stdlib,
+    inets,
+    ssl,
+    jsx,
+    pgsql,
+    prometheus
    ]},
   {env,[]},
   {modules, []},
