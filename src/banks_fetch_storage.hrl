@@ -1,5 +1,5 @@
 -define(SCHEMA, [
-                 {<<"0.0.0">>, <<"0.0.1">>, 
+                 {<<"0.0.0">>, <<"0.1.0">>,
                   [
                    <<"CREATE TABLE banks(id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL);">>,
                    <<"INSERT INTO banks(id, name) VALUES('ing','ING');">>,

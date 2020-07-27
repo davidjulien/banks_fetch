@@ -191,7 +191,7 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"BEGIN TRANSACTION">>, [], fake_connection],
                 {'begin', []}
                },
-               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.0.1';">>, [], fake_connection],
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.1.0';">>, [], fake_connection],
                 {'comment', []}
                },
                {[<<"COMMIT">>, [], fake_connection],
@@ -367,7 +367,7 @@ should_nodb_store_accounts(_Config) ->
                                                }
                                               ]),
   meck:expect(pgsql_connection, extended_query, ExpectedQueriesForAccounts),
-  ok = banks_fetch_storage:store_accounts(?BANK_ID_1, ?CLIENT_ID_1, ?FETCHING_AT_1, ?ACCOUNTS_1),
+  ok = banks_fetch_storage:store_accounts({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_1}, ?FETCHING_AT_1, ?ACCOUNTS_1),
 
   ct:comment("Verify pgsql_connection calls"),
   true = meck:validate(pgsql_connection),
@@ -428,7 +428,7 @@ should_db_not_insert_client_already_existing(Config) ->
 
 should_db_store_accounts(Config) ->
   ct:comment("Store accounts"),
-  ok = banks_fetch_storage:store_accounts(?BANK_ID_1, ?CLIENT_ID_1, ?FETCHING_AT_1, ?ACCOUNTS_1),
+  ok = banks_fetch_storage:store_accounts({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_1}, ?FETCHING_AT_1, ?ACCOUNTS_1),
 
   ct:comment("Load accounts from database"),
   {db_connection, Connection} = lists:keyfind(db_connection, 1, Config),
