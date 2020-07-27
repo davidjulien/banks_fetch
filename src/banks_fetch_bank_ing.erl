@@ -27,16 +27,16 @@
 -spec setup() -> ok.
 setup() ->
   banks_fetch_http:setup_monitoring("m.ing.fr"),
-  prometheus_counter:declare([{name, "bank_ing_connect_total_count"}, {help, "Bank ING connect total count"}]),
-  prometheus_counter:declare([{name, "bank_ing_connect_ok_count"}, {help, "Bank ING connect ok count"}]),
-  prometheus_counter:declare([{name, "bank_ing_connect_already_count"}, {help, "Bank ING connect 'already connected' count"}]),
-  prometheus_counter:declare([{name, "bank_ing_connect_invalid_cif_birthdate_count"}, {help, "Bank ING connect error 'invalid cif/birthdate' count"}]),
-  prometheus_counter:declare([{name, "bank_ing_connect_wrong_authentication_count"}, {help, "Bank ING connect error 'wrong authentication' count"}]),
-  prometheus_counter:declare([{name, "bank_ing_connect_account_locked_count"}, {help, "Bank ING connect error 'account locked' count"}]),
-  prometheus_counter:declare([{name, "bank_ing_accounts_total_count"}, {help, "Bank ING accounts total count"}]),
-  prometheus_counter:declare([{name, "bank_ing_accounts_ok_count"}, {help, "Bank ING accounts ok count"}]),
-  prometheus_counter:declare([{name, "bank_ing_transactions_total_count"}, {help, "Bank ING transactions total count"}]),
-  prometheus_counter:declare([{name, "bank_ing_transactions_ok_count"}, {help, "Bank ING transactions ok count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_connect_total_count'}, {help, "Bank ING connect total count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_connect_ok_count'}, {help, "Bank ING connect ok count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_connect_already_count'}, {help, "Bank ING connect 'already connected' count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_connect_invalid_cif_birthdate_count'}, {help, "Bank ING connect error 'invalid cif/birthdate' count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_connect_wrong_authentication_count'}, {help, "Bank ING connect error 'wrong authentication' count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_connect_account_locked_count'}, {help, "Bank ING connect error 'account locked' count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_accounts_total_count'}, {help, "Bank ING accounts total count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_accounts_ok_count'}, {help, "Bank ING accounts ok count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_transactions_total_count'}, {help, "Bank ING transactions total count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_transactions_ok_count'}, {help, "Bank ING transactions ok count"}]),
   ok.
 
 -spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()} | {error, banks_fetch_bank:connection_error()}.
