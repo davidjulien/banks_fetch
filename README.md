@@ -34,7 +34,7 @@ Build and run
 
 ```console
     rebar3 as prod release
-    ./_build/prod/rel/banks_fetch/bin/banks_fetch
+    ./_build/prod/rel/banks_fetch/bin/banks_fetch start
 ```
 
 2. Add an ING bank account in console
@@ -44,7 +44,8 @@ Build and run
 ```
 
 ```erlang
-banks_fetch_client_manager:add_client({bank_id, <<"ing">>}, {client_id, <<"YOUR_CLIENT_ID">>}, {client_credential, {"YOUR_PASSWORD","YOUR_BIRTHDATE_DDMMYYYY"}}).
+banks_fetch_client_manager:add_client({bank_id, <<"ing">>}, {client_id, <<"YOUR_CLIENT_ID">>}, {client_credential, {"YOUR_PASSWORD","YOUR_BIRTHDATE_DDMMYYYY"}})
+.
 ```
 
 It will connect to your bank and fetch accounts data every 4 hours. Credential (and accounts data) will be stored in postgres database and client will be started again automatically each time `banks_fetch` is started.
