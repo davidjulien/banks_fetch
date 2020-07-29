@@ -169,11 +169,14 @@ upgrade_schema_aux(VersionStr, DatabaseName, Connection) ->
   % Try to find an upgrade from current database version to next version. If any, applies queries in a transaction
   case lists:keyfind(VersionStr, 1, ?SCHEMA) of
     false ->
+      ok = lager:info("storage : no upgrade from ~s", [VersionStr]),
       ok;
     {_, NextVersion, Queries} ->
+      ok = lager:info("storage : upgrade from ~s to ~s", [VersionStr, NextVersion]),
       {'begin', []} = pgsql_connection:extended_query(<<"BEGIN TRANSACTION">>, [], Connection),
       case upgrade_schema_aux_loop_queries(Queries, Connection) of
         {stop, QueryStr, Err} ->
+          ok = lager:error("~p : unable to execute query : ~s : ~p", [QueryStr, Err]),
           {'rollback', []} = pgsql_connection:extended_query(<<"ROLLBACK">>, [], Connection),
           {error, {unable_to_upgrade_db, QueryStr, Err}};
         ok ->

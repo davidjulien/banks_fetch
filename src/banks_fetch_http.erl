@@ -93,6 +93,7 @@ request(Method, Request, HttpOptions, Options) ->
           end
       end;
     {error, _} ->
+      ok = lager:error("HTTP request error : ~p/~p/~p/~p : ~p", [Method, Request, HttpOptions, Options, R]),
       prometheus_counter_inc("all", "requests_error_count"),
       prometheus_counter_inc(MonitoringNamespace, "requests_error_count")
   end,

@@ -9,6 +9,8 @@
 -export([
          all/0,
          groups/0,
+         init_per_suite/1,
+         end_per_suite/1,
          init_per_testcase/2,
          end_per_testcase/2,
          init_per_group/2,
@@ -63,6 +65,17 @@ groups() ->
    {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_insert_client, should_nodb_store_accounts ]},
    {tests_with_db, [], [ should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing, should_db_store_accounts, should_db_get_accounts ]}
   ].
+
+%%
+%% Overall setup/teardwon
+%%
+init_per_suite(Config) ->
+  ok = lager:start(),
+  Config.
+
+end_per_suite(_Config) ->
+  application:stop(lager).
+
 
 % Init per group
 init_per_group(tests_without_db, Config) ->

@@ -2,6 +2,9 @@
 -include_lib("common_test/include/ct.hrl").
 -export([
          all/0,
+         init_per_suite/1,
+         end_per_suite/1,
+
          init_per_testcase/2,
          end_per_testcase/2,
 
@@ -12,6 +15,20 @@ all() ->
   [
    should_fetch_data_from_a_bank_and_store_them
   ].
+
+%%
+%% Overall setup/teardwon
+%%
+init_per_suite(Config) ->
+  ok = lager:start(),
+  Config.
+
+end_per_suite(_Config) ->
+  application:stop(lager).
+
+%%
+%% Test cases
+%%
 
 -define(DB_NAME, "banks_fetch_test").
 -define(DB_USER, "banks_fetch_test").

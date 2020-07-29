@@ -2,6 +2,9 @@
 -include_lib("common_test/include/ct.hrl").
 -export([
          all/0,
+         init_per_suite/1,
+         end_per_suite/1,
+
          init_per_testcase/2,
          end_per_testcase/2,
 
@@ -40,6 +43,21 @@ all() ->
 
    test_with_real_credential
   ].
+
+
+%%
+%% Overall setup/teardwon
+%%
+init_per_suite(Config) ->
+  ok = lager:start(),
+  Config.
+
+end_per_suite(_Config) ->
+  application:stop(lager).
+
+%%
+%% Test cases
+%%
 
 init_per_testcase(test_with_real_credential, Config) ->
   ct:comment("Load credential"),

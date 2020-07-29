@@ -1,6 +1,6 @@
 -module(banks_fetch_client_server_SUITE).
 -include_lib("common_test/include/ct.hrl").
--export([all/0, init_per_testcase/2, end_per_testcase/2 ]).
+-export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2, end_per_testcase/2 ]).
 -export([
          should_handle_cast_do_nothing/1,
          should_fetch_data_without_bank_storage/1,
@@ -16,6 +16,13 @@ all() -> [
           should_fetch_data_without_bank_storage,
           should_not_fetch_data_if_connection_failed_without_bank_storage
          ].
+
+init_per_suite(Config) ->
+  ok = lager:start(),
+  Config.
+
+end_per_suite(_Config) ->
+  application:stop(lager).
 
 init_per_testcase(should_handle_cast_do_nothing, Config) ->
   Config;

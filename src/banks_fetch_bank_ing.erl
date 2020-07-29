@@ -52,6 +52,7 @@ connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBir
     false ->
       case banks_fetch_http:request(post, {"https://m.ing.fr/secure/api-v1/login/cif", ?HEADERS, "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(ClientIdVal)++"\",\"birthDate\":\""++ClientBirthDate++"\"}"}, [{timeout,60000}], []) of
         {ok,{{"HTTP/1.1",412,"Precondition Failed"}, _Headers1, BodyError}} ->
+          ok = lager:warning("~p/~s : cif error : ~s", [?MODULE, ClientIdVal, BodyError]),
           decode_body_error(BodyError);
         {ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, _Body1}} ->
           {ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = banks_fetch_http:request(post, {"https://m.ing.fr/secure/api-v1/login/keypad", ?HEADERS, "application/json;charset=UTF-8", "{\"keyPadSize\":{\"width\":2840,\"height\":1136}}"}, [{timeout,60000}], []),
@@ -68,6 +69,7 @@ connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBir
 
           case banks_fetch_http:request(post, {"https://m.ing.fr/secure/api-v1/login/sca/pin", ?HEADERS, "application/json;charset=UTF-8", ClickPositionsStr}, [], []) of
             {ok,{{"HTTP/1.1",412,"Precondition Failed"}, _Headers4, BodyError}} ->
+              ok = lager:warning("~p/~s : pin error : ~", [?MODULE, ClientIdVal, BodyError]),
               decode_body_error(BodyError);
             {ok, {{_Version4, 200, _ReasonPhrase4}, Headers4, _Body4}} ->
               prometheus_counter:inc('bank_ing_connect_ok_count'),

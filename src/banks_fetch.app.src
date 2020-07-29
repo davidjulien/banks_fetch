@@ -8,6 +8,7 @@
     stdlib,
     inets,
     ssl,
+    lager,
     jsx,
     pgsql,
     prometheus

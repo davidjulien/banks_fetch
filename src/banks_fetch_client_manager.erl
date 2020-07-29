@@ -52,9 +52,11 @@ handle_info(load_clients, State0) ->
 %%
 
 -spec do_add_client(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any()), #state{}) -> {ok|{error, already_defined}, #state{}}.
-do_add_client(BankId, ClientId, ClientCredential, #state{ clients_pids = ClientsPids0 } = State0) ->
+do_add_client({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue} = ClientId, ClientCredential, #state{ clients_pids = ClientsPids0 } = State0) ->
   case banks_fetch_storage:insert_client(BankId, ClientId, ClientCredential) of
-    {error, already_inserted} -> {{error, already_defined}, State0};
+    {error, already_inserted} ->
+      ok = lager:warning("Client ~p/~s already defined", [BankIdValue, ClientIdValue]),
+      {{error, already_defined}, State0};
     ok ->
       {ok, PID} = banks_fetch_client_server_sup:start_child(BankId, ClientId, ClientCredential),
       State1 = State0#state{ clients_pids = [{BankId, ClientId, PID}|ClientsPids0] },

@@ -3,7 +3,8 @@
 -export([
          all/0,
          groups/0,
-
+         init_per_suite/1,
+         end_per_suite/1,
          init_per_testcase/2,
          end_per_testcase/2,
 
@@ -26,6 +27,20 @@ groups() ->
      should_call_request_status_300,
      should_call_request_error
     ]}].
+
+%%
+%% Overall setup/teardwon
+%%
+init_per_suite(Config) ->
+  ok = lager:start(),
+  Config.
+
+end_per_suite(_Config) ->
+  application:stop(lager).
+
+%%
+%% Test cases
+%%
 
 init_per_testcase(should_call_set_options, Config) ->
   meck:new(httpc),
