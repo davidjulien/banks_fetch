@@ -148,7 +148,7 @@ black_box_tests(_Config) ->
   ct:comment("Kill client server again ~p", [ClientPidA2]),
   exit(ClientPidA2, kill),
 
-  ct:comment("Verify that supervisor is shutdown because of the stratregy set in supervisor"),
+  ct:comment("Verify that supervisor is shutdown because of the strategy set in supervisor"),
   receive
     {'EXIT',SupervisorPid,shutdown} ->
       undefined = whereis(banks_fetch_client_server_sup);
