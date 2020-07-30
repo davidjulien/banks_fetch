@@ -74,11 +74,21 @@ should_handle_cast_do_nothing(_Config) ->
   ok.
 
 
+%% this function spawns a fake client server
+spawn_fake_client() ->
+  spawn(fun() ->
+            receive
+            after 1000 ->
+                    ok
+            end
+        end).
+
+
 should_launch_all_client_servers_on_init(_Config) ->
   ct:comment("Expect calls to storage to get all clients and start_child calls for every client"),
   meck:expect(banks_fetch_storage, get_clients, fun() -> {value, ?BANK_CLIENTS} end),
 
-  ClientsPids = lists:zip([ [BankId, ClientId, ClientCredential] || {BankId, ClientId, ClientCredential} <- ?BANK_CLIENTS], [ {ok, list_to_atom("pid_" ++ integer_to_list(N))} || N <- lists:seq(1,length(?BANK_CLIENTS)) ]),
+  ClientsPids = lists:zip([ [BankId, ClientId, ClientCredential] || {BankId, ClientId, ClientCredential} <- ?BANK_CLIENTS], [ {ok, spawn_fake_client()} || _N <- lists:seq(1,length(?BANK_CLIENTS)) ]),
   meck:expect(banks_fetch_client_server_sup, start_child, ClientsPids),
 
   ct:comment("Start clients manager"),
@@ -90,16 +100,9 @@ should_launch_all_client_servers_on_init(_Config) ->
   ct:comment("Verify that we have fetched clients from storage"),
   true = meck:validate(banks_fetch_storage),
 
-  ct:comment("Verify that we have triggered client_servers"),
-  true = meck:validate(banks_fetch_client_server_sup),
-
   ct:comment("Verify clients pid"),
   ClientsPidsManager = lists:sort(banks_fetch_client_manager:get_clients_pids()),
-  ExpectedClientsPidsManager = [
-                                {{bank_id, <<"bank_id_1">>}, {client_id, <<"client_id_1">>}, pid_1},
-                                {{bank_id, <<"bank_id_1">>}, {client_id, <<"client_id_2">>}, pid_2},
-                                {{bank_id, <<"bank_id_2">>}, {client_id, <<"client_id_3">>}, pid_3}
-                               ],
+  ExpectedClientsPidsManager = [ {BankId,ClientId,Pid} || {[BankId,ClientId,_ClientCredential],{ok, Pid}} <- ClientsPids ],
   ExpectedClientsPidsManager = ClientsPidsManager,
 
   ct:comment("Verify that we have started all required clients"),
@@ -107,6 +110,16 @@ should_launch_all_client_servers_on_init(_Config) ->
   NbrBankClients = meck:num_calls(banks_fetch_client_server_sup, start_child, '_'),
   true = meck:validate(banks_fetch_client_server_sup),
 
+  ct:comment("Kill first client"),
+  [{_,{ok,PidA}}|_] = ClientsPids,
+  exit(PidA, killed),
+
+  ct:comment("Verify that this client has been removed from manager"),
+  ClientsPidsManager2 = lists:sort(banks_fetch_client_manager:get_clients_pids()),
+  ExpectedClientsPidsManager2 = tl(ExpectedClientsPidsManager),
+  ExpectedClientsPidsManager2 = ClientsPidsManager2,
+
+  ct:comment("Exit manager"),
   exit(ClientsManagerPID, normal),
 
   ok.
@@ -132,7 +145,7 @@ should_launch_new_client_server_when_a_new_client_is_added(_Config) ->
   [] = lists:sort(banks_fetch_client_manager:get_clients_pids()),
 
 
-  ClientPid = 'pid_1',
+  ClientPid = spawn_fake_client(),
   meck:expect(banks_fetch_storage, insert_client, fun(MockBankId, MockClientId, MockClientCredential) ->
                                                       ?BANK_ID_1 = MockBankId,
                                                       ?CLIENT_ID_1 = MockClientId,
@@ -159,6 +172,7 @@ should_launch_new_client_server_when_a_new_client_is_added(_Config) ->
   ct:comment("Verify clients pid"),
   [{?BANK_ID_1, ?CLIENT_ID_1, ClientPid}] = lists:sort(banks_fetch_client_manager:get_clients_pids()),
 
+  ct:comment("Exit clients manager"),
   exit(ClientsManagerPID, normal),
 
   ok.
@@ -168,7 +182,7 @@ should_not_launch_new_client_server_when_an_existing_client_is_added(_Config) ->
   ct:comment("Expect calls to storage to get all clients and start_child calls for every client"),
   meck:expect(banks_fetch_storage, get_clients, fun() -> {value, [{?BANK_ID_1, ?CLIENT_ID_1, ?CLIENT_CREDENTIAL_1}]} end),
 
-  ClientPid = 'pid_1',
+  ClientPid = spawn_fake_client(),
   meck:expect(banks_fetch_client_server_sup, start_child, fun(MockBankId, MockClientId, MockClientCredential) ->
                                                               ?BANK_ID_1 = MockBankId,
                                                               ?CLIENT_ID_1 = MockClientId,
@@ -211,6 +225,7 @@ should_not_launch_new_client_server_when_an_existing_client_is_added(_Config) ->
   ct:comment("Verify clients pid"),
   [{?BANK_ID_1, ?CLIENT_ID_1, ClientPid}] = lists:sort(banks_fetch_client_manager:get_clients_pids()),
 
+  ct:comment("Exit clients manager"),
   exit(ClientsManagerPID, normal),
 
   ok.

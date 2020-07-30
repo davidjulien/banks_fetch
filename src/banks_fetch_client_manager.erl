@@ -26,6 +26,7 @@ start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, none, []).
 
 init(none) ->
+  process_flag(trap_exit, true), % because we want to receive a message when a client server is terminated to remove it from manager state
   self() ! load_clients,
   {ok, #state{ clients_pids = [] } }.
 
@@ -42,9 +43,14 @@ handle_info(load_clients, State0) ->
   {value, Clients} = banks_fetch_storage:get_clients(),
   ClientsPIDs = lists:foldl(fun({BankId, ClientId, ClientCredential}, Acc) ->
                                {ok, PID} = banks_fetch_client_server_sup:start_child(BankId, ClientId, ClientCredential),
+                               link(PID), % link process to receive exit signal for client servers
                                [{BankId, ClientId, PID}|Acc]
                            end, [], Clients),
   State1 = State0#state{ clients_pids = ClientsPIDs },
+  {noreply, State1};
+
+handle_info({'EXIT',ClientPid,_Reason}, State0) ->
+  State1 = do_handle_exit(ClientPid, State0),
   {noreply, State1}.
 
 %%
@@ -62,3 +68,9 @@ do_add_client({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue} = Clie
       State1 = State0#state{ clients_pids = [{BankId, ClientId, PID}|ClientsPids0] },
       {ok, State1}
   end.
+
+%% @doc Process exit signal from client servers
+-spec do_handle_exit(pid(), #state{}) -> #state{}.
+do_handle_exit(ClientPid, #state{ clients_pids = ClientsPIDs0 } = State0) ->
+  ClientsPIDs1 = lists:keydelete(ClientPid, 3, ClientsPIDs0),
+  State0#state{ clients_pids = ClientsPIDs1 }.
