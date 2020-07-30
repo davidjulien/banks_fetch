@@ -53,7 +53,7 @@
                           type => transaction_type()
                         }.
 
--type connection_error() :: invalid_credential | account_locked.
+-type connection_error() :: invalid_credential | account_locked | internal_error.
 
 %% Callbacks required by all modules implementing banks_fetch_bank behavior
 

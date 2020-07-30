@@ -12,6 +12,7 @@
          should_not_authenticate_if_birthdate_and_client_id_mismatched/1,
          should_not_authenticate_if_password_is_invalid/1,
          should_not_authenticate_if_account_is_locked/1,
+         should_not_authenticate_if_invalid_birthdate/1,
 
          should_connect_without_net_keypad/1,
          should_connect_without_net/1,
@@ -31,6 +32,7 @@ all() ->
    should_not_authenticate_if_birthdate_and_client_id_mismatched,
    should_not_authenticate_if_password_is_invalid,
    should_not_authenticate_if_account_is_locked,
+   should_not_authenticate_if_invalid_birthdate,
 
 
    should_connect_without_net_keypad,
@@ -97,6 +99,12 @@ init_per_testcase(should_not_authenticate_if_account_is_locked, Config) ->
   meck:new(banks_fetch_bank_ing_keypad),
   meck:new(prometheus_counter),
   Config;
+init_per_testcase(should_not_authenticate_if_invalid_birthdate, Config) ->
+  meck:new(banks_fetch_http),
+  meck:new(banks_fetch_bank_ing_keypad),
+  meck:new(prometheus_counter),
+  Config;
+
 
 init_per_testcase(should_fetch_accounts_without_net, Config) ->
   meck:new(banks_fetch_http),
@@ -150,6 +158,12 @@ end_per_testcase(should_not_authenticate_if_account_is_locked, _Config) ->
   meck:unload(banks_fetch_http),
   meck:unload(prometheus_counter),
   ok;
+end_per_testcase(should_not_authenticate_if_invalid_birthdate, _Config) ->
+  meck:unload(banks_fetch_bank_ing_keypad),
+  meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
+  ok;
+
 
 end_per_testcase(should_fetch_accounts_without_net, _Config) ->
   meck:unload(banks_fetch_http),
@@ -172,8 +186,10 @@ end_per_testcase(should_fetch_transactions_single_case_without_net, _Config) ->
 -define(CLIENT_ID_VAL, <<"123456789">>).
 -define(CLIENT_ID, {client_id, ?CLIENT_ID_VAL}).
 -define(CLIENT_PWD, "234567").
--define(CLIENT_BIRTHDATE, "230378").
+-define(CLIENT_BIRTHDATE, "23031978").
 -define(CLIENT_CREDENTIAL, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}).
+
+-define(CLIENT_INVALID_BIRTHDATE, "INVALID_BIRTHDATE").
 
 %%
 %% Should not authenticate cases
@@ -333,6 +349,43 @@ should_not_authenticate_if_account_is_locked(_Config) ->
   meck:expect(banks_fetch_http, request, HttpExpectations),
 
   {error, account_locked} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+
+  ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
+  true = meck:validate(banks_fetch_http),
+  true = meck:validate(banks_fetch_bank_ing_keypad),
+  true = meck:validate(prometheus_counter),
+  NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
+
+  ok.
+
+should_not_authenticate_if_invalid_birthdate(_Config) ->
+  ct:comment("Connect to ing account"),
+
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_internal_error_count'],ok}
+              ]),
+  HttpExpectations = [
+                       % Main page
+                       { [get, {"https://m.ing.fr/", '_'}, '_', []],
+                         {ok, {{'fakeversion', 200, 'fakereason'}, [], 'fakebody'}}
+                       },
+                       % Login
+                       {
+                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(?CLIENT_ID_VAL)++"\",\"birthDate\":\""++?CLIENT_INVALID_BIRTHDATE++"\"}"}, '_', []],
+                        {ok,{{"HTTP/1.1",500,"Internal Server Error"},
+                             fake_headers,
+                             "{\"error\":{\"code\":\"INTERNAL_ERROR\",\"message\":\"Ce service est indisponible pour le moment. Toutes nos excuses pour la gêne occasionnée. Pour effectuer vos opérations habituelles, réessayez plus tard ou contactez notre Centre de Relation Client.\"}}"}}
+                       }
+                      ],
+  NbrHttpExpectations = length(HttpExpectations),
+
+  meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
+  meck:expect(banks_fetch_http, request, HttpExpectations),
+
+  {error, internal_error} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_INVALID_BIRTHDATE}}),
 
   ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
   true = meck:validate(banks_fetch_http),
