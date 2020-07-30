@@ -51,7 +51,7 @@ do_fetch_data(#state{ bank_module = BankModule, bank_id = BankId, client_id = Cl
   ok = lager:info("~p/~p/~p : fetch data", [BankModule, BankId, ClientId]),
   case banks_fetch_bank:connect(BankModule, ClientId, ClientCredential) of
     {error, _} = Err ->
-      ok = lager:warning("~p/~s/~s : fetch data error : ~p", [BankModule, BankId, ClientId, Err]),
+      ok = lager:warning("~p/~p/~p : fetch data error : ~p", [BankModule, BankId, ClientId, Err]),
       State0;
     {ok, Auth} ->
       FetchingAt = calendar:universal_time(),
