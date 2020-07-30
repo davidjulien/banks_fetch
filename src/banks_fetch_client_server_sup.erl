@@ -43,7 +43,7 @@ init([]) ->
   ChildSpec = #{
     id => banks_fetch_client_server,
     start => {banks_fetch_client_server, start_link, []},
-    restart => permanent,
+    restart => temporary, % don't restart a client server in case of crash in order to prevent account locking
     shutdown => 1,
     type => worker,
     modules => [banks_fetch_client_server]

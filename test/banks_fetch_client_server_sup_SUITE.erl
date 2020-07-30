@@ -54,7 +54,7 @@ white_box_tests(_Config) ->
   ExpectedChildSpec = [
                        #{ id => banks_fetch_client_server,
                          start => {banks_fetch_client_server, start_link, []},
-                         restart => permanent,
+                         restart => temporary,
                          shutdown => 1,
                          type => worker,
                          modules => [banks_fetch_client_server]
@@ -132,34 +132,31 @@ black_box_tests(_Config) ->
 
   % ------------------------------------------------
   ct:comment("Kill client server A ~p", [ClientPidA1]),
-  exit(ClientPidA1, kill),
-  receive after 100 -> nil end, % let restart
+  exit(ClientPidA1, internal_error),
+  receive after 100 -> nil end, % wait a little bit to ensure that client is not restarted
 
-  ct:comment("Verify that client server A is restarted and client B still alived"),
-  [{undefined, ClientPidB1, worker, _},{undefined, ClientPidA2, worker, _}] = supervisor:which_children(banks_fetch_client_server_sup),
+  ct:comment("Verify that client server A is not restarted and client B still alived"),
+  [{undefined, ClientPidB1, worker, _}] = supervisor:which_children(banks_fetch_client_server_sup),
   false = erlang:is_process_alive(ClientPidA1),
   true = erlang:is_process_alive(ClientPidB1),
-  true = erlang:is_process_alive(ClientPidA2),
-  true = ClientPidA1 =/= ClientPidA2,
 
-  ct:comment("Verify that client_server A is working again"),
-  ?BANK_CLIENT_A_ACCOUNTS = banks_fetch_client_server:accounts(ClientPidA2),
+  ct:comment("Kill client server B ~p", [ClientPidB1]),
+  exit(ClientPidB1, internal_error),
 
-  ct:comment("Kill client server again ~p", [ClientPidA2]),
-  exit(ClientPidA2, kill),
-
-  ct:comment("Verify that supervisor is shutdown because of the strategy set in supervisor"),
+  ct:comment("Verify that supervisor is still running"),
   receive
     {'EXIT',SupervisorPid,shutdown} ->
-      undefined = whereis(banks_fetch_client_server_sup);
+      undefined = whereis(banks_fetch_client_server_sup),
+      ct:fail("Exit message received, supervisor no more alived");
     Message ->
       ct:fail("Unexpected message received : ~p", [Message])
   after 1000 ->
-          ct:fail("No exit message received, supervisor still alived ?")
+      ct:comment("Supervisor still alived"),
+      SupervisorPid = whereis(banks_fetch_client_server_sup)
   end,
 
   ct:comment("Verify that all clients servers are not alived"),
-  false = erlang:is_process_alive(ClientPidA2),
+  false = erlang:is_process_alive(ClientPidA1),
   false = erlang:is_process_alive(ClientPidB1),
 
   ok.
