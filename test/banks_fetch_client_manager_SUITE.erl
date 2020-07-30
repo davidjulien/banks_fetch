@@ -114,6 +114,8 @@ should_launch_all_client_servers_on_init(_Config) ->
   [{_,{ok,PidA}}|_] = ClientsPids,
   exit(PidA, killed),
 
+  receive after 100 -> ok end, % wait a little bit
+
   ct:comment("Verify that this client has been removed from manager"),
   ClientsPidsManager2 = lists:sort(banks_fetch_client_manager:get_clients_pids()),
   ExpectedClientsPidsManager2 = tl(ExpectedClientsPidsManager),
