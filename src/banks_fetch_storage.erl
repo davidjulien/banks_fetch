@@ -25,6 +25,11 @@
 
          store_accounts/4,
          get_accounts/2,
+
+         store_transactions/5,
+         get_last_transactions_id/2,
+         get_transactions/3,
+
          stop/0
         ]).
 
@@ -51,6 +56,22 @@ store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
 get_accounts(BankId, ClientId) ->
   gen_server:call(?MODULE, {get_accounts, BankId, ClientId}).
 
+
+%% @doc Store transactions
+-spec store_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), calendar:datetime(), [banks_fetch_bank:transaction()]) -> ok.
+store_transactions(BankId, ClientId, AccountId, FetchingAt, TransactionsList) ->
+  gen_server:call(?MODULE, {store_transactions, BankId, ClientId, AccountId, FetchingAt, TransactionsList}).
+
+%% @doc Returns last transaction id for each account for a given bank/client
+-spec get_last_transactions_id(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id()) -> {value, [{banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()}]}.
+get_last_transactions_id(BankId, ClientId) ->
+  gen_server:call(?MODULE, {get_last_transactions_id, BankId, ClientId}).
+
+%% @doc Returns all transactions for a given account
+-spec get_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id()) -> {value, [banks_fetch_bank:transaction()]}.
+get_transactions(BankId, ClientId, AccountId) ->
+  gen_server:call(?MODULE, {get_transactions, BankId, ClientId, AccountId}).
+
 -spec stop() -> ok.
 stop() ->
   gen_server:call(?MODULE, stop).
@@ -75,6 +96,15 @@ handle_call({store_accounts, BankId, ClientId, FetchingAt, AccountsList}, _From,
   {reply, R, State0};
 handle_call({get_accounts, BankId, ClientId}, _From, #state{ } = State0) ->
   R = do_get_accounts(BankId, ClientId, State0),
+  {reply, R, State0};
+handle_call({store_transactions, BankId, ClientId, AccountId, FetchingAt, TransactionsList}, _From, #state{ } = State0) ->
+  R = do_store_transactions(BankId, ClientId, AccountId, FetchingAt, TransactionsList, State0),
+  {reply, R, State0};
+handle_call({get_last_transactions_id, BankId, ClientId}, _From, #state{ } = State0) ->
+  R = do_get_last_transactions_id(BankId, ClientId, State0),
+  {reply, R, State0};
+handle_call({get_transactions, BankId, ClientId, AccountId}, _From, #state{ } = State0) ->
+  R = do_get_transactions(BankId, ClientId, AccountId, State0),
   {reply, R, State0};
 handle_call(stop, _From, State0) ->
   {stop, normal, stopped, State0}.
@@ -152,6 +182,45 @@ do_get_accounts(BankId, ClientId, #state{ connection = Connection }) ->
   {{select, _Nbr}, Accounts} = pgsql_connection:simple_query(<<"SELECT distinct on (bank_id, client_id, account_id) bank_id, client_id, account_id, balance, number, owner, ownership, type, name FROM accounts ORDER BY bank_id, client_id, account_id, fetching_at DESC">>, [BankId, ClientId], Connection),
   {ok, [#{ id => AccountId, balance => Balance, number => Number, owner => Owner, ownership => binary_to_atom(Ownership), type => binary_to_atom(Type), name => Name } 
         || {_BankId, _ClientId, AccountId, Balance, Number, Owner, {e_account_ownership, Ownership}, {e_account_type, Type}, Name} <- Accounts ]}.
+
+
+%%
+%% @doc Store transactions
+%%
+-spec do_store_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), calendar:datetime(), [banks_fetch_bank:transaction()], #state{}) -> ok.
+do_store_transactions({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account_id, AccountIdValue}, FetchingAt, TransactionsList, #state{ connection = Connection }) ->
+  {'begin', []} = pgsql_connection:simple_query(<<"BEGIN TRANSACTION">>, Connection),
+  lists:foreach(fun(#{ id := TransactionId, accounting_date := AccountingDate, effective_date := EffectiveDate, amount := Amount, description := Description, type := Type }) ->
+                    {{insert, _, 1}, []} = pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);">>, [BankIdValue, ClientIdValue, AccountIdValue, FetchingAt, TransactionId, AccountingDate, EffectiveDate, Amount, Description, atom_to_binary(Type,'utf8')], Connection)
+                end, TransactionsList),
+  {'commit', []} = pgsql_connection:simple_query(<<"COMMIT;">>, Connection),
+  ok.
+
+
+%%
+%% @doc Get last transactions id for each account of a given bank/client
+%%
+-spec do_get_last_transactions_id(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), #state{}) -> {value, [{banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()}]}.
+do_get_last_transactions_id({bank_id, BankIdValue}, {client_id, ClientIdValue}, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"SELECT account_id, MAX(transaction_id) FROM transactions WHERE bank_id = $1 and client_id = $2 GROUP BY account_id ORDER BY account_id;">>, [BankIdValue, ClientIdValue], Connection) of
+    {{select, _N}, List0} ->
+      List1 = [ {{account_id, AccountIdVal}, {transaction_id, TransactionIdVal}} || {AccountIdVal, TransactionIdVal} <- List0 ],
+      {value, List1}
+  end.
+
+
+%%
+%% @doc Get all transactions for a given account
+%%
+-spec do_get_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), #state{}) -> {value, [banks_fetch_bank:transaction()]}.
+do_get_transactions({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account_id, AccountIdValue}, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"SELECT transaction_id, accounting_date, effective_date, amount, description, type FROM transactions WHERE bank_id = $1 and client_id = $2 and account_id = $3 ORDER BY transaction_id DESC;">>, [BankIdValue, ClientIdValue, AccountIdValue], Connection) of
+    {{select, _N}, List0} ->
+      List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8') } ||
+                {TransactionId, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}} <- List0 ],
+      {value, List1}
+  end.
+
 
 
 %%
