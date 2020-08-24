@@ -74,8 +74,12 @@ white_box_tests(_Config) ->
 -define(BANK_CREDENTIAL_A, {client_credential, credential_a}).
 -define(BANK_CLIENT_ID_B, {client_id, <<"67890">>}).
 -define(BANK_CREDENTIAL_B, {client_credential, credential_b}).
--define(BANK_CLIENT_A_ACCOUNTS, [client_a_account_1]).
--define(BANK_CLIENT_B_ACCOUNTS, [client_b_account_1]).
+-define(BANK_CLIENT_A_ACCOUNT_ID_1, <<"client_a_account_1">>).
+-define(BANK_CLIENT_A_ACCOUNTS, [#{ id => ?BANK_CLIENT_A_ACCOUNT_ID_1 }]).
+-define(BANK_CLIENT_A_ACCOUNTS_MATCH, [#{ id := ?BANK_CLIENT_A_ACCOUNT_ID_1 }]).
+-define(BANK_CLIENT_B_ACCOUNT_ID_1, <<"client_b_account_1">>).
+-define(BANK_CLIENT_B_ACCOUNTS, [#{ id => ?BANK_CLIENT_B_ACCOUNT_ID_1 }]).
+-define(BANK_CLIENT_B_ACCOUNTS_MATCH, [#{ id := ?BANK_CLIENT_B_ACCOUNT_ID_1 }]).
 
 black_box_tests(_Config) ->
   process_flag(trap_exit, true),
@@ -94,7 +98,7 @@ black_box_tests(_Config) ->
   ct:comment("Start 2 client servers from supervisor"),
   meck:expect(banks_fetch_bank_fakebank, connect, fun(MockClientId, MockCredential) ->
                                                       case MockClientId of
-                                                        ?BANK_CLIENT_ID_A -> 
+                                                        ?BANK_CLIENT_ID_A ->
                                                           ?BANK_CREDENTIAL_A = MockCredential,
                                                           {ok, fake_auth_a};
                                                         ?BANK_CLIENT_ID_B ->
@@ -108,16 +112,58 @@ black_box_tests(_Config) ->
                                                         fake_auth_b -> {ok, ?BANK_CLIENT_B_ACCOUNTS}
                                                       end
                                                   end),
+  meck:expect(banks_fetch_bank_fakebank, fetch_transactions, fun(MockAuth, MockAccountId, MockFirstOrLastId) ->
+                                                                 case MockAuth of
+                                                                   fake_auth_a ->
+                                                                     {account_id, ?BANK_CLIENT_A_ACCOUNT_ID_1} = MockAccountId,
+                                                                     first_call = MockFirstOrLastId,
+                                                                     {ok, [#{ id => <<"TRANSACTION_ID_1">> }]};
+                                                                   fake_auth_b ->
+                                                                     {account_id, ?BANK_CLIENT_B_ACCOUNT_ID_1} = MockAccountId,
+                                                                     first_call = MockFirstOrLastId,
+                                                                     {ok, [#{ id => <<"TRANSACTION_ID_2">> }]}
+                                                                 end
+                                                             end),
+
   meck:expect(banks_fetch_storage, store_accounts, fun(MockBankName, MockClientId, _MockFetchingAt, MockAccounts) ->
                                                        case MockClientId of
                                                          ?BANK_CLIENT_ID_A ->
                                                            ?BANK_ID = MockBankName,
-                                                           ?BANK_CLIENT_A_ACCOUNTS = MockAccounts;
+                                                           ?BANK_CLIENT_A_ACCOUNTS_MATCH = MockAccounts,
+                                                           ok;
                                                          ?BANK_CLIENT_ID_B ->
                                                            ?BANK_ID = MockBankName,
-                                                           ?BANK_CLIENT_B_ACCOUNTS = MockAccounts
+                                                           ?BANK_CLIENT_B_ACCOUNTS_MATCH = MockAccounts,
+                                                           ok
                                                        end
                                                    end),
+  meck:expect(banks_fetch_storage, get_last_transactions_id, fun(MockBankName, MockClientId) ->
+                                                                 case MockClientId of
+                                                                   ?BANK_CLIENT_ID_A ->
+                                                                     ?BANK_ID = MockBankName,
+                                                                     {value, []};
+                                                                   ?BANK_CLIENT_ID_B ->
+                                                                     ?BANK_ID = MockBankName,
+                                                                     {value, []}
+                                                                 end
+                                                             end),
+  meck:expect(banks_fetch_storage, store_transactions, fun(MockBankId, MockClientId, MockAccountId, _MockFetchingAt, MockTransactions) ->
+                                                           case MockClientId of
+                                                             ?BANK_CLIENT_ID_A ->
+                                                               ?BANK_ID = MockBankId,
+                                                               {account_id, ?BANK_CLIENT_A_ACCOUNT_ID_1} = MockAccountId,
+                                                               [#{ id := <<"TRANSACTION_ID_1">> }] = MockTransactions,
+                                                               ok;
+                                                             ?BANK_CLIENT_ID_B ->
+                                                               ?BANK_ID = MockBankId,
+                                                               {account_id, ?BANK_CLIENT_B_ACCOUNT_ID_1} = MockAccountId,
+                                                               [#{ id := <<"TRANSACTION_ID_2">> }] = MockTransactions,
+                                                               ok
+                                                           end
+                                                       end),
+
+
+
   {ok, ClientPidA1} = banks_fetch_client_server_sup:start_child(?BANK_ID, ?BANK_CLIENT_ID_A, ?BANK_CREDENTIAL_A),
   {ok, ClientPidB1} = banks_fetch_client_server_sup:start_child(?BANK_ID, ?BANK_CLIENT_ID_B, ?BANK_CREDENTIAL_B),
 
@@ -125,10 +171,10 @@ black_box_tests(_Config) ->
   [{undefined, ClientPidA1, worker, _},{undefined,ClientPidB1,worker,_}] = supervisor:which_children(banks_fetch_client_server_sup),
 
   ct:comment("Verify that client_server A is working"),
-  ?BANK_CLIENT_A_ACCOUNTS = banks_fetch_client_server:accounts(ClientPidA1),
+  ?BANK_CLIENT_A_ACCOUNTS_MATCH = banks_fetch_client_server:accounts(ClientPidA1),
 
   ct:comment("Verify that client_server B is working"),
-  ?BANK_CLIENT_B_ACCOUNTS = banks_fetch_client_server:accounts(ClientPidB1),
+  ?BANK_CLIENT_B_ACCOUNTS_MATCH = banks_fetch_client_server:accounts(ClientPidB1),
 
   % ------------------------------------------------
   ct:comment("Kill client server A ~p", [ClientPidA1]),

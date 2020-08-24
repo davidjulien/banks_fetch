@@ -10,7 +10,7 @@
 
 -record(state, {
           bank_id :: banks_fetch_bank:bank_id(),
-          bank_module :: module(), 
+          bank_module :: module(),
           client_id :: banks_fetch_bank:client_id(),
           client_credential :: banks_fetch_bank:client_credential(_),
           accounts :: [banks_fetch_bank:account()]
@@ -28,8 +28,8 @@ init({BankId, ClientId, ClientCredential}) ->
   {bank_id, BankIdValue} = BankId,
   self() ! fetch_data,
   {ok, #state{
-          bank_id = BankId, 
-          bank_module = list_to_atom("banks_fetch_bank_" ++ binary_to_list(BankIdValue)), 
+          bank_id = BankId,
+          bank_module = list_to_atom("banks_fetch_bank_" ++ binary_to_list(BankIdValue)),
           client_id = ClientId,
           client_credential = ClientCredential,
           accounts = []}}.
@@ -57,6 +57,20 @@ do_fetch_data(#state{ bank_module = BankModule, bank_id = BankId, client_id = Cl
       FetchingAt = calendar:universal_time(),
       {ok, Accounts} =  banks_fetch_bank:fetch_accounts(BankModule, Auth),
       banks_fetch_storage:store_accounts(BankId, ClientId, FetchingAt, Accounts),
+
+      % Fetch transactions for each account,
+      % Get last transaction id for each account to stop fetching
+      {value, LastTransactionsIdList} = banks_fetch_storage:get_last_transactions_id(BankId, ClientId),
+
+      lists:foreach(fun(#{ id := AccountIdValue } = _Account) ->
+                        AccountId = {account_id, AccountIdValue},
+                        FirstCallOrLastFetchedTransactionId = case lists:keyfind(AccountId, 1, LastTransactionsIdList) of
+                                                                false -> first_call;
+                                                                {_, LastTransactionId} -> LastTransactionId
+                                                              end,
+                        {ok, Transactions} = banks_fetch_bank:fetch_transactions(BankModule, Auth, AccountId, FirstCallOrLastFetchedTransactionId),
+                        ok = banks_fetch_storage:store_transactions(BankId, ClientId, AccountId, FetchingAt, Transactions)
+                    end, Accounts),
 
       {ok, _} = timer:send_after(4*60*60*1000, fetch_data),
 

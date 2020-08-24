@@ -396,7 +396,6 @@ should_not_authenticate_if_invalid_birthdate(_Config) ->
 
   ok.
 
-
 %%
 %% Should connect cases
 %%
@@ -604,7 +603,7 @@ should_fetch_transactions_without_net(Config) ->
   meck:expect(banks_fetch_http, request, HttpExpectations),
 
   ct:comment("Fetch transactions"),
-  {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, first_call),
+  {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, {account_id, FakeAccountId}, first_call),
 
   ExpectedTransactions =
   [
@@ -678,7 +677,7 @@ should_fetch_transactions_until_without_net(Config) ->
   meck:expect(banks_fetch_http, request, HttpExpectations),
 
   ct:comment("Fetch transactions"),
-  {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, <<"12819">>),
+  {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, {account_id, FakeAccountId}, {transaction_id, <<"12819">>}),
 
   ExpectedTransactions =
   [
@@ -735,7 +734,7 @@ should_fetch_transactions_single_case_without_net(_Config) ->
   meck:expect(banks_fetch_http, request, HttpExpectations),
 
   ct:comment("Fetch transactions"),
-  {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, FakeAccountId, first_call),
+  {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions({bank_auth, banks_fetch_bank_ing, FakeToken}, {account_id, FakeAccountId}, first_call),
 
   ExpectedTransactions = [
                           #{accounting_date => {2020,6,16}, amount => 34.25,description => <<"INTÉRÊTS PAYÉS"/utf8>>, effective_date => {2020,6,16}, id => <<"12875">>,type => interests}
@@ -778,7 +777,7 @@ test_with_real_credential(Config) ->
 
   lists:foreach(fun(#{ id := AccountId, type := Type } = Account) ->
                     ct:comment("Fetch transactions for account ~1000p", [Account]),
-                    {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions(Auth, AccountId, first_call),
+                    {ok, Transactions} = banks_fetch_bank_ing:fetch_transactions(Auth, {account_id, AccountId}, first_call),
                     NbrTransactions = length(Transactions),
                     ct:pal("~p : ~B transactions fetched", [Account, NbrTransactions]),
                     if Type =/= home_loan -> true = NbrTransactions > 0;

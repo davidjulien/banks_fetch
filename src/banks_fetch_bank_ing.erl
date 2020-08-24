@@ -56,7 +56,6 @@ connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBir
           ok = lager:warning("~p/~s : cif error : ~s", [?MODULE, ClientIdVal, BodyError]),
           decode_body_error(BodyError);
         {ok,{{"HTTP/1.1",500,"Internal Server Error"}, _Headers1, BodyError}} -> % maybe an invalid birthDate
-          error_logger:info_msg("Error = ~s", [BodyError]),
           ok = lager:warning("~p/~s : internal errorr : ~s", [?MODULE, ClientIdVal, BodyError]),
           decode_body_error(BodyError);
         {ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, _Body1}} ->
@@ -133,22 +132,22 @@ account_transform(#{ <<"uid">> := UID, <<"ledgerBalance">> := Balance, <<"label"
 %%
 %% @doc Fetch transactions
 %%
--spec fetch_transactions(ing_bank_auth(), unicode:unicode_binary(), first_call | unicode:unicode_binary()) -> {ok, [banks_fetch_bank:transaction()]}.
+-spec fetch_transactions(ing_bank_auth(), banks_fetch_bank:account_id(), first_call | banks_fetch_bank:transaction_id()) -> {ok, [banks_fetch_bank:transaction()]}.
 fetch_transactions(AuthToken, AccountId, first_call) ->
-  fetch_transactions(AuthToken, AccountId, <<"0">>);
-fetch_transactions({bank_auth, ?MODULE, AuthToken}, AccountId, LastKnownTransactionId) ->
+  fetch_transactions(AuthToken, AccountId, {transaction_id, <<"0">>});
+fetch_transactions({bank_auth, ?MODULE, AuthToken}, {account_id, AccountIdValue}, {transaction_id, LastKnownTransactionIdValue}) ->
   prometheus_counter:inc('bank_ing_transactions_total_count'),
-  Transactions0 = transactions(AuthToken, AccountId, LastKnownTransactionId, <<"0">>, []),
+  Transactions0 = transactions(AuthToken, AccountIdValue, LastKnownTransactionIdValue, <<"0">>, []),
   Transactions1 = [ transaction_transform(T) || T <- Transactions0 ],
   prometheus_counter:inc('bank_ing_transactions_ok_count'),
   {ok, Transactions1}.
 
-transactions(AuthToken, AccountId, LastKnownTransactionId, NextCallId, AccTransactions) ->
-    URL = "https://m.ing.fr/secure/api-v1/accounts/"++binary_to_list(AccountId)++"/transactions/after/"++binary_to_list(NextCallId)++"/limit/50",
+transactions(AuthToken, AccountIdValue, LastKnownTransactionIdValue, NextCallId, AccTransactions) ->
+    URL = "https://m.ing.fr/secure/api-v1/accounts/"++binary_to_list(AccountIdValue)++"/transactions/after/"++binary_to_list(NextCallId)++"/limit/50",
     case request_json(AuthToken, URL) of
       {_JSON, []} -> AccTransactions;
       {_JSON, Transactions0} ->
-        {Transactions1, Remaining} = lists:splitwith(fun(T) -> #{ <<"id">> := TID } = T, TID =/= LastKnownTransactionId end, Transactions0),
+        {Transactions1, Remaining} = lists:splitwith(fun(T) -> #{ <<"id">> := TID } = T, TID =/= LastKnownTransactionIdValue end, Transactions0),
         if Remaining =/= [] ->
              AccTransactions++Transactions1;
            true ->
@@ -160,7 +159,7 @@ transactions(AuthToken, AccountId, LastKnownTransactionId, NextCallId, AccTransa
                                       true -> lists:nth(length(Transactions0)-1,Transactions0)          % second to last transaction
                                    end,
              #{ <<"id">> := NewNextCallId } = NextCallTransaction,
-             transactions(AuthToken, AccountId, LastKnownTransactionId, NewNextCallId, AccTransactions++Transactions0)
+             transactions(AuthToken, AccountIdValue, LastKnownTransactionIdValue, NewNextCallId, AccTransactions++Transactions0)
         end
     end.
 

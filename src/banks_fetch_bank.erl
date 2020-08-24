@@ -22,6 +22,8 @@
               bank_id/0,
               client_id/0,
               client_credential/1,
+              account_id/0,
+              transaction_id/0,
               account/0,
               transaction/0
              ]).
@@ -33,6 +35,8 @@
 -type bank_id() :: {bank_id, unicode:unicode_binary()}.
 -type client_id() :: {client_id, unicode:unicode_binary()}.
 -type client_credential(A) :: {client_credential, A}.
+-type account_id() :: {account_id, unicode:unicode_binary()}.
+-type transaction_id() :: {transaction_id, unicode:unicode_binary()}.
 
 -type account_type() :: current | savings | home_loan.
 -type account_ownership() :: single | joint.
@@ -60,7 +64,7 @@
 -callback setup() -> ok.
 -callback connect(ClientId :: client_id(), ClientCredential :: client_credential(_)) -> {ok, BankAuth :: bank_auth()} | {error, connection_error()}.
 -callback fetch_accounts(BankAuth :: bank_auth()) -> {ok, Accounts :: [account()]}.
--callback fetch_transactions(BankAuth :: bank_auth(), AcountId :: unicode:unicode_binary(), FirstCallOrLastFetchedTransactionId :: first_call | unicode:unicode_binary()) -> {ok, Transactions :: [banks_fetch_bank:transaction()]}.
+-callback fetch_transactions(BankAuth :: bank_auth(), AcountId :: account_id(), FirstCallOrLastFetchedTransactionId :: first_call | transaction_id()) -> {ok, Transactions :: [banks_fetch_bank:transaction()]}.
 
 -spec setup(BankModule :: module()) -> ok.
 setup(BankModule) ->
@@ -74,7 +78,7 @@ connect(BankModule, ClientId, ClientCredential) ->
 fetch_accounts(BankModule, BankAuth) ->
   BankModule:fetch_accounts(BankAuth).
 
--spec fetch_transactions(BankModule :: module(), BankAuth :: bank_auth(), AccountId :: unicode:unicode_binary(), FirstCallOrLastFetchedTransactionId :: first_call | unicode:unicode_binary()) -> 
+-spec fetch_transactions(BankModule :: module(), BankAuth :: bank_auth(), AccountId :: account_id(), FirstCallOrLastFetchedTransactionId :: first_call | transaction_id()) ->
   {ok, Transactions :: [banks_fetch_bank:transaction()]}.
 fetch_transactions(Module, BankAuth, AccountId, FirstCallOrLastFetchedTransactionId) ->
   Module:fetch_transactions(BankAuth, AccountId, FirstCallOrLastFetchedTransactionId).
