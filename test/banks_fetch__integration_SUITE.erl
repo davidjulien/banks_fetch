@@ -42,6 +42,9 @@ init_per_testcase(should_fetch_data_from_a_bank_and_store_them, Config) ->
     {ok, []} ->
       {skip, "Credential is required to test full integration"};
     {ok, [{BankId, ClientId, ClientCredential}]} ->
+      ct:comment("Start jsx"),
+      ok = application:start(jsx),
+
       ct:comment("Start pgsql"),
       ok = application:start(pgsql),
 
@@ -84,12 +87,30 @@ should_fetch_data_from_a_bank_and_store_them(Config) ->
 
   ct:comment("Add new client"),
   ok = banks_fetch_client_manager:add_client(BankId, ClientId, ClientCredential),
+  [{_,_,ClientPid}] = banks_fetch_client_manager:get_clients_pids(),
 
   ct:comment("Wait for accounts storing"),
   ok = meck:wait(banks_fetch_storage, store_accounts, '_', 20000),
 
   ct:comment("Verify accounts data"),
-  {ok, Accounts} = banks_fetch_storage:get_accounts(BankId, ClientId),
+  Accounts = banks_fetch_client_server:accounts(ClientPid),
   [_|_] = Accounts,
+
+  NbrAccounts = length(Accounts),
+  ct:comment("Wait for transactions storing for ~B accounts", [NbrAccounts]),
+  lists:foreach(fun(_) ->
+                    ct:comment("Wait transactions storing..."),
+                    ok = meck:wait(banks_fetch_storage, store_transactions, '_', 20000)
+                end, Accounts),
+  NbrAccounts = meck:num_calls(banks_fetch_storage, store_transactions, '_'),
+
+  ct:comment("Verify transactions data"),
+  lists:foreach(fun(#{ id := AccountIdValue, type := AccountType } = Account) ->
+                    {value, Transactions} = banks_fetch_storage:get_transactions(BankId, ClientId, {account_id, AccountIdValue}),
+                    if AccountType =/= home_loan ->
+                         [_|_] = Transactions;
+                       true -> ok
+                    end
+                end, Accounts),
 
   ok.
