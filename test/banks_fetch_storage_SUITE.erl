@@ -267,6 +267,11 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.1.0';">>, [], fake_connection],
                 {'comment', []}
                },
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.0';">>, [], fake_connection],
+                {'comment', []}
+               },
+               {[meck_matcher:new(fun(<<"COMMENT ON DATABASE banks_fetch_test IS ", _/binary>>) -> true; (_) -> false end), [], fake_connection],
+                {error, unexpected_comment}},
                {[<<"COMMIT">>, [], fake_connection],
                 {'commit', []}
                },
@@ -274,9 +279,10 @@ should_nodb_start_with_db_upgrade(_Config) ->
               ]),
 
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
-  meck:wait(pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
+  % One COMMIT for each upgrade
+  meck:wait(2, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
-  12 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  17 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 

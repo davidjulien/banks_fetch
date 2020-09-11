@@ -17,5 +17,10 @@
                      "amount FLOAT NOT NULL, description TEXT NOT NULL, type e_transaction_type NOT NULL, ",
                      "FOREIGN KEY (bank_id, client_id) REFERENCES clients(bank_id, client_id), ",
                      "FOREIGN KEY (bank_id, account_id) REFERENCES accounts(bank_id, account_id));">>
+                  ]},
+                 {<<"0.1.0">>, <<"0.2.0">>,
+                  [
+                   <<"CREATE TABLE apps(name TEXT UNIQUE NOT NULL, version TEXT NOT NULL)">>,
+                   <<"INSERT INTO apps(name, version) VALUES('banks_fetch', '0.2.0')">>
                   ]}
                 ]).
