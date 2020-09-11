@@ -1,7 +1,7 @@
 banks_fetch [![Build Status](https://travis-ci.com/davidjulien/banks_fetch.svg?branch=master)](https://travis-ci.com/davidjulien/banks_fetch)
 ===========
 
-An OTP application to fetch banks accounts and transactions. Current version fetch only accounts.
+An OTP application to fetch banks accounts and transactions.
 
 Current status of banks modules :
 
