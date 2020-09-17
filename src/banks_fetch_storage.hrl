@@ -22,5 +22,14 @@
                   [
                    <<"CREATE TABLE apps(name TEXT UNIQUE NOT NULL, version TEXT NOT NULL)">>,
                    <<"INSERT INTO apps(name, version) VALUES('banks_fetch', '0.2.0')">>
+                  ]},
+                 {<<"0.2.0">>, <<"0.2.1">>,
+                  [
+                   <<"UPDATE apps SET version = '0.2.1' where name = 'banks_fetch';">>,
+                   <<"ALTER TABLE transactions DROP CONSTRAINT transactions_bank_id_account_id_fkey;">>,
+                   <<"ALTER TABLE accounts DROP CONSTRAINT accounts_pkey;">>,
+                   <<"ALTER TABLE transactions ADD COLUMN fetching_position INTEGER NOT NULL;">>,
+                   <<"DELETE FROM transactions a USING transactions b WHERE a.fetching_at > b.fetching_at AND a.transaction_id = b.transaction_id and a.bank_id = b.bank_id and a.client_id = b.client_id;">>,
+                   <<"CREATE UNIQUE INDEX ON transactions(bank_id,client_id,transaction_id);">>
                   ]}
                 ]).

@@ -190,9 +190,10 @@ do_get_accounts(BankId, ClientId, #state{ connection = Connection }) ->
 -spec do_store_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), calendar:datetime(), [banks_fetch_bank:transaction()], #state{}) -> ok.
 do_store_transactions({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account_id, AccountIdValue}, FetchingAt, TransactionsList, #state{ connection = Connection }) ->
   {'begin', []} = pgsql_connection:simple_query(<<"BEGIN TRANSACTION">>, Connection),
-  lists:foreach(fun(#{ id := TransactionId, accounting_date := AccountingDate, effective_date := EffectiveDate, amount := Amount, description := Description, type := Type }) ->
-                    {{insert, _, 1}, []} = pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);">>, [BankIdValue, ClientIdValue, AccountIdValue, FetchingAt, TransactionId, AccountingDate, EffectiveDate, Amount, Description, atom_to_binary(Type,'utf8')], Connection)
-                end, TransactionsList),
+  lists:foldl(fun(#{ id := TransactionId, accounting_date := AccountingDate, effective_date := EffectiveDate, amount := Amount, description := Description, type := Type }, Position) ->
+                    {{insert, _, 1}, []} = pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, fetching_position, transaction_id, accounting_date, effective_date, amount, description, type) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);">>, [BankIdValue, ClientIdValue, AccountIdValue, FetchingAt, Position, TransactionId, AccountingDate, EffectiveDate, Amount, Description, atom_to_binary(Type,'utf8')], Connection),
+                    Position+1
+                end, 0, TransactionsList),
   {'commit', []} = pgsql_connection:simple_query(<<"COMMIT;">>, Connection),
   ok.
 
@@ -202,7 +203,7 @@ do_store_transactions({bank_id, BankIdValue}, {client_id, ClientIdValue}, {accou
 %%
 -spec do_get_last_transactions_id(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), #state{}) -> {value, [{banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()}]}.
 do_get_last_transactions_id({bank_id, BankIdValue}, {client_id, ClientIdValue}, #state{ connection = Connection }) ->
-  case pgsql_connection:extended_query(<<"SELECT account_id, MAX(transaction_id) FROM transactions WHERE bank_id = $1 and client_id = $2 GROUP BY account_id ORDER BY account_id;">>, [BankIdValue, ClientIdValue], Connection) of
+  case pgsql_connection:extended_query(<<"SELECT distinct on (account_id) account_id, transaction_id FROM transactions WHERE fetching_position = 0 and bank_id = $1 and client_id = $2 order by account_id, fetching_at desc;">>, [BankIdValue, ClientIdValue], Connection) of
     {{select, _N}, List0} ->
       List1 = [ {{account_id, AccountIdVal}, {transaction_id, TransactionIdVal}} || {AccountIdVal, TransactionIdVal} <- List0 ],
       {value, List1}
