@@ -26,7 +26,7 @@
                  {<<"0.2.0">>, <<"0.2.1">>,
                   [
                    <<"UPDATE apps SET version = '0.2.1' where name = 'banks_fetch';">>,
-                   <<"ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_bank_id_account_id_fkey, DROP CONSTRAINT IF EXISTS transactions_bank_id_fkey;">>,
+                   <<"ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_bank_id_account_id_fkey, DROP CONSTRAINT IF EXISTS transactions_bank_id_fkey, DROP CONSTRAINT IF EXISTS transactions_bank_id_fkey1;">>,
                    <<"ALTER TABLE accounts DROP CONSTRAINT accounts_pkey;">>,
                    <<"ALTER TABLE transactions ADD COLUMN fetching_position INTEGER NOT NULL;">>,
                    <<"DELETE FROM transactions a USING transactions b WHERE a.fetching_at > b.fetching_at AND a.transaction_id = b.transaction_id and a.bank_id = b.bank_id and a.client_id = b.client_id;">>,
