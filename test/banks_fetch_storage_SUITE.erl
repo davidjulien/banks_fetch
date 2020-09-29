@@ -43,46 +43,23 @@
 -define(CLIENT_ID_1, <<"client1">>).
 -define(CLIENT_CREDENTIAL_1, {<<"credential1">>}).
 -define(FETCHING_AT_1, {{2020,7,7},{12,0,0}}).
--define(ACCOUNT_ID_1, <<"ACCOUNT1">>).
--define(ACCOUNT_ID_2, <<"ACCOUNT2">>).
+-define(ACCOUNT_ID_1, <<"account1">>).
+-define(ACCOUNT_ID_2, <<"account2">>).
 % data used to test store_accounts
 -define(ACCOUNTS_1, [
-                     #{ id => ?ACCOUNT_ID_1, balance => 234.12, number => <<"NUMBER1">>, owner => <<"OWNER">>, ownership => single, type => current, name => <<"CURRENT">> },
-                     #{ id => ?ACCOUNT_ID_2, balance => 4321.78, number => <<"NUMBER2">>, owner => <<"OWNER">>, ownership => single, type => savings, name => <<"LDD">> }
+                     #{ id => ?ACCOUNT_ID_1, balance => 234.12, number => <<"number1">>, owner => <<"owner1">>, ownership => single, type => current, name => <<"CURRENT">> },
+                     #{ id => ?ACCOUNT_ID_2, balance => 4321.78, number => <<"number2">>, owner => <<"owner2">>, ownership => single, type => savings, name => <<"LDD">> }
                     ]).
 % data used to test store_transactions
 -define(TRANSACTIONS_1,
         [
          #{ id => <<"TRANSACTION_2">>, accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit },
-         #{ id => <<"TRANSACTION_1">>, accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
+         #{ id => <<"TRANSACTION_1">>, accounting_date => {2020,7,20}, effective_date => {2020,7,20}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
         ]).
 
 -define(BANK_ID_2, <<"ing">>).
 -define(CLIENT_ID_2, <<"client2">>).
 -define(CLIENT_CREDENTIAL_2, {<<"credential2">>}).
-
-% Data used to test get_last_transactions
--define(ACCOUNT_ID_2_1, <<"ACCOUNT_2_1">>).
--define(ACCOUNT_ID_2_2, <<"ACCOUNT_2_2">>).
--define(ACCOUNTS_2, [
-                     #{ id => ?ACCOUNT_ID_2_1, balance => 234.12, number => <<"NUMBER1">>, owner => <<"OWNER">>, ownership => single, type => current, name => <<"CURRENT">> },
-                     #{ id => ?ACCOUNT_ID_2_2, balance => 4321.78, number => <<"NUMBER2">>, owner => <<"OWNER">>, ownership => single, type => savings, name => <<"LDD">> }
-                    ]).
--define(TRANSACTIONS_2_1,
-        [
-         #{ id => <<"TRANSACTION_2">>, accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit },
-         #{ id => <<"TRANSACTION_1">>, accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
-        ]).
--define(TRANSACTIONS_2_2,
-        [
-         #{ id => <<"TRANSACTION_5">>, accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => 18.20, description => <<"PRLV SEPA XXX">>, type => sepa_debit },
-         #{ id => <<"TRANSACTION_4">>, accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -121.99, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
-        ]).
-
-
--define(BANK_ID_3, <<"ing">>).
--define(CLIENT_ID_3, <<"client3">>).
--define(CLIENT_CREDENTIAL_3, {<<"credential3">>}).
 
 all() ->
   [
@@ -110,11 +87,10 @@ end_per_suite(_Config) ->
   application:stop(lager).
 
 
-% Init per group
-init_per_group(tests_without_db, Config) ->
-  meck:new(pgsql_connection),
-  Config;
-init_per_group(tests_with_db, Config) ->
+setup_database(Config) ->
+  setup_database(Config, none).
+
+setup_database(Config, FilenameOpt) ->
   ok = application:start(pgsql),
   Connection = pgsql_connection:open("127.0.0.1", "postgres", ?DB_USER, ?DB_PASSWORD),
 
@@ -126,90 +102,96 @@ init_per_group(tests_with_db, Config) ->
   pgsql_connection:close(Connection),
 
   DBConnection = pgsql_connection:open("127.0.0.1", ?DB_NAME, ?DB_USER, ?DB_PASSWORD),
-  [{db_connection, DBConnection} | Config].
+
+  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
+  receive after 500 -> nil end, % wait for db init
+
+  case FilenameOpt of
+    none -> ok;
+    _ ->
+      % Load queries to init database content
+      {ok, FileData} = file:read_file(filename:join([?config(data_dir, Config), FilenameOpt])),
+      Queries = binary:split(FileData, <<"\n">>, [global]),
+      ok = lists:foldl(fun(_Query, stop) -> stop;
+                     (Query, ok) ->
+                      case pgsql_connection:simple_query(Query, DBConnection) of
+                        {error, _} = Err ->
+                          error_logger:info_msg("Unable to setup_database for ~s:\n~p", [Query, Err]),
+                          stop;
+                        _ -> ok
+                      end
+                  end, ok, Queries)
+  end,
+
+  [{db_connection, DBConnection}, {storage_pid, PID} | Config].
+
+teardown_database() ->
+  ok = application:stop(pgsql),
+  ok.
+
+% Init per group
+init_per_group(tests_without_db, Config) ->
+  meck:new(pgsql_connection),
+  Config;
+init_per_group(tests_with_db, Config) ->
+  Config.
 
 % End per group
 end_per_group(tests_without_db, _Config) ->
   meck:unload(pgsql_connection),
   ok;
 end_per_group(tests_with_db, _Config) ->
-  ok = application:stop(pgsql),
   ok.
 
 
 % Init per testcase
 init_per_testcase(should_db_get_clients, Config) ->
-  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
-
-  receive after 1000 -> nil end, % wait for db init
-
-  {db_connection, Connection} = lists:keyfind(db_connection, 1, Config),
-  {{insert,_,1},[]} = pgsql_connection:extended_query(<<"INSERT INTO clients(bank_id, client_id, client_credential) VALUES($1,$2,$3);">>, [?BANK_ID_1, ?CLIENT_ID_1, term_to_binary(?CLIENT_CREDENTIAL_1)], Connection),
-
-  [{storage_pid, PID}|Config];
+  setup_database(Config, <<"setup_db_for_get_clients.sql">>);
 
 init_per_testcase(should_db_insert_client, Config) ->
-  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
-  [{storage_pid, PID}|Config];
+  setup_database(Config);
 
 init_per_testcase(should_db_not_insert_client_already_existing, Config) ->
-  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
-  [{storage_pid, PID}|Config];
+  setup_database(Config, <<"setup_db_for_get_clients.sql">>);
 
 init_per_testcase(should_db_store_accounts, Config) ->
-  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
-  [{storage_pid, PID}|Config];
+  setup_database(Config, <<"setup_db_for_store_accounts.sql">>);
 
 init_per_testcase(should_db_get_accounts, Config) ->
-  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
-  [{storage_pid, PID}|Config];
+  setup_database(Config, <<"setup_db_for_get_accounts.sql">>);
 
 init_per_testcase(should_db_store_transactions, Config) ->
-  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
-  [{storage_pid, PID}|Config];
+  setup_database(Config, <<"setup_db_for_store_transactions.sql">>);
 
 init_per_testcase(should_db_get_transactions, Config) ->
-  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
-  [{storage_pid, PID}|Config];
+  setup_database(Config, <<"setup_db_for_get_transactions.sql">>);
 
 init_per_testcase(should_db_get_last_transactions_id, Config) ->
-  {ok, PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
+  setup_database(Config, <<"setup_db_for_get_last_transactions_id.sql">>);
 
-  ct:comment("Store accounts for clients 2"),
-  ok = banks_fetch_storage:store_accounts({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_2}, ?FETCHING_AT_1, ?ACCOUNTS_2),
-  ok = banks_fetch_storage:store_transactions({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_2}, {account_id, ?ACCOUNT_ID_2_1}, ?FETCHING_AT_1, ?TRANSACTIONS_2_1),
-  ok = banks_fetch_storage:store_transactions({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_2}, {account_id, ?ACCOUNT_ID_2_2}, ?FETCHING_AT_1, ?TRANSACTIONS_2_2),
-
-  [{storage_pid, PID}|Config];
-
+% Other cases are without db
 init_per_testcase(_, Config) ->
   Config.
 
 % End per testcase
 end_per_testcase(should_db_get_clients, _Config) ->
-  banks_fetch_storage:stop(),
-  ok;
+  teardown_database();
 end_per_testcase(should_db_insert_client, _Config) ->
-  banks_fetch_storage:stop(),
-  ok;
+  teardown_database();
 end_per_testcase(should_db_not_insert_client_already_existing, _Config) ->
-  banks_fetch_storage:stop(),
-  ok;
+  teardown_database();
 end_per_testcase(should_db_store_accounts, _Config) ->
-  banks_fetch_storage:stop(),
-  ok;
+  teardown_database();
 end_per_testcase(should_db_get_accounts, _Config) ->
-  banks_fetch_storage:stop(),
-  ok;
+  teardown_database();
 end_per_testcase(should_db_store_transactions, _Config) ->
-  banks_fetch_storage:stop(),
-  ok;
+  teardown_database();
 end_per_testcase(should_db_get_transactions, _Config) ->
-  banks_fetch_storage:stop(),
-  ok;
+  teardown_database();
 end_per_testcase(should_db_get_last_transactions_id, _Config) ->
-  banks_fetch_storage:stop(),
-  ok;
+  teardown_database();
+
+% Other cases are without db
 end_per_testcase(_, _Config) ->
   ok.
 
@@ -478,6 +460,7 @@ should_db_get_clients(_Config) ->
 
 should_db_insert_client(Config) ->
   ct:comment("Insert client"),
+  ok = banks_fetch_storage:insert_client({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_1}, {client_credential, ?CLIENT_CREDENTIAL_1}),
   ok = banks_fetch_storage:insert_client({bank_id, ?BANK_ID_2}, {client_id, ?CLIENT_ID_2}, {client_credential, ?CLIENT_CREDENTIAL_2}),
 
   ct:comment("Load clients from database"),
@@ -565,17 +548,18 @@ should_db_store_transactions(Config) ->
 should_db_get_transactions(_Config) ->
   ct:comment("Get transactions"),
   {value, Transactions} = banks_fetch_storage:get_transactions({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_1}, {account_id, ?ACCOUNT_ID_1}),
-  ExpectedTransactions = ?TRANSACTIONS_1,
-  ExpectedTransactions = Transactions,
+
+  ct:comment("Verify transactions"),
+  2 = length(Transactions),
+  [#{ id := <<"transaction2">> }, #{id := <<"transaction1">> }] = Transactions,
 
   ok.
 
-
 should_db_get_last_transactions_id(_Config) ->
   ct:comment("Get last transactions id"),
-  ExpectedData = [{{account_id, ?ACCOUNT_ID_2_1}, {transaction_id,<<"TRANSACTION_2">>}}, {{account_id, ?ACCOUNT_ID_2_2}, {transaction_id,<<"TRANSACTION_5">>}}],
+  ExpectedData = [{{account_id, <<"account1">>}, {transaction_id,<<"transaction1">>}}, {{account_id, <<"account2">>}, {transaction_id,<<"transaction3">>}}],
   NbrExpectedData = length(ExpectedData),
-  {value, LastTransactionsIdList} = banks_fetch_storage:get_last_transactions_id({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_2}),
+  {value, LastTransactionsIdList} = banks_fetch_storage:get_last_transactions_id({bank_id, <<"ing">>}, {client_id, <<"client1">>}),
 
   ct:comment("Verify returned transactions id"),
   NbrExpectedData = length(LastTransactionsIdList),
