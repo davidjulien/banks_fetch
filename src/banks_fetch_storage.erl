@@ -29,6 +29,7 @@
          store_transactions/5,
          get_last_transactions_id/2,
          get_transactions/3,
+         get_last_transactions/1,
 
          stop/0
         ]).
@@ -72,6 +73,13 @@ get_last_transactions_id(BankId, ClientId) ->
 get_transactions(BankId, ClientId, AccountId) ->
   gen_server:call(?MODULE, {get_transactions, BankId, ClientId, AccountId}).
 
+%% @doc Returns last N transactions for any account
+-spec get_last_transactions(non_neg_integer()) -> {value, [banks_fetch_bank:transaction()]}.
+get_last_transactions(N) ->
+  gen_server:call(?MODULE, {get_last_transactions, N}).
+
+
+
 -spec stop() -> ok.
 stop() ->
   gen_server:call(?MODULE, stop).
@@ -105,6 +113,9 @@ handle_call({get_last_transactions_id, BankId, ClientId}, _From, #state{ } = Sta
   {reply, R, State0};
 handle_call({get_transactions, BankId, ClientId, AccountId}, _From, #state{ } = State0) ->
   R = do_get_transactions(BankId, ClientId, AccountId, State0),
+  {reply, R, State0};
+handle_call({get_last_transactions, N}, _From, #state{ } = State0) ->
+  R = do_get_last_transactions(N, State0),
   {reply, R, State0};
 handle_call(stop, _From, State0) ->
   {stop, normal, stopped, State0}.
@@ -216,6 +227,18 @@ do_get_last_transactions_id({bank_id, BankIdValue}, {client_id, ClientIdValue}, 
 -spec do_get_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), #state{}) -> {value, [banks_fetch_bank:transaction()]}.
 do_get_transactions({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account_id, AccountIdValue}, #state{ connection = Connection }) ->
   case pgsql_connection:extended_query(<<"SELECT transaction_id, accounting_date, effective_date, amount, description, type FROM transactions WHERE bank_id = $1 and client_id = $2 and account_id = $3 ORDER BY transaction_id DESC;">>, [BankIdValue, ClientIdValue, AccountIdValue], Connection) of
+    {{select, _N}, List0} ->
+      List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8') } ||
+                {TransactionId, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}} <- List0 ],
+      {value, List1}
+  end.
+
+%%
+%% @doc Get last N transactions for all accounts. Order by effective_date desc. If effective_dates are identifical, grouped transactions by bank/client/account
+%%
+-spec do_get_last_transactions(non_neg_integer(), #state{}) -> {value, [banks_fetch_bank:transaction()]}.
+do_get_last_transactions(N, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"SELECT transaction_id, accounting_date, effective_date, amount, description, type FROM transactions ORDER BY effective_date DESC, bank_id, client_id, account_id, fetching_at DESC, fetching_position ASC LIMIT $1;">>, [N], Connection) of
     {{select, _N}, List0} ->
       List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8') } ||
                 {TransactionId, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}} <- List0 ],

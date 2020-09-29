@@ -32,6 +32,7 @@
          should_db_get_accounts/1,
          should_db_store_transactions/1,
          should_db_get_transactions/1,
+         should_db_get_last_transactions/1,
          should_db_get_last_transactions_id/1
         ]).
 
@@ -73,7 +74,7 @@ groups() ->
    {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_insert_client, should_nodb_store_accounts ]},
    {tests_with_db, [], [ should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
                          should_db_store_accounts, should_db_get_accounts,
-                         should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions_id ]}
+                         should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_id ]}
   ].
 
 %%
@@ -166,6 +167,9 @@ init_per_testcase(should_db_store_transactions, Config) ->
 init_per_testcase(should_db_get_transactions, Config) ->
   setup_database(Config, <<"setup_db_for_get_transactions.sql">>);
 
+init_per_testcase(should_db_get_last_transactions, Config) ->
+  setup_database(Config,"setup_db_for_get_last_transactions.sql");
+
 init_per_testcase(should_db_get_last_transactions_id, Config) ->
   setup_database(Config, <<"setup_db_for_get_last_transactions_id.sql">>);
 
@@ -187,6 +191,8 @@ end_per_testcase(should_db_get_accounts, _Config) ->
 end_per_testcase(should_db_store_transactions, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_transactions, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_get_last_transactions, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_last_transactions_id, _Config) ->
   teardown_database();
@@ -552,6 +558,19 @@ should_db_get_transactions(_Config) ->
   ct:comment("Verify transactions"),
   2 = length(Transactions),
   [#{ id := <<"transaction2">> }, #{id := <<"transaction1">> }] = Transactions,
+
+  ok.
+
+should_db_get_last_transactions(_Config) ->
+  ct:comment("Get last 1 transactions"),
+  {value, Transactions} = banks_fetch_storage:get_last_transactions(1),
+  1 = length(Transactions),
+  [#{ id := <<"transaction1">> }] = Transactions,
+
+  ct:comment("Get last 5 transactions"),
+  {value, Transactions2} = banks_fetch_storage:get_last_transactions(5),
+  5 = length(Transactions2),
+  [#{ id := <<"transaction1">> }, #{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }, #{ id := <<"transaction5">> }, #{ id := <<"transaction2">> }] = Transactions2,
 
   ok.
 
