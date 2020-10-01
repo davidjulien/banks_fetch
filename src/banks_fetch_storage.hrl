@@ -31,5 +31,10 @@
                    <<"ALTER TABLE transactions ADD COLUMN fetching_position INTEGER NOT NULL;">>,
                    <<"DELETE FROM transactions a USING transactions b WHERE a.fetching_at > b.fetching_at AND a.transaction_id = b.transaction_id and a.bank_id = b.bank_id and a.client_id = b.client_id;">>,
                    <<"CREATE UNIQUE INDEX transactions_bank_client_transaction_ids ON transactions(bank_id,client_id,transaction_id);">>
-                  ]}
+                  ]},
+                 {<<"0.2.1">>, <<"0.2.2">>,
+                  [
+                   <<"ALTER TYPE e_transaction_type ADD VALUE 'other';">>
+                  ]
+                 }
                 ]).

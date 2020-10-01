@@ -163,7 +163,7 @@ transactions(AuthToken, AccountIdValue, LastKnownTransactionIdValue, NextCallId,
         end
     end.
 
-transaction_transform(#{ <<"id">> := ID, <<"effectiveDate">> := EffectiveDateStr, <<"accountingDate">> := AccountingDateStr, <<"detail">> := Detail, <<"amount">> := Amount, <<"type">> := TypeStr } = _Transaction) ->
+transaction_transform(#{ <<"id">> := ID, <<"effectiveDate">> := EffectiveDateStr, <<"accountingDate">> := AccountingDateStr, <<"detail">> := Detail, <<"amount">> := Amount, <<"type">> := TypeStr } = Transaction) ->
   EffectiveDate = string_to_date(EffectiveDateStr),
   AccountingDate = string_to_date(AccountingDateStr),
   Type = case TypeStr of
@@ -172,8 +172,10 @@ transaction_transform(#{ <<"id">> := ID, <<"effectiveDate">> := EffectiveDateStr
            <<"TRANSFER">> -> transfer;
            <<"CHECK">> -> check;
            <<"CARD_WITHDRAWAL">> -> card_withdrawal;
-           <<"OTHER">> when Detail =:= <<"INTÉRÊTS PAYÉS"/utf8>> -> interests
-           %_ -> io:format("T=~p", [_Transaction])
+           <<"OTHER">> when Detail =:= <<"INTÉRÊTS PAYÉS"/utf8>> -> interests;
+           <<"OTHER">> ->
+             ok = lager:warning("Other case in ING transaction: ~p", [Transaction]),
+             other
          end,
   #{ id => ID, effective_date => EffectiveDate, accounting_date => AccountingDate, amount => Amount, description => Detail, type => Type }.
 

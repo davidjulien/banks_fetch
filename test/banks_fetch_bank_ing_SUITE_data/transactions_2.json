@@ -117,5 +117,17 @@
     "isOldBankCode": false,
     "sameMonthAsPrevious": true,
     "sameDateAsPrevious": false,
-    "sameDateAsNext": true
+    "sameDateAsNext": false
+}, {
+    "id": "12535",
+    "effectiveDate": "2020-05-25",
+    "accountingDate": "2020-05-25",
+    "detail": "AVOIR CARTE",
+    "amount": 18.00,
+    "transcodeNeedCustomerAction": false,
+    "type": "OTHER",
+    "isOldBankCode": false,
+    "sameMonthAsPrevious": true,
+    "sameDateAsPrevious": false,
+    "sameDateAsNext": false
 }]

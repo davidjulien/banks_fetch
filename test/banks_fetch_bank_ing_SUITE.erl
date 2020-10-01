@@ -579,7 +579,7 @@ should_fetch_transactions_without_net(Config) ->
 
   URL_1 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/0/limit/50",
   URL_2 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/12714/limit/50",
-  URL_3 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/12541/limit/50",
+  URL_3 = "https://m.ing.fr/secure/api-v1/accounts/" ++ binary_to_list(FakeAccountId) ++ "/transactions/after/12537/limit/50",
 
   meck:expect(prometheus_counter, inc,
               [
@@ -630,7 +630,8 @@ should_fetch_transactions_without_net(Config) ->
    #{accounting_date => {2020,5,28}, amount => -2.93, description => <<"PAIEMENT PAR CARTE 27/05/2020 XXX">>, effective_date => {2020,5,28}, id => <<"12582">>,type => card_debit},
    #{accounting_date => {2020,5,27}, amount => 2978.11,description => <<"VIREMENT SEPA RECU XXX">>, effective_date => {2020,5,27}, id => <<"12579">>,type => transfer},
    #{accounting_date => {2020,5,27}, amount => -150.58, description => <<"PAIEMENT PAR CARTE 26/05/2020 XXX">>, effective_date => {2020,5,27}, id => <<"12541">>,type => card_debit},
-   #{accounting_date => {2020,5,26}, amount => -14.9, description => <<"PAIEMENT PAR CARTE 24/05/2020 XXX">>, effective_date => {2020,5,26}, id => <<"12537">>,type => card_debit}
+   #{accounting_date => {2020,5,26}, amount => -14.9, description => <<"PAIEMENT PAR CARTE 24/05/2020 XXX">>, effective_date => {2020,5,26}, id => <<"12537">>,type => card_debit},
+   #{accounting_date => {2020,5,25}, amount => 18.0, description => <<"AVOIR CARTE">>, effective_date => {2020,5,25}, id => <<"12535">>,type => other}
   ],
 
   ct:comment("Verify transactions count"),
