@@ -32,10 +32,8 @@ handle_event(_Event, _Data, _Args) ->
 
 -spec handle_transactions(non_neg_integer()) -> elli_handler:result().
 handle_transactions(N) ->
-  error_logger:info_msg("handle_transactions"),
   {value, Transactions} = banks_fetch_storage:get_last_transactions(N),
   Transactions1 = [ to_json_transaction(Transaction) || Transaction <- Transactions ],
-  error_logger:info_msg("handle_transactions : ~p", [Transactions1]),
   JSON = jiffy:encode(#{ transactions => Transactions1 }),
   {200, [], JSON}.
 
