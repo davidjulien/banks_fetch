@@ -12,6 +12,6 @@ env:
     - PGVER=12
     - PGPORT=5433
 before_script:
-  - psql -c 'CREATE ROLE banks_fetch_test LOGIN; ALTER USER banks_fetch_test WITH SUPERUSER;' -U postgres
+  - psql -c 'CREATE ROLE banks_fetch_test LOGIN; ALTER USER banks_fetch_test WITH SUPERUSER;'
 script:
   - rebar3 compile && rebar3 check
