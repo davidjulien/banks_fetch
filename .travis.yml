@@ -1,13 +1,16 @@
 language: erlang
 otp_release:
    - 23.0
-services: postgresql
 addons:
   postgresql: '12'
   apt:
     packages:
       - postgresql-12
       - postgresql-client-12
+env:
+  global:
+    - PGVER=12
+    - PGPORT=5433
 before_script:
   - psql -c 'CREATE ROLE banks_fetch_test LOGIN; ALTER USER banks_fetch_test WITH SUPERUSER;' -U postgres
 script:
