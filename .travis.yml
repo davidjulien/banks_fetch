@@ -2,13 +2,13 @@ language: erlang
 otp_release:
    - 23.0
 services: postgresql
+addons:
+  postgresql: '12'
+  apt:
+    packages:
+      - postgresql-12
+      - postgresql-client-12
 before_script:
   - psql -c 'CREATE ROLE banks_fetch_test LOGIN; ALTER USER banks_fetch_test WITH SUPERUSER;' -U postgres
-before_install:
-  - "test x\"$TRAVIS_POSTGRESQL_VERSION\" = x\"\" || (sudo service postgresql stop && sudo service postgresql start $TRAVIS_POSTGRESQL_VERSION)"
 script:
   - rebar3 compile && rebar3 check
-matrix:
-  include:
-    - otp_release: 23.0
-      env: TRAVIS_POSTGRESQL_VERSION=9.6
