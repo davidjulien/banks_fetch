@@ -48,7 +48,15 @@ init([]) ->
       type => worker,
       modules => [banks_fetch_storage]
      },
-    {ok, {SupFlags, [StorageSup, ClientSupSpec]}}.
+    ApiParameters = [{callback, banks_fetch_api}, {port, 2020}],
+    ApiSpec = #{
+      id  => banks_fetch_api,
+      start => {elli, start_link, [ApiParameters]},
+      restart => permanent,
+      type => worker,
+      modules => [elli, banks_fetch_api]
+     },
+    {ok, {SupFlags, [StorageSup, ClientSupSpec, ApiSpec]}}.
 
 %%====================================================================
 %% Internal functions

@@ -11,7 +11,9 @@
     lager,
     jsx,
     pgsql,
-    prometheus
+    prometheus,
+    elli,
+    jiffy
    ]},
   {env,[]},
   {modules, []},

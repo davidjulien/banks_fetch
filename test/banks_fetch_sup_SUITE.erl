@@ -11,6 +11,7 @@ all() -> [should_returns_valid_specs, black_box_tests].
 init_per_testcase(black_box_tests, Config) ->
   meck:new(banks_fetch_client_sup),
   meck:new(banks_fetch_storage),
+  meck:new(elli),
   Config;
 init_per_testcase(_, Config) ->
   application:set_env(banks_fetch, storage, ?DATABASE_PARAMS),
@@ -19,6 +20,7 @@ init_per_testcase(_, Config) ->
 end_per_testcase(black_box_tests, _Config) ->
   meck:unload(banks_fetch_client_sup),
   meck:unload(banks_fetch_storage),
+  meck:unload(elli),
   ok;
 end_per_testcase(_, _Config) ->
   ok.
@@ -26,29 +28,10 @@ end_per_testcase(_, _Config) ->
 should_returns_valid_specs(_Config) ->
   ct:comment("Call supervisor init directly"),
   ExpectedSupervisorSpec = #{strategy => one_for_one, intensity => 1, period => 60},
-  ExpectedChildSpecs =
-  [
-   #{
-      id => banks_fetch_storage,
-      start => {banks_fetch_storage, start_link, [?DATABASE_PARAMS]},
-      restart => permanent,
-      shutdown => 1,
-      type => worker,
-      modules => [banks_fetch_storage]
-   },
-   #{
-      id => banks_fetch_client_sup,
-      start => {banks_fetch_client_sup, start_link, []},
-      restart => permanent,
-      shutdown => 1,
-      type => supervisor,
-      modules => [banks_fetch_client_sup]
-   }
-  ],
-  {ok, {ExpectedSupervisorSpec, ExpectedChildSpecs}} = banks_fetch_sup:init([]),
+  {ok, {ExpectedSupervisorSpec, ChildSpecs}} = banks_fetch_sup:init([]),
 
   ct:comment("Check child specs"),
-  ok = supervisor:check_childspecs(ExpectedChildSpecs),
+  ok = supervisor:check_childspecs(ChildSpecs),
 
   ok.
 
@@ -83,6 +66,11 @@ black_box_tests(_Config) ->
                                                    Pid = spawn_link(fun() -> timer:sleep(60*1000) end),
                                                    {ok, Pid}
                                                end),
+  meck:expect(elli, start_link, fun(MockParams) ->
+                                    [{callback, banks_fetch_api}, {port, _}] = MockParams,
+                                    Pid = spawn_link(fun() -> timer:sleep(60*1000) end),
+                                    {ok, Pid}
+                                end),
 
   ct:comment("Start supervisor"),
   {ok, SupervisorPid} = banks_fetch_sup:start_link(),
@@ -90,9 +78,10 @@ black_box_tests(_Config) ->
 
   ct:comment("Verify that there is a client supervisor and a storage worker"),
   ChildrenList1 = supervisor:which_children(banks_fetch_sup),
-  2 = length(ChildrenList1),
+  3 = length(ChildrenList1),
   {banks_fetch_client_sup, ClientSupPid1, supervisor, [banks_fetch_client_sup]} = lists:keyfind(banks_fetch_client_sup, 1, ChildrenList1),
   {banks_fetch_storage, StoragePid1, worker, [banks_fetch_storage]} = lists:keyfind(banks_fetch_storage, 1, ChildrenList1),
+  {banks_fetch_api, ApiPid1, worker, [elli, banks_fetch_api]} = lists:keyfind(banks_fetch_api, 1, ChildrenList1),
 
   % ------------------------------------------------
   ct:comment("Kill client supervisor ~p", [ClientSupPid1]),
@@ -101,13 +90,15 @@ black_box_tests(_Config) ->
 
   ct:comment("Verify that client supervisor is restarted"),
   ChildrenList2 = supervisor:which_children(banks_fetch_sup),
-  2 = length(ChildrenList2),
+  3 = length(ChildrenList2),
   {banks_fetch_client_sup, ClientSupPid2, supervisor, [banks_fetch_client_sup]} = lists:keyfind(banks_fetch_client_sup, 1, ChildrenList2),
   {banks_fetch_storage, StoragePid1, worker, [banks_fetch_storage]} = lists:keyfind(banks_fetch_storage, 1, ChildrenList2),
+  {banks_fetch_api, ApiPid1, worker, [elli, banks_fetch_api]} = lists:keyfind(banks_fetch_api, 1, ChildrenList1),
 
   false = erlang:is_process_alive(ClientSupPid1),
   true = erlang:is_process_alive(ClientSupPid2),
   true = erlang:is_process_alive(StoragePid1),
+  true = erlang:is_process_alive(ApiPid1),
 
   ct:comment("Stop the supervisor"),
   exit(SupervisorPid, normal),
@@ -118,5 +109,6 @@ black_box_tests(_Config) ->
   false = erlang:is_process_alive(SupervisorPid),
   false = erlang:is_process_alive(ClientSupPid2),
   false = erlang:is_process_alive(StoragePid1),
+  false = erlang:is_process_alive(ApiPid1),
 
   ok.
