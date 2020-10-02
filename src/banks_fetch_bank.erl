@@ -49,13 +49,18 @@
                       name => unicode:unicode_binary() }.
 
 -type transaction_type() :: 'card_debit' | 'card_withdrawal' | 'check' | 'sepa_debit' | 'transfer' | 'interests' | 'other'.
--type transaction() :: #{ id => unicode:unicode_binary(),
-                          accounting_date => calendar:date(),
-                          effective_date => calendar:date(),
-                          amount => float(),
-                          description => unicode:unicode_binary(),
-                          type => transaction_type()
-                        }.
+-type transaction() :: #{
+        id := unicode:unicode_binary(),
+        accounting_date := calendar:date(),
+        effective_date := calendar:date(),
+        amount := float(),
+        description := unicode:unicode_binary(),
+        type := transaction_type(),
+
+        bank_id => bank_id(),
+        client_id => client_id(),
+        account_id => account_id()
+       }.
 
 -type connection_error() :: invalid_credential | account_locked | internal_error.
 

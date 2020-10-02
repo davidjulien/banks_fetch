@@ -109,20 +109,22 @@ should_handle_unknown_request(_Config) ->
 
 -define(TRANSACTIONS,
         [
-         #{ id => <<"TRANSACTION_2">>, accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit },
-         #{ id => <<"TRANSACTION_1">>, accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
+         #{ id => <<"TRANSACTION_2">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>}, 
+            accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit },
+         #{ id => <<"TRANSACTION_1">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client2">>}, account_id => {account_id, <<"account2">>},
+            accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
         ]).
--define(TRANSACTIONS_JSON, <<"{\"transactions\":[{\"type\":\"sepa_debit\",\"id\":\"TRANSACTION_2\",\"effective_date\":\"2020-07-22\",\"description\":\"PRLV SEPA XXX\",\"amount\":-14.32,\"accounting_date\":\"2020-07-22\"},{\"type\":\"card_debit\",\"id\":\"TRANSACTION_1\",\"effective_date\":\"2020-07-21\",\"description\":\"PAIEMENT PAR CARTE 20/07/2020 XXX\",\"amount\":-34.32,\"accounting_date\":\"2020-07-21\"}]}">>).
+-define(TRANSACTIONS_JSON, <<"{\"transactions\":[{\"type\":\"sepa_debit\",\"id\":\"TRANSACTION_2\",\"effective_date\":\"2020-07-22\",\"description\":\"PRLV SEPA XXX\",\"client_id\":\"client1\",\"bank_id\":\"ing\",\"amount\":-14.32,\"accounting_date\":\"2020-07-22\",\"account_id\":\"account1\"},{\"type\":\"card_debit\",\"id\":\"TRANSACTION_1\",\"effective_date\":\"2020-07-21\",\"description\":\"PAIEMENT PAR CARTE 20/07/2020 XXX\",\"client_id\":\"client2\",\"bank_id\":\"ing\",\"amount\":-34.32,\"accounting_date\":\"2020-07-21\",\"account_id\":\"account2\"}]}">>).
 
 should_return_last_transactions(_Config) ->
-  Req = #req{ method = 'GET', path = [<<"transactions">>] },
+  Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"transactions">>] },
   meck:expect(banks_fetch_storage, get_last_transactions, fun(MockN) ->
                                                               10 = MockN,
                                                               {value, ?TRANSACTIONS}
                                                           end),
   {Status, Headers, Body} = banks_fetch_api:handle(Req, no_args),
   200 = Status,
-  [] = Headers,
+  [{<<"Content-Type">>, <<"application/json">>}] = Headers,
   ?TRANSACTIONS_JSON = Body,
 
   true = meck:validate(banks_fetch_storage),
@@ -135,7 +137,7 @@ should_return_last_transactions_with_client(_Config) ->
                                                               {value, ?TRANSACTIONS}
                                                           end),
  
-  Response = hackney:get("http://localhost:3003/transactions"),
+  Response = hackney:get("http://localhost:3003/api/1.0/transactions"),
   200 = status(Response),
   ?TRANSACTIONS_JSON = body(Response),
 

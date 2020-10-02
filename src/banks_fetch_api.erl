@@ -15,7 +15,7 @@
 handle(Req, _Args) ->
   handle(elli_request:method(Req), elli_request:path(Req), Req).
 
-handle('GET',[<<"transactions">>], _Req) ->
+handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>], _Req) ->
   handle_transactions(?MAX_TRANSACTIONS_RETURNED);
 
 handle(_, _, _Req) ->
@@ -32,17 +32,18 @@ handle_event(_Event, _Data, _Args) ->
 
 -spec handle_transactions(non_neg_integer()) -> elli_handler:result().
 handle_transactions(N) ->
+  ok = lager:info("[API] Fetch ~B transactions", [N]),
   {value, Transactions} = banks_fetch_storage:get_last_transactions(N),
+
   Transactions1 = [ to_json_transaction(Transaction) || Transaction <- Transactions ],
   JSON = jiffy:encode(#{ transactions => Transactions1 }),
-  {200, [], JSON}.
+  {200, [{<<"Content-Type">>, <<"application/json">>}], JSON}.
 
 
-
-%% @doc Transform an internal transaction data to a json compatible transaction data (transform dates)
+%% @doc Transform an internal transaction data to a json compatible transaction data (transform dates and protected ids)
 -spec to_json_transaction(banks_fetch_bank:transaction()) -> map().
-to_json_transaction(#{ accounting_date := AccountingDate, effective_date := EffectiveDate } = Transaction) ->
-  Transaction#{ accounting_date := fix_date(AccountingDate), effective_date := fix_date(EffectiveDate) }.
+to_json_transaction(#{ bank_id := {bank_id, BankIdVal}, client_id := {client_id, ClientIdVal}, account_id := {account_id, AccountIdVal}, accounting_date := AccountingDate, effective_date := EffectiveDate } = Transaction) ->
+  Transaction#{ bank_id := BankIdVal, client_id := ClientIdVal, account_id := AccountIdVal, accounting_date := fix_date(AccountingDate), effective_date := fix_date(EffectiveDate) }.
 
 %% @doc Transform date to ISO8601 format
 -spec fix_date(calendar:date()) -> unicode:unicode_binary().

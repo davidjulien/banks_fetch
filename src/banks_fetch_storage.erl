@@ -234,14 +234,15 @@ do_get_transactions({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account
   end.
 
 %%
-%% @doc Get last N transactions for all accounts. Order by effective_date desc. If effective_dates are identifical, grouped transactions by bank/client/account
+%% @doc Get last N transactions for all accounts. Order by effective_date desc. If effective_dates are identical, grouped transactions by bank/client/account
 %%
 -spec do_get_last_transactions(non_neg_integer(), #state{}) -> {value, [banks_fetch_bank:transaction()]}.
 do_get_last_transactions(N, #state{ connection = Connection }) ->
-  case pgsql_connection:extended_query(<<"SELECT transaction_id, accounting_date, effective_date, amount, description, type FROM transactions ORDER BY effective_date DESC, bank_id, client_id, account_id, fetching_at DESC, fetching_position ASC LIMIT $1;">>, [N], Connection) of
+  case pgsql_connection:extended_query(<<"SELECT transaction_id, bank_id, client_id, account_id, accounting_date, effective_date, amount, description, type FROM transactions ORDER BY effective_date DESC, bank_id, client_id, account_id, fetching_at DESC, fetching_position ASC LIMIT $1;">>, [N], Connection) of
     {{select, _N}, List0} ->
-      List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8') } ||
-                {TransactionId, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}} <- List0 ],
+      List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8'),
+                bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal} } ||
+                {TransactionId, BankIdVal, ClientIdVal, AccountIdVal, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}} <- List0 ],
       {value, List1}
   end.
 
