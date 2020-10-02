@@ -277,7 +277,7 @@ should_nodb_start_with_db_upgrade(_Config) ->
   meck:wait(4, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
   % 3 queries + number of queries to upgrade
-  30 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  33 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 

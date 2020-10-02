@@ -34,7 +34,11 @@
                   ]},
                  {<<"0.2.1">>, <<"0.2.2">>,
                   [
-                   <<"ALTER TYPE e_transaction_type ADD VALUE 'other';">>
+                   % Because ALTER TYPE e_transaction_type ADD VALUE 'other'; does not work in transaction block, we have to convert column type in transactions, change type and convert again to new type definition
+                   <<"ALTER TABLE transactions ALTER COLUMN \"type\" type VARCHAR(255);">>,
+                   <<"DROP TYPE IF EXISTS e_transaction_type">>,
+                   <<"CREATE TYPE e_transaction_type AS ENUM ('card_debit', 'card_withdrawal', 'check', 'sepa_debit','transfer','interests','other');">>,
+                   <<"ALTER TABLE transactions ALTER COLUMN type TYPE e_transaction_type USING (type::e_transaction_type);">>
                   ]
                  }
                 ]).
