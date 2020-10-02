@@ -10,7 +10,11 @@ addons:
 env:
   global:
     - PGVER=12
-    - PGPORT=5433
+    - PGPORT=5432
+before_install:
+  - sudo sed -i -e 's/^#listen_addresses.*/listen_addresses = "*"/' /etc/postgresql/12/main/postgresql.conf
+  - sudo sed -i -e 's/^port = 5433/port = 5432/' /etc/postgresql/12/main/postgresql.conf
+  - sudo service postgresql restart 12
 before_script:
   - psql -c 'CREATE ROLE banks_fetch_test LOGIN; ALTER USER banks_fetch_test WITH SUPERUSER;'
 script:
