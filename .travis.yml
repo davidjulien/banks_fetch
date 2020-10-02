@@ -16,6 +16,6 @@ before_install:
   - sudo sed -i -e 's/^port = 5433/port = 5432/' /etc/postgresql/12/main/postgresql.conf
   - sudo service postgresql restart 12
 before_script:
-  - psql -c 'CREATE ROLE banks_fetch_test LOGIN; ALTER USER banks_fetch_test WITH SUPERUSER;'
+  - psql -c 'CREATE ROLE banks_fetch_test LOGIN; ALTER USER banks_fetch_test WITH SUPERUSER;' -U postgres
 script:
   - rebar3 compile && rebar3 check
