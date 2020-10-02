@@ -20,6 +20,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
 -export([
+         get_banks/0,
+
          get_clients/0,
          insert_client/3,
 
@@ -41,6 +43,11 @@
          }).
 
 
+-spec get_banks() -> {value, [banks_fetch_bank:bank()]}.
+get_banks() ->
+  gen_server:call(?MODULE, get_banks).
+
+
 -spec get_clients() -> {value, [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())}]}.
 get_clients() ->
   gen_server:call(?MODULE, get_clients).
@@ -48,6 +55,7 @@ get_clients() ->
 -spec insert_client(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())) -> ok | {error, already_inserted}.
 insert_client(BankId, ClientId, ClientCredential) ->
   gen_server:call(?MODULE, {insert_client, BankId, ClientId, ClientCredential}).
+
 
 -spec store_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), calendar:datetime(), [banks_fetch_bank:account()]) -> ok.
 store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
@@ -93,6 +101,9 @@ init(Credential) ->
   {ok, #state{ credential = Credential, connection = undefined }}.
 
 
+handle_call(get_banks, _From, #state{ } = State0) ->
+  R = do_get_banks(State0),
+  {reply, R, State0};
 handle_call(get_clients, _From, #state{ } = State0) ->
   R = do_get_clients(State0),
   {reply, R, State0};
@@ -139,6 +150,18 @@ do_init_db(#state{ credential = {DatabaseName, _Username, _Password}, connection
   ok = upgrade_schema(DatabaseName, Connection),
   State.
 
+
+%%
+%% @doc Get banks from database
+%%
+-spec do_get_banks(#state{}) -> {value, [banks_fetch_bank:bank()]}.
+do_get_banks(#state{ connection = Connection }) ->
+  case pgsql_connection:simple_query(<<"SELECT id, name FROM banks;">>, Connection) of
+    {{select, _N}, List0} ->
+      error_logger:info_msg("List0=~p", [List0]),
+      List1 = [ #{ id => Id, name => Name } || {Id, Name} <- List0 ],
+      {value, List1}
+  end.
 
 
 %%

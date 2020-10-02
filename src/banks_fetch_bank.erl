@@ -24,6 +24,7 @@
               client_credential/1,
               account_id/0,
               transaction_id/0,
+              bank/0,
               account/0,
               transaction/0
              ]).
@@ -37,6 +38,11 @@
 -type client_credential(A) :: {client_credential, A}.
 -type account_id() :: {account_id, unicode:unicode_binary()}.
 -type transaction_id() :: {transaction_id, unicode:unicode_binary()}.
+
+-type bank() :: #{
+        id := unicode:unicode_binary(),
+        name := unicode:unicode_binary()
+       }.
 
 -type account_type() :: current | savings | home_loan.
 -type account_ownership() :: single | joint.

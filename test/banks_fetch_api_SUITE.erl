@@ -11,16 +11,24 @@
 
          should_handle_event_do_nothing/1,
          should_handle_unknown_request/1,
+
          should_return_last_transactions/1,
-         should_return_last_transactions_with_client/1
+         should_return_last_transactions_with_client/1,
+
+         should_return_banks/1,
+         should_return_banks_with_client/1
         ]).
 
 all() ->
   [
    should_handle_event_do_nothing,
    should_handle_unknown_request,
+
    should_return_last_transactions,
-   should_return_last_transactions_with_client
+   should_return_last_transactions_with_client,
+
+   should_return_banks,
+   should_return_banks_with_client
   ].
 
 
@@ -38,17 +46,7 @@ end_per_suite(_Config) ->
 %% Test cases
 %%
 
-init_per_testcase(should_handle_event_do_nothing, Config) ->
-  Config;
-
-init_per_testcase(should_handle_unknown_request, Config) ->
-  Config;
-
-init_per_testcase(should_return_last_transactions, Config) ->
-  meck:new(banks_fetch_storage),
-  Config;
-
-init_per_testcase(should_return_last_transactions_with_client, Config) ->
+init_elli(Config) ->
   application:start(crypto),
   application:start(public_key),
   application:start(ssl),
@@ -65,9 +63,36 @@ init_per_testcase(should_return_last_transactions_with_client, Config) ->
                              {port, 3003}]),
   unlink(P),
 
-  meck:new(banks_fetch_storage),
-
   [{elli_pid, P}|Config].
+
+teardown_elli(Config) ->
+  {elli_pid, P} = lists:keyfind(elli_pid, 1, Config),
+  elli:stop(P),
+  ok.
+
+
+init_per_testcase(should_handle_event_do_nothing, Config) ->
+  Config;
+
+init_per_testcase(should_handle_unknown_request, Config) ->
+  Config;
+
+init_per_testcase(should_return_last_transactions, Config) ->
+  meck:new(banks_fetch_storage),
+  Config;
+
+init_per_testcase(should_return_last_transactions_with_client, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_return_banks, Config) ->
+  meck:new(banks_fetch_storage),
+  Config;
+
+init_per_testcase(should_return_banks_with_client, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config).
+
 
 
 end_per_testcase(should_handle_event_do_nothing, _Config) ->
@@ -82,9 +107,16 @@ end_per_testcase(should_return_last_transactions, _Config) ->
 
 end_per_testcase(should_return_last_transactions_with_client, Config) ->
   meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
 
-  {elli_pid, P} = lists:keyfind(elli_pid, 1, Config),
-  elli:stop(P),
+end_per_testcase(should_return_banks, _Config) ->
+  meck:unload(banks_fetch_storage),
+  ok;
+
+end_per_testcase(should_return_banks_with_client, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
   ok.
 
 
@@ -109,7 +141,7 @@ should_handle_unknown_request(_Config) ->
 
 -define(TRANSACTIONS,
         [
-         #{ id => <<"TRANSACTION_2">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>}, 
+         #{ id => <<"TRANSACTION_2">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>},
             accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit },
          #{ id => <<"TRANSACTION_1">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client2">>}, account_id => {account_id, <<"account2">>},
             accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
@@ -136,7 +168,7 @@ should_return_last_transactions_with_client(_Config) ->
                                                               10 = MockN,
                                                               {value, ?TRANSACTIONS}
                                                           end),
- 
+
   Response = hackney:get("http://localhost:3003/api/1.0/transactions"),
   200 = status(Response),
   ?TRANSACTIONS_JSON = body(Response),
@@ -144,6 +176,36 @@ should_return_last_transactions_with_client(_Config) ->
   true = meck:validate(banks_fetch_storage),
 
   ok.
+
+
+-define(BANKS, [#{ id => <<"ing">>, name => <<"ING">>} ]).
+-define(BANKS_JSON, <<"[{\"name\":\"ING\",\"id\":\"ing\"}]">>).
+
+should_return_banks(_Config) ->
+  Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"banks">>] },
+  meck:expect(banks_fetch_storage, get_banks, fun() -> {value, ?BANKS} end),
+  {Status, Headers, Body} = banks_fetch_api:handle(Req, no_args),
+  200 = Status,
+  [{<<"Content-Type">>, <<"application/json">>}] = Headers,
+  ?BANKS_JSON = Body,
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_return_banks_with_client(_Config) ->
+  meck:expect(banks_fetch_storage, get_banks, fun() -> {value, ?BANKS} end),
+
+  Response = hackney:get("http://localhost:3003/api/1.0/banks"),
+  200 = status(Response),
+  ?BANKS_JSON = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
 
 %%
 %% Functions to extract data from hackney response (from elli_test.hrl)

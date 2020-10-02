@@ -25,6 +25,7 @@
          should_nodb_insert_client/1,
          should_nodb_store_accounts/1,
 
+         should_db_get_banks/1,
          should_db_get_clients/1,
          should_db_insert_client/1,
          should_db_not_insert_client_already_existing/1,
@@ -72,7 +73,7 @@ all() ->
 groups() ->
   [
    {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_insert_client, should_nodb_store_accounts ]},
-   {tests_with_db, [], [ should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
+   {tests_with_db, [], [ should_db_get_banks, should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
                          should_db_store_accounts, should_db_get_accounts,
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_id ]}
   ].
@@ -146,6 +147,9 @@ end_per_group(tests_with_db, _Config) ->
 
 
 % Init per testcase
+init_per_testcase(should_db_get_banks, Config) ->
+  setup_database(Config);
+
 init_per_testcase(should_db_get_clients, Config) ->
   setup_database(Config, <<"setup_db_for_get_clients.sql">>);
 
@@ -178,6 +182,8 @@ init_per_testcase(_, Config) ->
   Config.
 
 % End per testcase
+end_per_testcase(should_db_get_banks, _Config) ->
+  teardown_database();
 end_per_testcase(should_db_get_clients, _Config) ->
   teardown_database();
 end_per_testcase(should_db_insert_client, _Config) ->
@@ -458,6 +464,15 @@ should_nodb_store_accounts(_Config) ->
 %
 % Tests with real database
 %
+
+should_db_get_banks(_Config) ->
+  ct:comment("Get banks"),
+  Banks = banks_fetch_storage:get_banks(),
+
+  ct:comment("Verify returned banks"),
+  {value, [#{ id := <<"ing">>, name := <<"ING">> }]} = Banks,
+  ok.
+
 
 should_db_get_clients(_Config) ->
   ct:comment("Get clients"),

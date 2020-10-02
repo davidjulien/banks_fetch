@@ -18,6 +18,9 @@ handle(Req, _Args) ->
 handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>], _Req) ->
   handle_transactions(?MAX_TRANSACTIONS_RETURNED);
 
+handle('GET',[<<"api">>, <<"1.0">>, <<"banks">>], _Req) ->
+  handle_banks();
+
 handle(_, _, _Req) ->
   {404, [], <<"Not Found">>}.
 
@@ -37,6 +40,12 @@ handle_transactions(N) ->
 
   Transactions1 = [ to_json_transaction(Transaction) || Transaction <- Transactions ],
   JSON = jiffy:encode(#{ transactions => Transactions1 }),
+  {200, [{<<"Content-Type">>, <<"application/json">>}], JSON}.
+
+-spec handle_banks() -> elli_handler:result().
+handle_banks() ->
+  {value, Banks} = banks_fetch_storage:get_banks(),
+  JSON = jiffy:encode(Banks),
   {200, [{<<"Content-Type">>, <<"application/json">>}], JSON}.
 
 
