@@ -105,7 +105,7 @@ should_fetch_data_from_a_bank_and_store_them(Config) ->
   NbrAccounts = meck:num_calls(banks_fetch_storage, store_transactions, '_'),
 
   ct:comment("Verify transactions data"),
-  lists:foreach(fun(#{ id := AccountIdValue, type := AccountType } = Account) ->
+  lists:foreach(fun(#{ id := AccountIdValue, type := AccountType } = _Account) ->
                     {value, Transactions} = banks_fetch_storage:get_transactions(BankId, ClientId, {account_id, AccountIdValue}),
                     if AccountType =/= home_loan ->
                          [_|_] = Transactions;
