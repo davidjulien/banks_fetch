@@ -31,6 +31,7 @@
          should_db_not_insert_client_already_existing/1,
          should_db_store_accounts/1,
          should_db_get_accounts/1,
+         should_db_get_all_accounts/1,
          should_db_store_transactions/1,
          should_db_get_transactions/1,
          should_db_get_last_transactions/1,
@@ -47,11 +48,16 @@
 -define(FETCHING_AT_1, {{2020,7,7},{12,0,0}}).
 -define(ACCOUNT_ID_1, <<"account1">>).
 -define(ACCOUNT_ID_2, <<"account2">>).
+-define(ACCOUNT_ID_3, <<"account3">>).
 % data used to test store_accounts
 -define(ACCOUNTS_1, [
                      #{ id => ?ACCOUNT_ID_1, balance => 234.12, number => <<"number1">>, owner => <<"owner1">>, ownership => single, type => current, name => <<"CURRENT">> },
                      #{ id => ?ACCOUNT_ID_2, balance => 4321.78, number => <<"number2">>, owner => <<"owner2">>, ownership => single, type => savings, name => <<"LDD">> }
                     ]).
+-define(ACCOUNTS_2, [
+                     #{ id => ?ACCOUNT_ID_3, balance => 431.80, number => <<"number3">>, owner => <<"owner3">>, ownership => single, type => savings, name => <<"LDD">> }
+                    ]).
+
 % data used to test store_transactions
 -define(TRANSACTIONS_1,
         [
@@ -74,7 +80,7 @@ groups() ->
   [
    {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_insert_client, should_nodb_store_accounts ]},
    {tests_with_db, [], [ should_db_get_banks, should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
-                         should_db_store_accounts, should_db_get_accounts,
+                         should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_id ]}
   ].
 
@@ -165,6 +171,9 @@ init_per_testcase(should_db_store_accounts, Config) ->
 init_per_testcase(should_db_get_accounts, Config) ->
   setup_database(Config, <<"setup_db_for_get_accounts.sql">>);
 
+init_per_testcase(should_db_get_all_accounts, Config) ->
+  setup_database(Config, <<"setup_db_for_get_accounts.sql">>);
+
 init_per_testcase(should_db_store_transactions, Config) ->
   setup_database(Config, <<"setup_db_for_store_transactions.sql">>);
 
@@ -193,6 +202,8 @@ end_per_testcase(should_db_not_insert_client_already_existing, _Config) ->
 end_per_testcase(should_db_store_accounts, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_accounts, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_get_all_accounts, _Config) ->
   teardown_database();
 end_per_testcase(should_db_store_transactions, _Config) ->
   teardown_database();
@@ -547,6 +558,18 @@ should_db_get_accounts(_Config) ->
 
   ok.
 
+
+should_db_get_all_accounts(_Config) ->
+  ct:comment("Get all accounts"),
+  ExpectedAccounts = ?ACCOUNTS_1 ++ ?ACCOUNTS_2,
+  NbrExpectedAccounts = length(ExpectedAccounts),
+  {value, Accounts} = banks_fetch_storage:get_all_accounts(),
+
+  ct:comment("Verify returned accounts"),
+  NbrExpectedAccounts = length(Accounts),
+  ExpectedAccounts = Accounts,
+
+  ok.
 
 
 should_db_store_transactions(Config) ->

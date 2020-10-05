@@ -25,6 +25,7 @@
          get_clients/0,
          insert_client/3,
 
+         get_all_accounts/0,
          store_accounts/4,
          get_accounts/2,
 
@@ -56,6 +57,13 @@ get_clients() ->
 insert_client(BankId, ClientId, ClientCredential) ->
   gen_server:call(?MODULE, {insert_client, BankId, ClientId, ClientCredential}).
 
+
+% Functions related to accounts
+
+%% @doc Return all stored accounts
+-spec get_all_accounts() -> {value, [banks_fetch_bank:account()]}.
+get_all_accounts() ->
+  gen_server:call(?MODULE, get_all_accounts).
 
 -spec store_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), calendar:datetime(), [banks_fetch_bank:account()]) -> ok.
 store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
@@ -112,6 +120,9 @@ handle_call({insert_client, BankId, ClientId, ClientCredential},  _From, #state{
   {reply, R, State0};
 handle_call({store_accounts, BankId, ClientId, FetchingAt, AccountsList}, _From, #state{ } = State0) ->
   R = do_store_accounts(BankId, ClientId, FetchingAt, AccountsList, State0),
+  {reply, R, State0};
+handle_call(get_all_accounts, _From, #state{ } = State0) ->
+  R = do_get_all_accounts(State0),
   {reply, R, State0};
 handle_call({get_accounts, BankId, ClientId}, _From, #state{ } = State0) ->
   R = do_get_accounts(BankId, ClientId, State0),
@@ -209,14 +220,26 @@ do_store_accounts_aux({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue
   end.
 
 %%
+%% @doc Get all accounts
+%%
+-spec do_get_all_accounts(#state{}) -> {value, [banks_fetch_bank:bank()]}.
+do_get_all_accounts(#state{ connection = Connection }) ->
+  case pgsql_connection:simple_query(<<"SELECT distinct on (bank_id, client_id, account_id) bank_id, client_id, account_id, balance, number, owner, ownership, type, name FROM accounts ORDER BY bank_id, client_id, account_id, fetching_at DESC;">>, Connection) of
+    {{select, _N}, AccountsSQL} ->
+      {value, [ account_sql_to_map(AccountSQL) || AccountSQL <- AccountsSQL]}
+  end.
+
+%%
 %% @doc Get accounts
 %%
 -spec do_get_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), #state{}) -> {ok, [banks_fetch_bank:account()]}.
 do_get_accounts(BankId, ClientId, #state{ connection = Connection }) ->
-  {{select, _Nbr}, Accounts} = pgsql_connection:simple_query(<<"SELECT distinct on (bank_id, client_id, account_id) bank_id, client_id, account_id, balance, number, owner, ownership, type, name FROM accounts ORDER BY bank_id, client_id, account_id, fetching_at DESC">>, [BankId, ClientId], Connection),
-  {ok, [#{ id => AccountId, balance => Balance, number => Number, owner => Owner, ownership => binary_to_atom(Ownership), type => binary_to_atom(Type), name => Name } 
-        || {_BankId, _ClientId, AccountId, Balance, Number, Owner, {e_account_ownership, Ownership}, {e_account_type, Type}, Name} <- Accounts ]}.
+  {{select, _Nbr}, Accounts} = pgsql_connection:extended_query(<<"SELECT distinct on (bank_id, client_id, account_id) bank_id, client_id, account_id, balance, number, owner, ownership, type, name FROM accounts WHERE bank_id = $1 and client_id = $2 ORDER BY bank_id, client_id, account_id, fetching_at DESC">>, [BankId, ClientId], Connection),
+  {ok, [ account_sql_to_map(AccountSQL) || AccountSQL <- Accounts ]}.
 
+-spec account_sql_to_map(tuple()) -> banks_fetch_bank:account().
+account_sql_to_map({_BankId, _ClientId, AccountId, Balance, Number, Owner, {e_account_ownership, Ownership}, {e_account_type, Type}, Name}) ->
+  #{ id => AccountId, balance => Balance, number => Number, owner => Owner, ownership => binary_to_atom(Ownership), type => binary_to_atom(Type), name => Name }.
 
 %%
 %% @doc Store transactions
