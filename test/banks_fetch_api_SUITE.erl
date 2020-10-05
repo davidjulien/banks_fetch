@@ -16,7 +16,10 @@
          should_return_last_transactions_with_client/1,
 
          should_return_banks/1,
-         should_return_banks_with_client/1
+         should_return_banks_with_client/1,
+
+         should_return_all_accounts/1,
+         should_return_all_accounts_with_client/1
         ]).
 
 all() ->
@@ -28,7 +31,10 @@ all() ->
    should_return_last_transactions_with_client,
 
    should_return_banks,
-   should_return_banks_with_client
+   should_return_banks_with_client,
+
+   should_return_all_accounts,
+   should_return_all_accounts_with_client
   ].
 
 
@@ -91,6 +97,14 @@ init_per_testcase(should_return_banks, Config) ->
 
 init_per_testcase(should_return_banks_with_client, Config) ->
   meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_return_all_accounts, Config) ->
+  meck:new(banks_fetch_storage),
+  Config;
+
+init_per_testcase(should_return_all_accounts_with_client, Config) ->
+  meck:new(banks_fetch_storage),
   init_elli(Config).
 
 
@@ -117,7 +131,17 @@ end_per_testcase(should_return_banks, _Config) ->
 end_per_testcase(should_return_banks_with_client, Config) ->
   meck:unload(banks_fetch_storage),
   teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_return_all_accounts, _Config) ->
+  meck:unload(banks_fetch_storage),
+  ok;
+
+end_per_testcase(should_return_all_accounts_with_client, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
   ok.
+
 
 
 should_handle_event_do_nothing(_Config) ->
@@ -205,6 +229,37 @@ should_return_banks_with_client(_Config) ->
 
   ok.
 
+
+
+-define(ACCOUNTS, [
+                   #{ id => <<"account1">>, balance => 234.12, number => <<"number1">>, owner => <<"owner1">>, ownership => single, type => current, name => <<"CURRENT">> },
+                   #{ id => <<"account2">>, balance => 4321.78, number => <<"number2">>, owner => <<"owner2">>, ownership => single, type => savings, name => <<"LDD">> }
+                  ]).
+-define(ACCOUNTS_JSON, <<"[{\"type\":\"current\",\"ownership\":\"single\",\"owner\":\"owner1\",\"number\":\"number1\",\"name\":\"CURRENT\",\"id\":\"account1\",\"balance\":234.12},{\"type\":\"savings\",\"ownership\":\"single\",\"owner\":\"owner2\",\"number\":\"number2\",\"name\":\"LDD\",\"id\":\"account2\",\"balance\":4321.78}]">>).
+
+should_return_all_accounts(_Config) ->
+  Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"accounts">>] },
+  meck:expect(banks_fetch_storage, get_all_accounts, fun() -> {value, ?ACCOUNTS} end),
+  {Status, Headers, Body} = banks_fetch_api:handle(Req, no_args),
+  200 = Status,
+  [{<<"Content-Type">>, <<"application/json">>}] = Headers,
+  ?ACCOUNTS_JSON = Body,
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_return_all_accounts_with_client(_Config) ->
+  meck:expect(banks_fetch_storage, get_all_accounts, fun() -> {value, ?ACCOUNTS} end),
+
+  Response = hackney:get("http://localhost:3003/api/1.0/accounts"),
+  200 = status(Response),
+  ?ACCOUNTS_JSON = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
 
 
 %%

@@ -21,6 +21,9 @@ handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>], _Req) ->
 handle('GET',[<<"api">>, <<"1.0">>, <<"banks">>], _Req) ->
   handle_banks();
 
+handle('GET',[<<"api">>, <<"1.0">>, <<"accounts">>], _Req) ->
+  handle_accounts();
+
 handle(_, _, _Req) ->
   {404, [], <<"Not Found">>}.
 
@@ -46,6 +49,12 @@ handle_transactions(N) ->
 handle_banks() ->
   {value, Banks} = banks_fetch_storage:get_banks(),
   JSON = jiffy:encode(Banks),
+  {200, [{<<"Content-Type">>, <<"application/json">>}], JSON}.
+
+-spec handle_accounts() -> elli_handler:result().
+handle_accounts() ->
+  {value, Accounts} = banks_fetch_storage:get_all_accounts(),
+  JSON = jiffy:encode(Accounts),
   {200, [{<<"Content-Type">>, <<"application/json">>}], JSON}.
 
 
