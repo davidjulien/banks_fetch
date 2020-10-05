@@ -550,7 +550,7 @@ should_db_get_accounts(_Config) ->
   ct:comment("Get accounts"),
   ExpectedAccounts = ?ACCOUNTS_1,
   NbrExpectedAccounts = length(ExpectedAccounts),
-  {ok, Accounts} = banks_fetch_storage:get_accounts(?BANK_ID_1, ?CLIENT_ID_1),
+  {value, Accounts} = banks_fetch_storage:get_accounts(?BANK_ID_1, ?CLIENT_ID_1),
 
   ct:comment("Verify returned accounts"),
   NbrExpectedAccounts = length(Accounts),
