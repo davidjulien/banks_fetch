@@ -35,6 +35,7 @@
          should_db_store_transactions/1,
          should_db_get_transactions/1,
          should_db_get_last_transactions/1,
+         should_db_get_last_transactions_invalid_cursor/1,
          should_db_get_last_transactions_id/1
         ]).
 
@@ -81,7 +82,8 @@ groups() ->
    {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_insert_client, should_nodb_store_accounts ]},
    {tests_with_db, [], [ should_db_get_banks, should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
                          should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
-                         should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_id ]}
+                         should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_invalid_cursor,
+                         should_db_get_last_transactions_id ]}
   ].
 
 %%
@@ -183,6 +185,9 @@ init_per_testcase(should_db_get_transactions, Config) ->
 init_per_testcase(should_db_get_last_transactions, Config) ->
   setup_database(Config,"setup_db_for_get_last_transactions.sql");
 
+init_per_testcase(should_db_get_last_transactions_invalid_cursor, Config) ->
+  setup_database(Config,"setup_db_for_get_last_transactions.sql");
+
 init_per_testcase(should_db_get_last_transactions_id, Config) ->
   setup_database(Config, <<"setup_db_for_get_last_transactions_id.sql">>);
 
@@ -210,6 +215,8 @@ end_per_testcase(should_db_store_transactions, _Config) ->
 end_per_testcase(should_db_get_transactions, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_last_transactions, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_get_last_transactions_invalid_cursor, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_last_transactions_id, _Config) ->
   teardown_database();
@@ -603,18 +610,43 @@ should_db_get_transactions(_Config) ->
 
   ok.
 
-should_db_get_last_transactions(_Config) ->
+should_db_get_last_transactions(Config) ->
   ct:comment("Get last 1 transactions"),
-  {value, Transactions} = banks_fetch_storage:get_last_transactions(1),
-  1 = length(Transactions),
-  [#{ id := <<"transaction1">> }] = Transactions,
+  {value, {Cursor1, Total1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 1),
+  <<"NToxOjU=">> = Cursor1,
+  5 = Total1,
+  1 = length(Transactions1),
+  [#{ id := <<"transaction1">> }] = Transactions1,
 
   ct:comment("Get last 5 transactions"),
-  {value, Transactions2} = banks_fetch_storage:get_last_transactions(5),
+  {value, {Cursor2, Total2, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 5),
+  <<"NTo1OjU=">> = Cursor2,
+  Total1 = Total2,
   5 = length(Transactions2),
   [#{ id := <<"transaction1">> }, #{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }, #{ id := <<"transaction5">> }, #{ id := <<"transaction2">> }] = Transactions2,
 
+  ct:comment("Get last 2 transactions after first one"),
+  {value, {Cursor3, Total3, Transactions3}} = banks_fetch_storage:get_last_transactions(Cursor1, 2),
+  <<"NTozOjU=">> = Cursor3,
+  Total1 = Total3,
+  2 = length(Transactions3),
+  [#{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }] = Transactions3,
+
+  ct:comment("Insert a new transaction"),
+  {db_connection, Connection} = lists:keyfind(db_connection, 1, Config),
+  Query = <<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, fetching_position, transaction_id, accounting_date, effective_date, amount, description, type) VALUES ('ing', 'client2', 'account4', '2020-07-05T00:00:00Z', 0, 'transaction6', '2020-07-05', '2020-07-05', -13.00, 'VIREMENT SEPA', 'sepa_debit');">>,
+  {{insert, 0, 1}, []} = pgsql_connection:simple_query(Query, Connection),
+
+  ct:comment("Verify that last get_last_transactions returns same result even if we add a new transaction"),
+  {value, {Cursor3, Total3, Transactions3}} = banks_fetch_storage:get_last_transactions(Cursor1, 2),
+
   ok.
+
+should_db_get_last_transactions_invalid_cursor(Config) ->
+  ct:comment("Get last 1 transactions with an invalid cursor"),
+  {error, invalid_cursor} = banks_fetch_storage:get_last_transactions(<<"invalidcursor">>, 1),
+  ok.
+
 
 should_db_get_last_transactions_id(_Config) ->
   ct:comment("Get last transactions id"),

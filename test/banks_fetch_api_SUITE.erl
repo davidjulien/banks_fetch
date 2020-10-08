@@ -15,6 +15,12 @@
          should_return_last_transactions/1,
          should_return_last_transactions_with_client/1,
 
+         should_return_last_transactions_cursor/1,
+         should_return_last_transactions_cursor_with_client/1,
+
+         should_return_last_transactions_invalid_cursor/1,
+         should_return_last_transactions_invalid_cursor_with_client/1,
+
          should_return_banks/1,
          should_return_banks_with_client/1,
 
@@ -29,6 +35,12 @@ all() ->
 
    should_return_last_transactions,
    should_return_last_transactions_with_client,
+
+   should_return_last_transactions_cursor,
+   should_return_last_transactions_cursor_with_client,
+
+   should_return_last_transactions_invalid_cursor,
+   should_return_last_transactions_invalid_cursor_with_client,
 
    should_return_banks,
    should_return_banks_with_client,
@@ -91,6 +103,22 @@ init_per_testcase(should_return_last_transactions_with_client, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
 
+init_per_testcase(should_return_last_transactions_cursor, Config) ->
+  meck:new(banks_fetch_storage),
+  Config;
+
+init_per_testcase(should_return_last_transactions_cursor_with_client, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_return_last_transactions_invalid_cursor, Config) ->
+  meck:new(banks_fetch_storage),
+  Config;
+
+init_per_testcase(should_return_last_transactions_invalid_cursor_with_client, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
 init_per_testcase(should_return_banks, Config) ->
   meck:new(banks_fetch_storage),
   Config;
@@ -120,6 +148,24 @@ end_per_testcase(should_return_last_transactions, _Config) ->
   ok;
 
 end_per_testcase(should_return_last_transactions_with_client, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_return_last_transactions_cursor, _Config) ->
+  meck:unload(banks_fetch_storage),
+  ok;
+
+end_per_testcase(should_return_last_transactions_cursor_with_client, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_return_last_transactions_invalid_cursor, _Config) ->
+  meck:unload(banks_fetch_storage),
+  ok;
+
+end_per_testcase(should_return_last_transactions_invalid_cursor_with_client, Config) ->
   meck:unload(banks_fetch_storage),
   teardown_elli(Config),
   ok;
@@ -170,13 +216,16 @@ should_handle_unknown_request(_Config) ->
          #{ id => <<"TRANSACTION_1">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client2">>}, account_id => {account_id, <<"account2">>},
             accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
         ]).
--define(TRANSACTIONS_JSON, <<"{\"transactions\":[{\"type\":\"sepa_debit\",\"id\":\"TRANSACTION_2\",\"effective_date\":\"2020-07-22\",\"description\":\"PRLV SEPA XXX\",\"client_id\":\"client1\",\"bank_id\":\"ing\",\"amount\":-14.32,\"accounting_date\":\"2020-07-22\",\"account_id\":\"account1\"},{\"type\":\"card_debit\",\"id\":\"TRANSACTION_1\",\"effective_date\":\"2020-07-21\",\"description\":\"PAIEMENT PAR CARTE 20/07/2020 XXX\",\"client_id\":\"client2\",\"bank_id\":\"ing\",\"amount\":-34.32,\"accounting_date\":\"2020-07-21\",\"account_id\":\"account2\"}]}">>).
+-define(TRANSACTIONS_JSON, <<"{\"transactions\":[{\"type\":\"sepa_debit\",\"id\":\"TRANSACTION_2\",\"effective_date\":\"2020-07-22\",\"description\":\"PRLV SEPA XXX\",\"client_id\":\"client1\",\"bank_id\":\"ing\",\"amount\":-14.32,\"accounting_date\":\"2020-07-22\",\"account_id\":\"account1\"},{\"type\":\"card_debit\",\"id\":\"TRANSACTION_1\",\"effective_date\":\"2020-07-21\",\"description\":\"PAIEMENT PAR CARTE 20/07/2020 XXX\",\"client_id\":\"client2\",\"bank_id\":\"ing\",\"amount\":-34.32,\"accounting_date\":\"2020-07-21\",\"account_id\":\"account2\"}],\"total\":8,\"next_cursor\":\"fakecursor\"}">>).
 
 should_return_last_transactions(_Config) ->
   Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"transactions">>] },
-  meck:expect(banks_fetch_storage, get_last_transactions, fun(MockN) ->
+  FakeCursor = <<"fakecursor">>,
+  FakeTotal = 8,
+  meck:expect(banks_fetch_storage, get_last_transactions, fun(MockCursor, MockN) ->
+                                                              none = MockCursor,
                                                               10 = MockN,
-                                                              {value, ?TRANSACTIONS}
+                                                              {value, {FakeCursor, FakeTotal, ?TRANSACTIONS}}
                                                           end),
   {Status, Headers, Body} = banks_fetch_api:handle(Req, no_args),
   200 = Status,
@@ -188,14 +237,89 @@ should_return_last_transactions(_Config) ->
   ok.
 
 should_return_last_transactions_with_client(_Config) ->
-  meck:expect(banks_fetch_storage, get_last_transactions, fun(MockN) ->
+  FakeCursor = <<"fakecursor">>,
+  FakeTotal = 8,
+  meck:expect(banks_fetch_storage, get_last_transactions, fun(MockCursor, MockN) ->
+                                                              none = MockCursor,
                                                               10 = MockN,
-                                                              {value, ?TRANSACTIONS}
+                                                              {value, {FakeCursor, FakeTotal, ?TRANSACTIONS}}
                                                           end),
 
   Response = hackney:get("http://localhost:3003/api/1.0/transactions"),
   200 = status(Response),
   ?TRANSACTIONS_JSON = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_return_last_transactions_cursor(_Config) ->
+  FakeCursor = <<"fakecursor1">>,
+  Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"transactions">>, FakeCursor] },
+  FakeCursor2 = <<"fakecursor">>,
+  FakeTotal = 8,
+  meck:expect(banks_fetch_storage, get_last_transactions, fun(MockCursor, MockN) ->
+                                                              FakeCursor = MockCursor,
+                                                              10 = MockN,
+                                                              {value, {FakeCursor2, FakeTotal, ?TRANSACTIONS}}
+                                                          end),
+  {Status, Headers, Body} = banks_fetch_api:handle(Req, no_args),
+  200 = Status,
+  [{<<"Content-Type">>, <<"application/json">>}] = Headers,
+  ?TRANSACTIONS_JSON = Body,
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+should_return_last_transactions_cursor_with_client(_Config) ->
+  FakeCursor = <<"fakecursor1">>,
+  FakeTotal = 8,
+  FakeCursor2 = <<"fakecursor">>,
+  meck:expect(banks_fetch_storage, get_last_transactions, fun(MockCursor, MockN) ->
+                                                              FakeCursor = MockCursor,
+                                                              10 = MockN,
+                                                              {value, {FakeCursor2, FakeTotal, ?TRANSACTIONS}}
+                                                          end),
+
+  Response = hackney:get("http://localhost:3003/api/1.0/transactions/"++binary_to_list(FakeCursor)),
+  200 = status(Response),
+  ?TRANSACTIONS_JSON = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_return_last_transactions_invalid_cursor(_Config) ->
+  FakeCursor = <<"fakecursor1">>,
+  Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"transactions">>, FakeCursor] },
+  meck:expect(banks_fetch_storage, get_last_transactions, fun(MockCursor, MockN) ->
+                                                              FakeCursor = MockCursor,
+                                                              10 = MockN,
+                                                              {error, invalid_cursor}
+                                                          end),
+  {Status, Headers, Body} = banks_fetch_api:handle(Req, no_args),
+  400 = Status,
+  [{<<"Content-Type">>, <<"text/plain">>}] = Headers,
+  <<"Invalid cursor">> = Body,
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+should_return_last_transactions_invalid_cursor_with_client(_Config) ->
+  FakeCursor = <<"fakecursor1">>,
+  meck:expect(banks_fetch_storage, get_last_transactions, fun(MockCursor, MockN) ->
+                                                              FakeCursor = MockCursor,
+                                                              10 = MockN,
+                                                              {error, invalid_cursor}
+                                                          end),
+
+  Response = hackney:get("http://localhost:3003/api/1.0/transactions/"++binary_to_list(FakeCursor)),
+  400 = status(Response),
+  <<"Invalid cursor">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 

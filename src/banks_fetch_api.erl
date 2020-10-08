@@ -3,7 +3,7 @@
          handle/2,
          handle_event/3,
         
-         handle_transactions/1
+         handle_transactions/2
         ]).
 
 -include_lib("elli/include/elli.hrl").
@@ -16,7 +16,9 @@ handle(Req, _Args) ->
   handle(elli_request:method(Req), elli_request:path(Req), Req).
 
 handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>], _Req) ->
-  handle_transactions(?MAX_TRANSACTIONS_RETURNED);
+  handle_transactions(none, ?MAX_TRANSACTIONS_RETURNED);
+handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>, Cursor], _Req) ->
+  handle_transactions(Cursor, ?MAX_TRANSACTIONS_RETURNED);
 
 handle('GET',[<<"api">>, <<"1.0">>, <<"banks">>], _Req) ->
   handle_banks();
@@ -36,14 +38,17 @@ handle_event(_Event, _Data, _Args) ->
 %% Functions to handle queries
 %%
 
--spec handle_transactions(non_neg_integer()) -> elli_handler:result().
-handle_transactions(N) ->
-  ok = lager:info("[API] Fetch ~B transactions", [N]),
-  {value, Transactions} = banks_fetch_storage:get_last_transactions(N),
-
-  Transactions1 = [ to_json_transaction(Transaction) || Transaction <- Transactions ],
-  JSON = jiffy:encode(#{ transactions => Transactions1 }),
-  {200, [{<<"Content-Type">>, <<"application/json">>}], JSON}.
+-spec handle_transactions(none | unicode:unicode_binary(), non_neg_integer()) -> elli_handler:result().
+handle_transactions(CursorOpt, N) ->
+  ok = lager:info("[API] Fetch ~B transactions (cursor: ~p)", [N, CursorOpt]),
+  case banks_fetch_storage:get_last_transactions(CursorOpt, N) of
+    {value, {NextCursor, Total, Transactions}} ->
+      Transactions1 = [ to_json_transaction(Transaction) || Transaction <- Transactions ],
+      JSON = jiffy:encode(#{ next_cursor => NextCursor, total => Total, transactions => Transactions1 }),
+      {200, [{<<"Content-Type">>, <<"application/json">>}], JSON};
+    {error, invalid_cursor} ->
+      {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Invalid cursor">>}
+  end.
 
 -spec handle_banks() -> elli_handler:result().
 handle_banks() ->
