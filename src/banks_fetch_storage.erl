@@ -238,8 +238,8 @@ do_get_accounts(BankId, ClientId, #state{ connection = Connection }) ->
   {value, [ account_sql_to_map(AccountSQL) || AccountSQL <- Accounts ]}.
 
 -spec account_sql_to_map(tuple()) -> banks_fetch_bank:account().
-account_sql_to_map({_BankId, _ClientId, AccountId, Balance, Number, Owner, {e_account_ownership, Ownership}, {e_account_type, Type}, Name}) ->
-  #{ id => AccountId, balance => Balance, number => Number, owner => Owner, ownership => binary_to_atom(Ownership), type => binary_to_atom(Type), name => Name }.
+account_sql_to_map({BankId, ClientId, AccountId, Balance, Number, Owner, {e_account_ownership, Ownership}, {e_account_type, Type}, Name}) ->
+  #{ id => AccountId, bank_id => BankId, client_id => ClientId, balance => Balance, number => Number, owner => Owner, ownership => binary_to_atom(Ownership), type => binary_to_atom(Type), name => Name }.
 
 %%
 %% @doc Store transactions

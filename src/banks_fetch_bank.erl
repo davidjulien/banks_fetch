@@ -52,7 +52,11 @@
                       owner => unicode:unicode_binary(),
                       ownership => account_ownership(),
                       type => account_type(),
-                      name => unicode:unicode_binary() }.
+                      name => unicode:unicode_binary(),
+
+                      bank_id => bank_id(),
+                      client_id => client_id()
+                    }.
 
 -type transaction_type() :: 'card_debit' | 'card_withdrawal' | 'check' | 'sepa_debit' | 'transfer' | 'interests' | 'other'.
 -type transaction() :: #{

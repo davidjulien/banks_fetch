@@ -52,11 +52,11 @@
 -define(ACCOUNT_ID_3, <<"account3">>).
 % data used to test store_accounts
 -define(ACCOUNTS_1, [
-                     #{ id => ?ACCOUNT_ID_1, balance => 234.12, number => <<"number1">>, owner => <<"owner1">>, ownership => single, type => current, name => <<"CURRENT">> },
-                     #{ id => ?ACCOUNT_ID_2, balance => 4321.78, number => <<"number2">>, owner => <<"owner2">>, ownership => single, type => savings, name => <<"LDD">> }
+                     #{ id => ?ACCOUNT_ID_1, balance => 234.12, number => <<"number1">>, owner => <<"owner1">>, ownership => single, type => current, name => <<"CURRENT">>, bank_id => <<"ing">>, client_id => <<"client1">> },
+                     #{ id => ?ACCOUNT_ID_2, balance => 4321.78, number => <<"number2">>, owner => <<"owner2">>, ownership => single, type => savings, name => <<"LDD">>, bank_id => <<"ing">>, client_id => <<"client1">> }
                     ]).
 -define(ACCOUNTS_2, [
-                     #{ id => ?ACCOUNT_ID_3, balance => 431.80, number => <<"number3">>, owner => <<"owner3">>, ownership => single, type => savings, name => <<"LDD">> }
+                     #{ id => ?ACCOUNT_ID_3, balance => 431.80, number => <<"number3">>, owner => <<"owner3">>, ownership => single, type => savings, name => <<"LDD">>, bank_id => <<"ing">>, client_id => <<"client2">> }
                     ]).
 
 % data used to test store_transactions
@@ -642,7 +642,7 @@ should_db_get_last_transactions(Config) ->
 
   ok.
 
-should_db_get_last_transactions_invalid_cursor(Config) ->
+should_db_get_last_transactions_invalid_cursor(_Config) ->
   ct:comment("Get last 1 transactions with an invalid cursor"),
   {error, invalid_cursor} = banks_fetch_storage:get_last_transactions(<<"invalidcursor">>, 1),
   ok.
