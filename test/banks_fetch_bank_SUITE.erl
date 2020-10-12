@@ -7,6 +7,7 @@
 
          should_call_setup/1,
          should_call_connect/1,
+         should_call_connect_failed_connect/1,
          should_call_fetch_accounts/1,
          should_call_fetch_transactions/1
         ]).
@@ -15,6 +16,7 @@ all() ->
   [
    should_call_setup,
    should_call_connect,
+   should_call_connect_failed_connect,
    should_call_fetch_accounts,
    should_call_fetch_transactions
   ].
@@ -56,6 +58,20 @@ should_call_connect(_Config) ->
   true = meck:validate(banks_fetch_bank_test),
 
   ok.
+
+should_call_connect_failed_connect(_Config) ->
+  meck:expect(banks_fetch_bank_test, connect, fun(MockClientId, MockClientCredential) ->
+                                                  ?CLIENT_ID = MockClientId,
+                                                  ?CLIENT_CREDENTIAL = MockClientCredential,
+                                                  {error, network_error}
+                                              end),
+  ct:comment("Verify connect"),
+  {error, network_error} = banks_fetch_bank:connect(banks_fetch_bank_test, ?CLIENT_ID, ?CLIENT_CREDENTIAL),
+
+  true = meck:validate(banks_fetch_bank_test),
+
+  ok.
+
 
 should_call_fetch_accounts(_Config) ->
   BankAuth = {bank_auth, banks_fetch_bank_test, "AUTH_TOKEN"},

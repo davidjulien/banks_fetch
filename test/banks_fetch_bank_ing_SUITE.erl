@@ -9,6 +9,7 @@
          end_per_testcase/2,
 
          should_not_authenticate_again_if_token_is_available/1,
+         should_not_authenticate_if_connection_failed/1,
          should_not_authenticate_if_birthdate_and_client_id_mismatched/1,
          should_not_authenticate_if_password_is_invalid/1,
          should_not_authenticate_if_account_is_locked/1,
@@ -29,6 +30,7 @@
 all() ->
   [
    should_not_authenticate_again_if_token_is_available,
+   should_not_authenticate_if_connection_failed,
    should_not_authenticate_if_birthdate_and_client_id_mismatched,
    should_not_authenticate_if_password_is_invalid,
    should_not_authenticate_if_account_is_locked,
@@ -80,6 +82,11 @@ init_per_testcase(should_connect_without_net, Config) ->
   Config;
 
 init_per_testcase(should_not_authenticate_again_if_token_is_available, Config) ->
+  meck:new(banks_fetch_http),
+  meck:new(banks_fetch_bank_ing_keypad),
+  meck:new(prometheus_counter),
+  Config;
+init_per_testcase(should_not_authenticate_if_connection_failed, Config) ->
   meck:new(banks_fetch_http),
   meck:new(banks_fetch_bank_ing_keypad),
   meck:new(prometheus_counter),
@@ -139,6 +146,11 @@ end_per_testcase(should_connect_without_net, _Config) ->
   ok;
 
 end_per_testcase(should_not_authenticate_again_if_token_is_available, _Config) ->
+  meck:unload(banks_fetch_bank_ing_keypad),
+  meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
+  ok;
+end_per_testcase(should_not_authenticate_if_connection_failed, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
   meck:unload(banks_fetch_http),
   meck:unload(prometheus_counter),
@@ -220,6 +232,34 @@ should_not_authenticate_again_if_token_is_available(_Config) ->
   2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
+
+should_not_authenticate_if_connection_failed(_Config) ->
+  ct:comment("Connect to ing account"),
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_network_error_count'],ok}
+              ]),
+  meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
+  meck:expect(banks_fetch_http, request,
+              [
+               {
+                [get, {"https://m.ing.fr/", '_'}, '_', []],
+                {error, failed_connect}
+               }
+              ]),
+  {error, network_error} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+
+  ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
+  true = meck:validate(banks_fetch_http),
+  true = meck:validate(banks_fetch_bank_ing_keypad),
+  true = meck:validate(prometheus_counter),
+  1 = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
+
+  ok.
+
+
 
 should_not_authenticate_if_birthdate_and_client_id_mismatched(_Config) ->
   ct:comment("Connect to ing account"),

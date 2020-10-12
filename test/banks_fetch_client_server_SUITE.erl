@@ -4,7 +4,8 @@
 -export([
          should_handle_cast_do_nothing/1,
          should_fetch_data_without_bank_storage/1,
-         should_not_fetch_data_if_connection_failed_without_bank_storage/1
+         should_not_fetch_data_if_connection_failed_without_bank_storage/1,
+         should_not_fetch_data_if_network_error_without_bank_storage/1
         ]).
 
 -define(BANK_ID, {bank_id, <<"ing">>}).
@@ -14,7 +15,8 @@
 all() -> [
           should_handle_cast_do_nothing,
           should_fetch_data_without_bank_storage,
-          should_not_fetch_data_if_connection_failed_without_bank_storage
+          should_not_fetch_data_if_connection_failed_without_bank_storage,
+          should_not_fetch_data_if_network_error_without_bank_storage
          ].
 
 init_per_suite(Config) ->
@@ -35,6 +37,11 @@ init_per_testcase(should_not_fetch_data_if_connection_failed_without_bank_storag
   meck:new(banks_fetch_bank_ing),
   meck:new(banks_fetch_storage),
   meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
+  Config;
+init_per_testcase(should_not_fetch_data_if_network_error_without_bank_storage, Config) ->
+  meck:new(banks_fetch_bank_ing),
+  meck:new(banks_fetch_storage),
+  meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
   Config.
 
 end_per_testcase(should_handle_cast_do_nothing, _Config) ->
@@ -46,7 +53,12 @@ end_per_testcase(should_fetch_data_without_bank_storage, _Config) ->
 end_per_testcase(should_not_fetch_data_if_connection_failed_without_bank_storage, _Config) ->
   meck:unload(timer),
   meck:unload(banks_fetch_storage),
+  meck:unload(banks_fetch_bank_ing);
+end_per_testcase(should_not_fetch_data_if_network_error_without_bank_storage, _Config) ->
+  meck:unload(timer),
+  meck:unload(banks_fetch_storage),
   meck:unload(banks_fetch_bank_ing).
+
 
 should_handle_cast_do_nothing(_Config) ->
   {noreply, dummystate} = banks_fetch_client_server:handle_cast(dummycall, dummystate),
@@ -103,7 +115,7 @@ should_fetch_data_without_bank_storage(_Config) ->
   {ok, BanksPID} = banks_fetch_client_server:start_link(?BANK_ID, ?CLIENT_ID, ?CLIENT_CREDENTIAL),
 
   ct:comment("Wait storage is done"),
-  meck:wait(banks_fetch_storage, store_transactions, '_', 1000),
+  meck:wait(banks_fetch_storage, store_transactions, '_', 2000),
 
   ct:comment("Verify that client server contain fetched accounts"),
   % This call ensures that fetch_data call in banks_fetch_client_server is terminated
@@ -125,6 +137,38 @@ should_not_fetch_data_if_connection_failed_without_bank_storage(_Config) ->
                                                  ?CLIENT_ID = MockClientId,
                                                  ?CLIENT_CREDENTIAL = MockCredential,
                                                  {error, invalid_credential} end),
+
+  {ok, BanksPID} = banks_fetch_client_server:start_link(?BANK_ID, ?CLIENT_ID, ?CLIENT_CREDENTIAL),
+
+  ct:comment("Verify that we don't try to fetch accounts"),
+  try
+    meck:wait(banks_fetch_bank_ing, fetch_acccounts, '_', 1000)
+  catch error:timeout ->
+          ok
+  end,
+
+  ct:comment("Verify that expected functions has been called"),
+  true = meck:validate(banks_fetch_bank_ing),
+  true = meck:validate(banks_fetch_storage),
+  true = meck:validate(timer),
+
+  ct:comment("Verify that client server does not contain accounts"),
+  NewAccounts = banks_fetch_client_server:accounts(BanksPID),
+  [] = NewAccounts,
+
+  ok.
+
+should_not_fetch_data_if_network_error_without_bank_storage(_Config) ->
+  meck:expect(banks_fetch_bank_ing, connect, fun(MockClientId, MockCredential) ->
+                                                 ?CLIENT_ID = MockClientId,
+                                                 ?CLIENT_CREDENTIAL = MockCredential,
+                                                 {error, network_error}
+                                             end),
+  meck:expect(timer, send_after, fun(MockTime, MockCall) ->
+                                     1 * 60 * 60 * 1000 = MockTime,
+                                     fetch_data = MockCall,
+                                     {ok, tref}
+                                 end),
 
   {ok, BanksPID} = banks_fetch_client_server:start_link(?BANK_ID, ?CLIENT_ID, ?CLIENT_CREDENTIAL),
 

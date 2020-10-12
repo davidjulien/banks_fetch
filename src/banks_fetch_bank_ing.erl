@@ -34,6 +34,7 @@ setup() ->
   prometheus_counter:declare([{name, 'bank_ing_connect_wrong_authentication_count'}, {help, "Bank ING connect error 'wrong authentication' count"}]),
   prometheus_counter:declare([{name, 'bank_ing_connect_account_locked_count'}, {help, "Bank ING connect error 'account locked' count"}]),
   prometheus_counter:declare([{name, 'bank_ing_connect_internal_error_count'}, {help, "Bank ING connect error 'internal error' count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_connect_network_error_count'}, {help, "Bank ING connect error 'network error' count"}]),
   prometheus_counter:declare([{name, 'bank_ing_accounts_total_count'}, {help, "Bank ING accounts total count"}]),
   prometheus_counter:declare([{name, 'bank_ing_accounts_ok_count'}, {help, "Bank ING accounts ok count"}]),
   prometheus_counter:declare([{name, 'bank_ing_transactions_total_count'}, {help, "Bank ING transactions total count"}]),
@@ -41,11 +42,19 @@ setup() ->
   ok.
 
 -spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()} | {error, banks_fetch_bank:connection_error()}.
-connect({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBirthDate}}) ->
+connect(ClientId, ClientCredential) ->
   ok = banks_fetch_http:set_options([{cookies,enabled}]),
 
   prometheus_counter:inc('bank_ing_connect_total_count'),
-  {ok, {{_Version0, 200, _ReasonPhrase0}, Headers0, _Body0}} = banks_fetch_http:request(get, {"https://m.ing.fr/", ?HEADERS}, [{timeout,60000}], []),
+  case banks_fetch_http:request(get, {"https://m.ing.fr/", ?HEADERS}, [{timeout,60000}], []) of
+    {ok, {{_Version0, 200, _ReasonPhrase0}, Headers0, _Body0}} ->
+      connect_step2(ClientId, ClientCredential, Headers0);
+    {error, failed_connect} ->
+      prometheus_counter:inc('bank_ing_connect_network_error_count'),
+      {error, network_error}
+  end.
+
+connect_step2({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBirthDate}}, Headers0) ->
   case lists:keyfind("ingdf-auth-token", 1, Headers0) of
     {_, AuthToken} ->
       prometheus_counter:inc('bank_ing_connect_already_count'),

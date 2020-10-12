@@ -11,6 +11,7 @@
          should_call_set_options/1,
          should_call_request_status_200/1,
          should_call_request_status_300/1,
+         should_call_request_error_failed_connect/1,
          should_call_request_error/1
         ]).
 
@@ -25,6 +26,7 @@ groups() ->
     [
      should_call_request_status_200,
      should_call_request_status_300,
+     should_call_request_error_failed_connect,
      should_call_request_error
     ]}].
 
@@ -45,7 +47,8 @@ end_per_suite(_Config) ->
 init_per_testcase(should_call_set_options, Config) ->
   meck:new(httpc),
   Config;
-init_per_testcase(Test, Config) when Test =:= should_call_request_status_200 orelse Test =:= should_call_request_status_300 orelse Test =:= should_call_request_error ->
+init_per_testcase(Test, Config) when Test =:= should_call_request_status_200 orelse Test =:= should_call_request_status_300 
+                                     orelse Test =:= should_call_request_error orelse Test =:= should_call_request_error_failed_connect ->
   meck:new(httpc),
   meck:new(prometheus_counter),
   Config.
@@ -53,7 +56,8 @@ init_per_testcase(Test, Config) when Test =:= should_call_request_status_200 ore
 end_per_testcase(should_call_set_options, _Config) ->
   meck:unload(httpc),
   ok;
-end_per_testcase(Test, _Config) when Test =:= should_call_request_status_200 orelse Test =:= should_call_request_status_300 orelse Test =:= should_call_request_error ->
+end_per_testcase(Test, _Config) when Test =:= should_call_request_status_200 orelse Test =:= should_call_request_status_300 
+                                     orelse Test =:= should_call_request_error orelse Test =:= should_call_request_error_failed_connect ->
   meck:unload(prometheus_counter),
   meck:unload(httpc),
   ok.
@@ -170,7 +174,42 @@ should_call_request_error(_Config) ->
   meck:expect(prometheus_counter, inc, ExpectedCounterInc),
 
   ct:comment("Call request"),
-  Result = banks_fetch_http:request(Method, Request, HttpOptions, Options),
+  {error, other} = banks_fetch_http:request(Method, Request, HttpOptions, Options),
+
+  ct:comment("Verify httpc"),
+  true = meck:validate(httpc),
+  true = meck:validate(prometheus_counter),
+  NbrExpectedCounterInc = meck:num_calls(prometheus_counter, inc, '_'),
+
+  ok.
+
+
+should_call_request_error_failed_connect(_Config) ->
+  Method = get,
+  Request = {"https://m.ing.fr/", none},
+  HttpOptions = [],
+  Options = [],
+  Result = {error, {failed_connect, []}},
+
+  meck:expect(httpc, request, fun(MockMethod, MockRequest, MockHttpOptions, MockOptions) ->
+                                  Method = MockMethod,
+                                  Request = MockRequest,
+                                  HttpOptions = MockHttpOptions,
+                                  Options = MockOptions,
+                                  Result
+                              end),
+  ExpectedCounterInc = [
+                        {['http_all_requests_call_count'], ok},
+                        {['http_m_ing_fr_requests_call_count'], ok},
+
+                        {['http_all_requests_error_count'], ok},
+                        {['http_m_ing_fr_requests_error_count'], ok}
+                       ],
+  NbrExpectedCounterInc = length(ExpectedCounterInc),
+  meck:expect(prometheus_counter, inc, ExpectedCounterInc),
+
+  ct:comment("Call request"),
+  {error, failed_connect} = banks_fetch_http:request(Method, Request, HttpOptions, Options),
 
   ct:comment("Verify httpc"),
   true = meck:validate(httpc),

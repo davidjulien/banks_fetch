@@ -52,7 +52,13 @@ do_fetch_data(#state{ bank_module = BankModule, bank_id = BankId, client_id = Cl
   case banks_fetch_bank:connect(BankModule, ClientId, ClientCredential) of
     {error, _} = Err ->
       ok = lager:warning("~p/~p/~p : fetch data error : ~p", [BankModule, BankId, ClientId, Err]),
-      State0;
+      case Err of
+        {error, network_error} -> % In case of network errors, try again an hour later
+          {ok, _} = timer:send_after(1*60*60*1000, fetch_data),
+          State0;
+        {error, _} -> % Do nothing for other cases
+          State0
+      end;
     {ok, Auth} ->
       FetchingAt = calendar:universal_time(),
       {ok, Accounts} =  banks_fetch_bank:fetch_accounts(BankModule, Auth),

@@ -68,7 +68,7 @@ set_options(Options) ->
 %% @doc HTTP request with monitoring. For each request, we increment number of requests globally and for request's domain. We also monitor
 %% result status (ok, error, status code)
 %% @end
--spec request(get | post, request(), http_options(), options()) -> {ok, {status_line(), headers(), Body :: string() | binary()}} | {error, Reason :: term()}.
+-spec request(get | post, request(), http_options(), options()) -> {ok, {status_line(), headers(), Body :: string() | binary()}} | {error, failed_connect | other}.
 request(Method, Request, HttpOptions, Options) ->
   MonitoringNamespace = monitoring_namespace(Request),
 
@@ -91,13 +91,19 @@ request(Method, Request, HttpOptions, Options) ->
               prometheus_counter_inc("all", "results_status_other_count"),
               prometheus_counter_inc(MonitoringNamespace, "results_status_other_count")
           end
-      end;
+      end,
+      R;
+    {error,{failed_connect,_}} ->
+      ok = lager:error("HTTP request error : ~p/~p/~p/~p : ~p", [Method, Request, HttpOptions, Options, R]),
+      prometheus_counter_inc("all", "requests_error_count"),
+      prometheus_counter_inc(MonitoringNamespace, "requests_error_count"),
+      {error, failed_connect};
     {error, _} ->
       ok = lager:error("HTTP request error : ~p/~p/~p/~p : ~p", [Method, Request, HttpOptions, Options, R]),
       prometheus_counter_inc("all", "requests_error_count"),
-      prometheus_counter_inc(MonitoringNamespace, "requests_error_count")
-  end,
-  R.
+      prometheus_counter_inc(MonitoringNamespace, "requests_error_count"),
+      {error, other}
+  end.
 
 %% @doc Increment counter for a specific monitoring namespace and extension
 prometheus_counter_inc(MonitoringNamespace, Extension) ->

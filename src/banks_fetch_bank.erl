@@ -68,7 +68,7 @@
         account_id => account_id()
        }.
 
--type connection_error() :: invalid_credential | account_locked | internal_error.
+-type connection_error() :: invalid_credential | account_locked | internal_error | network_error.
 
 %% Callbacks required by all modules implementing banks_fetch_bank behavior
 
