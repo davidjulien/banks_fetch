@@ -115,7 +115,7 @@ should_fetch_data_without_bank_storage(_Config) ->
   {ok, BanksPID} = banks_fetch_client_server:start_link(?BANK_ID, ?CLIENT_ID, ?CLIENT_CREDENTIAL),
 
   ct:comment("Wait storage is done"),
-  meck:wait(banks_fetch_storage, store_transactions, '_', 2000),
+  meck:wait(banks_fetch_storage, store_transactions, '_', 5000),
 
   ct:comment("Verify that client server contain fetched accounts"),
   % This call ensures that fetch_data call in banks_fetch_client_server is terminated
