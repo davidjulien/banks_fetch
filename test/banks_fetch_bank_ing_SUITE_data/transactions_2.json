@@ -130,4 +130,16 @@
     "sameMonthAsPrevious": true,
     "sameDateAsPrevious": false,
     "sameDateAsNext": false
+}, {
+    "id": "12531",
+    "effectiveDate": "2020-05-24",
+    "accountingDate": "2020-05-24",
+    "detail": "RENOUVELLEMENT ANTICIPE CARTE BANCAIRE",
+    "amount": -15.00,
+    "transcodeNeedCustomerAction": false,
+    "type": "FEES",
+    "isOldBankCode": false,
+    "sameMonthAsPrevious": true,
+    "sameDateAsPrevious": false,
+    "sameDateAsNext": false
 }]

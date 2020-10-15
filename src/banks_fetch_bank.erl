@@ -58,7 +58,7 @@
                       client_id => client_id()
                     }.
 
--type transaction_type() :: 'card_debit' | 'card_withdrawal' | 'check' | 'sepa_debit' | 'transfer' | 'interests' | 'other'.
+-type transaction_type() :: 'card_debit' | 'card_withdrawal' | 'check' | 'sepa_debit' | 'transfer' | 'interests' | 'bank_fees' | 'other'.
 -type transaction() :: #{
         id := unicode:unicode_binary(),
         accounting_date := calendar:date(),

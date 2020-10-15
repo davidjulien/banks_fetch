@@ -181,6 +181,7 @@ transaction_transform(#{ <<"id">> := ID, <<"effectiveDate">> := EffectiveDateStr
            <<"TRANSFER">> -> transfer;
            <<"CHECK">> -> check;
            <<"CARD_WITHDRAWAL">> -> card_withdrawal;
+           <<"FEES">> -> bank_fees;
            <<"OTHER">> when Detail =:= <<"INTÉRÊTS PAYÉS"/utf8>> -> interests;
            <<"OTHER">> ->
              ok = lager:warning("Other case in ING transaction: ~p", [Transaction]),
