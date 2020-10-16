@@ -49,5 +49,48 @@
                    <<"CREATE TYPE e_transaction_type AS ENUM ('other','card_debit', 'card_withdrawal', 'check', 'sepa_debit','transfer','interests','bank_fees');">>,
                    <<"ALTER TABLE transactions ALTER COLUMN type TYPE e_transaction_type USING (type::e_transaction_type);">>
                   ]
+                 },
+                 % Each transaction may be associated to a budget (everyday purchases, fun, exceptional...), a category (grocery, restaurant...) and a store.
+                 % You may have also a real date (when you pay something at the beginning of the month for the previous month) and period (like one payment for a quarter)
+                 % Mapping table contains pattern allowing to enrich transactions automatically. Enrichment is done at insertion or when description is updated
+                 {<<"0.2.3">>, <<"0.2.4">>,
+                  [
+                   <<"CREATE TABLE budgets(id SERIAL PRIMARY KEY, name TEXT NOT NULL);">>,
+                   <<"CREATE TABLE categories(id SERIAL PRIMARY KEY, up_category_id INTEGER, name TEXT NOT NULL);">>,
+                   <<"CREATE OR REPLACE FUNCTION compute_real_date(effective_date DATE, description TEXT) RETURNS DATE AS $$ SELECT CASE WHEN description ~* '^(VIREMENT|VIR|PRLV|AVOIR CARTE) ' THEN effective_date WHEN description ~* '^(CARTE|PAIEMENT PAR CARTE) '  THEN to_date(substring(description from '^(?:CARTE|PAIEMENT PAR CARTE) ([^ ]*) '),'DD/MM/YYYY') WHEN description ~* '^RETRAIT DAB( | .* )../../....' THEN to_date(substring(description FROM '^RETRAIT DAB(?: | .* )(../../....*) '),'DD/MM/YYYY') WHEN description ~* 'RETRAIT DAB [^0-9]' THEN effective_date else null END $$ LANGUAGE sql">>,
+                   <<"CREATE TYPE e_fix_date AS ENUM ('previous2','previous','previous_if_begin','none','next','next_if_end')">>,
+                   <<"CREATE TYPE e_period AS ENUM('bimester','quarter','semester','annual')">>,
+                   <<"CREATE TABLE mapping(id SERIAL PRIMARY KEY, pattern TEXT NOT NULL, fix_date e_fix_date, period e_period, budget_id INTEGER, categories_id INTEGER[], store_id INTEGER);">>,
+                   <<"CREATE UNIQUE INDEX mapping_pattern_idx ON mapping(pattern);">>,
+                   <<"CREATE TABLE stores(id SERIAL PRIMARY KEY, name TEXT NOT NULL)">>,
+                   <<"CREATE UNIQUE INDEX stores_name_idx ON stores(name);">>,
+                   <<"ALTER TABLE transactions ADD COLUMN ext_mapping_id INTEGER, ADD COLUMN ext_date DATE, ADD COLUMN ext_period e_period, ADD COLUMN ext_budget_id INTEGER, ADD COLUMN ext_categories_id INTEGER[], ADD COLUMN ext_store_id INTEGER;">>,
+                   <<"CREATE FUNCTION analyze_transaction() RETURNS trigger AS $analyze_transaction$\n",
+                     "DECLARE selected_mapping mapping%rowtype;\n",
+                     "BEGIN\n",
+                     " SELECT * INTO selected_mapping FROM mapping WHERE NEW.description ~* mapping.pattern order by length(mapping.pattern) desc, mapping.id limit 1;\n",
+                     " IF NOT FOUND THEN\n",
+                     "   NEW.ext_date = compute_real_date(NEW.effective_date, NEW.description);\n",
+                     "   RETURN NEW;\n",
+                     " END IF;\n",
+                     " NEW.ext_date = CASE WHEN selected_mapping.fix_date is null THEN compute_real_date(NEW.effective_date, NEW.description)\n",
+                     "                     WHEN selected_mapping.fix_date = 'previous2' THEN date_trunc('month', NEW.effective_date) - INTERVAL '1 month' - INTERVAL '1 day'",
+                     "                     WHEN selected_mapping.fix_date = 'previous' THEN date_trunc('month', NEW.effective_date) - interval '1 day'",
+                     "                     WHEN selected_mapping.fix_date = 'previous_if_begin' AND date_part('day', NEW.effective_date) < 15 THEN date_trunc('month', NEW.effective_date) - interval '1 day'",
+                     "                     WHEN selected_mapping.fix_date = 'previous_if_begin' AND date_part('day', NEW.effective_date) >= 15 THEN NEW.effective_date",
+                     "                     WHEN selected_mapping.fix_date = 'next' THEN date_trunc('month', NEW.effective_date) + INTERVAL '1 month'",
+                     "                     WHEN selected_mapping.fix_date = 'next_if_end' AND date_part('day', NEW.effective_date) >= 15 THEN date_trunc('month', NEW.effective_date) + INTERVAL '1 month'",
+                     "                     WHEN selected_mapping.fix_date = 'next_if_end' AND date_part('day', NEW.effective_date) < 15 THEN NEW.effective_date",
+                     "                END;\n",
+                     " NEW.ext_mapping_id = selected_mapping.id;\n",
+                     " NEW.ext_period = selected_mapping.period;\n",
+                     " NEW.ext_budget_id = selected_mapping.budget_id;\n",
+                     " NEW.ext_categories_id = selected_mapping.categories_id;\n",
+                     " NEW.ext_store_id = selected_mapping.store_id;\n",
+                     " RETURN NEW;\n",
+                     "END; $analyze_transaction$ LANGUAGE plpgsql;">>,
+                   <<"CREATE TRIGGER analyze_transaction BEFORE INSERT ON transactions FOR EACH ROW EXECUTE PROCEDURE analyze_transaction();">>,
+                   <<"CREATE TRIGGER update_transaction BEFORE UPDATE OF description ON transactions FOR EACH ROW EXECUTE PROCEDURE analyze_transaction();">>
+                  ]
                  }
                 ]).

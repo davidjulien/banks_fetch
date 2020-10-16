@@ -25,6 +25,9 @@
               account_id/0,
               transaction_id/0,
               bank/0,
+              budget/0,
+              category/0,
+              store/0,
               account/0,
               transaction/0
              ]).
@@ -44,6 +47,23 @@
         name := unicode:unicode_binary()
        }.
 
+-type budget() :: #{
+        id := unicode:unicode_binary(),
+        name := unicode:unicode_binary()
+       }.
+
+
+-type category() :: #{
+        id := non_neg_integer(),
+        name := unicode:unicode_binary(),
+        up_category_id := non_neg_integer() | none
+       }.
+
+-type store() :: #{
+        id := non_neg_integer(),
+        name := unicode:unicode_binary()
+       }.
+
 -type account_type() :: current | savings | home_loan.
 -type account_ownership() :: single | joint.
 -type account() :: #{ id => unicode:unicode_binary(),
@@ -59,6 +79,7 @@
                     }.
 
 -type transaction_type() :: 'card_debit' | 'card_withdrawal' | 'check' | 'sepa_debit' | 'transfer' | 'interests' | 'bank_fees' | 'other'.
+-type transaction_period() :: undefined | 'bimester' | 'quarter' | 'semester' | 'annual'.
 -type transaction() :: #{
         id := unicode:unicode_binary(),
         accounting_date := calendar:date(),
@@ -69,7 +90,13 @@
 
         bank_id => bank_id(),
         client_id => client_id(),
-        account_id => account_id()
+        account_id => account_id(),
+
+        ext_date => undefined | calendar:date(),
+        ext_period => undefined | transaction_period(),
+        ext_budget_id => undefined | non_neg_integer(),
+        ext_categories_id => undefined | [non_neg_integer()],
+        ext_store_id => undefined | non_neg_integer()
        }.
 
 -type connection_error() :: invalid_credential | account_locked | internal_error | network_error.

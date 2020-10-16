@@ -26,6 +26,9 @@
          should_nodb_store_accounts/1,
 
          should_db_get_banks/1,
+         should_db_get_budgets/1,
+         should_db_get_categories/1,
+         should_db_get_stores/1,
          should_db_get_clients/1,
          should_db_insert_client/1,
          should_db_not_insert_client_already_existing/1,
@@ -62,8 +65,25 @@
 % data used to test store_transactions
 -define(TRANSACTIONS_1,
         [
+         #{ id => <<"TRANSACTION_5">>, accounting_date => {2020,7,23}, effective_date => {2020,7,23}, amount => -900.09, description => <<"PAIEMENT PAR CARTE 22/07/2020 CHARGES">>, type => transfer },
+         #{ id => <<"TRANSACTION_4">>, accounting_date => {2020,7,23}, effective_date => {2020,7,23}, amount => -4.26, description => <<"URSSAF 120120">>, type => transfer },
+         #{ id => <<"TRANSACTION_3">>, accounting_date => {2020,7,23}, effective_date => {2020,7,23}, amount => -64.26, description => <<"PAIEMENT PAR CARTE 20/07/2020 PETITEBOUTIQUE">>, type => card_debit },
          #{ id => <<"TRANSACTION_2">>, accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit },
          #{ id => <<"TRANSACTION_1">>, accounting_date => {2020,7,20}, effective_date => {2020,7,20}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
+        ]).
+
+-define(TRANSACTION_1_STORED,
+        [
+         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_5">>, {2020,7,23}, {2020,7,23}, -900.09, <<"PAIEMENT PAR CARTE 22/07/2020 CHARGES">>, {e_transaction_type, <<"transfer">>}, 
+          {2020,8,1}, 3, {e_period, <<"quarter">>}, 1, {array, [1,42]}, 4}, % next month, for one quarter
+         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_4">>, {2020,7,23}, {2020,7,23}, -4.26, <<"URSSAF 120120">>, {e_transaction_type, <<"transfer">>}, 
+          {2020,6,30}, 2, null, 1, {array, [1,42]}, 3}, % previous month
+         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_3">>, {2020,7,23}, {2020,7,23}, -64.26, <<"PAIEMENT PAR CARTE 20/07/2020 PETITEBOUTIQUE">>, {e_transaction_type, <<"card_debit">>}, 
+          {2020,7,20}, 1, null, 1, {array, [1,52]}, 2},
+         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_2">>, {2020,7,22}, {2020,7,22}, -14.32, <<"PRLV SEPA XXX">>, {e_transaction_type, <<"sepa_debit">>},
+          {2020,7,22}, null, null, null, null, null},
+         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_1">>, {2020,7,20}, {2020,7,20}, -34.32, <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, {e_transaction_type, <<"card_debit">>},
+          {2020,7,20}, null, null, null, null, null}
         ]).
 
 -define(BANK_ID_2, <<"ing">>).
@@ -80,7 +100,8 @@ all() ->
 groups() ->
   [
    {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_insert_client, should_nodb_store_accounts ]},
-   {tests_with_db, [], [ should_db_get_banks, should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
+   {tests_with_db, [], [ should_db_get_banks, should_db_get_budgets, should_db_get_categories, should_db_get_stores,
+                         should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
                          should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_invalid_cursor,
                          should_db_get_last_transactions_id ]}
@@ -158,6 +179,15 @@ end_per_group(tests_with_db, _Config) ->
 init_per_testcase(should_db_get_banks, Config) ->
   setup_database(Config);
 
+init_per_testcase(should_db_get_budgets, Config) ->
+  setup_database(Config, <<"setup_db_for_get_budgets.sql">>);
+
+init_per_testcase(should_db_get_categories, Config) ->
+  setup_database(Config, <<"setup_db_for_get_categories.sql">>);
+
+init_per_testcase(should_db_get_stores, Config) ->
+  setup_database(Config, <<"setup_db_for_get_stores.sql">>);
+
 init_per_testcase(should_db_get_clients, Config) ->
   setup_database(Config, <<"setup_db_for_get_clients.sql">>);
 
@@ -197,6 +227,12 @@ init_per_testcase(_, Config) ->
 
 % End per testcase
 end_per_testcase(should_db_get_banks, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_get_budgets, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_get_categories, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_get_stores, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_clients, _Config) ->
   teardown_database();
@@ -291,6 +327,9 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.3';">>, [], fake_connection],
                 {'comment', []}
                },
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.4';">>, [], fake_connection],
+                {'comment', []}
+               },
                {[meck_matcher:new(fun(<<"COMMENT ON DATABASE banks_fetch_test IS ", _/binary>>) -> true; (_) -> false end), [], fake_connection],
                 {error, unexpected_comment}},
                {[<<"COMMIT">>, [], fake_connection],
@@ -301,10 +340,10 @@ should_nodb_start_with_db_upgrade(_Config) ->
 
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   % One COMMIT for each upgrade
-  meck:wait(5, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
+  meck:wait(6, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
   % 3 queries + number of queries to upgrade
-  40 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  56 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 
@@ -494,6 +533,29 @@ should_db_get_banks(_Config) ->
   {value, [#{ id := <<"ing">>, name := <<"ING">> }]} = Banks,
   ok.
 
+should_db_get_budgets(_Config) ->
+  ct:comment("Get budgets"),
+  Budgets = banks_fetch_storage:get_budgets(),
+
+  ct:comment("Verify returned budgets"),
+  {value, [#{ id := 1, name := <<"Aucun">> }, #{ id := 2, name := <<"Courant">> }, #{ id := 3, name := <<"Plaisir">> }, #{ id := 4, name := <<"Exceptionnel">> }, #{ id := 5, name := <<"Épargne"/utf8>> }]} = Budgets,
+  ok.
+
+should_db_get_categories(_Config) ->
+  ct:comment("Get categories"),
+  Categories = banks_fetch_storage:get_categories(),
+
+  ct:comment("Verify returned categories"),
+  {value, [#{ id := 1, name := <<"Alimentation">>, up_category_id := none }, #{ id := 2, name := <<"Supermarché"/utf8>>, up_category_id := 1} ]} = Categories,
+  ok.
+
+should_db_get_stores(_Config) ->
+  ct:comment("Get stores"),
+  Stores = banks_fetch_storage:get_stores(),
+
+  ct:comment("Verify returned stores"),
+  {value, [#{ id := 1, name := <<"Carrefour">> }, #{ id := 2, name := <<"LIDL">> }, #{ id := 3, name := <<"Monoprix">> }, #{ id := 4, name := <<"Casino">> }]} = Stores,
+  ok.
 
 should_db_get_clients(_Config) ->
   ct:comment("Get clients"),
@@ -588,16 +650,14 @@ should_db_store_transactions(Config) ->
 
   ct:comment("Load transactions from database"),
   {db_connection, Connection} = lists:keyfind(db_connection, 1, Config),
-  {{select, Nbr}, TransactionsList} = pgsql_connection:simple_query(<<"SELECT bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type FROM transactions ORDER BY transaction_id desc;">>, Connection),
+  {{select, Nbr}, TransactionsList} = pgsql_connection:simple_query(<<"SELECT bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type, ext_date, ext_mapping_id, ext_period, ext_budget_id, ext_categories_id, ext_store_id FROM transactions ORDER BY transaction_id desc;">>, Connection),
 
   ct:comment("Verify number of transactions"),
   NbrExpectedTransactions = length(?TRANSACTIONS_1),
   NbrExpectedTransactions = Nbr,
 
   ct:comment("Verify transactions data"),
-  ExpectedDataList = [
-                      {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, TransactionId, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, atom_to_binary(Type,'utf8')}}
-                      || #{ id := TransactionId, accounting_date := AccountingDate, effective_date := EffectiveDate, amount := Amount, description := Description, type := Type } <- ?TRANSACTIONS_1 ],
+  ExpectedDataList = ?TRANSACTION_1_STORED,
 
   lists:foreach(fun({Expected, Transaction}) -> Expected = Transaction end, lists:zip(ExpectedDataList, TransactionsList)),
 

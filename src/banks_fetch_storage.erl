@@ -29,6 +29,10 @@
          store_accounts/4,
          get_accounts/2,
 
+         get_budgets/0,
+         get_categories/0,
+         get_stores/0,
+
          store_transactions/5,
          get_last_transactions_id/2,
          get_transactions/3,
@@ -44,10 +48,14 @@
          }).
 
 
+% Functions related to banks
+
 -spec get_banks() -> {value, [banks_fetch_bank:bank()]}.
 get_banks() ->
   gen_server:call(?MODULE, get_banks).
 
+
+% Functions related to clients
 
 -spec get_clients() -> {value, [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())}]}.
 get_clients() ->
@@ -56,6 +64,30 @@ get_clients() ->
 -spec insert_client(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())) -> ok | {error, already_inserted}.
 insert_client(BankId, ClientId, ClientCredential) ->
   gen_server:call(?MODULE, {insert_client, BankId, ClientId, ClientCredential}).
+
+
+% Functions related to budgets
+
+%% @doc Return all stored budgets
+-spec get_budgets() -> {value, [banks_fetch_bank:budget()]}.
+get_budgets() ->
+  gen_server:call(?MODULE, get_budgets).
+
+
+% Functions related to categories
+
+%% @doc Return all stored categories
+-spec get_categories() -> {value, [banks_fetch_bank:category()]}.
+get_categories() ->
+  gen_server:call(?MODULE, get_categories).
+
+
+% Functions related to stores
+
+%% @doc Return all stored stores
+-spec get_stores() -> {value, [banks_fetch_bank:store()]}.
+get_stores() ->
+  gen_server:call(?MODULE, get_stores).
 
 
 % Functions related to accounts
@@ -111,6 +143,15 @@ init(Credential) ->
 
 handle_call(get_banks, _From, #state{ } = State0) ->
   R = do_get_banks(State0),
+  {reply, R, State0};
+handle_call(get_budgets, _From, #state{ } = State0) ->
+  R = do_get_budgets(State0),
+  {reply, R, State0};
+handle_call(get_categories, _From, #state{ } = State0) ->
+  R = do_get_categories(State0),
+  {reply, R, State0};
+handle_call(get_stores, _From, #state{ } = State0) ->
+  R = do_get_stores(State0),
   {reply, R, State0};
 handle_call(get_clients, _From, #state{ } = State0) ->
   R = do_get_clients(State0),
@@ -169,7 +210,40 @@ do_init_db(#state{ credential = {DatabaseName, _Username, _Password}, connection
 do_get_banks(#state{ connection = Connection }) ->
   case pgsql_connection:simple_query(<<"SELECT id, name FROM banks;">>, Connection) of
     {{select, _N}, List0} ->
-      error_logger:info_msg("List0=~p", [List0]),
+      List1 = [ #{ id => Id, name => Name } || {Id, Name} <- List0 ],
+      {value, List1}
+  end.
+
+%%
+%% @doc Get budgets from database
+%%
+-spec do_get_budgets(#state{}) -> {value, [banks_fetch_bank:budget()]}.
+do_get_budgets(#state{ connection = Connection }) ->
+  case pgsql_connection:simple_query(<<"SELECT id, name FROM budgets;">>, Connection) of
+    {{select, _N}, List0} ->
+      List1 = [ #{ id => Id, name => Name } || {Id, Name} <- List0 ],
+      {value, List1}
+  end.
+
+%%
+%% @doc Get categories from database
+%%
+-spec do_get_categories(#state{}) -> {value, [banks_fetch_bank:category()]}.
+do_get_categories(#state{ connection = Connection }) ->
+  % WARNING: it is not enough to ensure that up category is defined before a category
+  case pgsql_connection:simple_query(<<"SELECT id, name, up_category_id FROM categories ORDER BY up_category_id NULLS FIRST;">>, Connection) of
+    {{select, _N}, List0} ->
+      List1 = [ #{ id => Id, name => Name, up_category_id => if is_integer(CategoryUpId) -> CategoryUpId; true -> none end } || {Id, Name, CategoryUpId} <- List0 ],
+      {value, List1}
+  end.
+
+%%
+%% @doc Get stores from database
+%%
+-spec do_get_stores(#state{}) -> {value, [banks_fetch_bank:store()]}.
+do_get_stores(#state{ connection = Connection }) ->
+  case pgsql_connection:simple_query(<<"SELECT id, name FROM stores;">>, Connection) of
+    {{select, _N}, List0} ->
       List1 = [ #{ id => Id, name => Name } || {Id, Name} <- List0 ],
       {value, List1}
   end.
@@ -285,13 +359,16 @@ do_get_transactions({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account
 -spec do_get_last_transactions(none | unicode:unicode_binary(), non_neg_integer(), #state{}) -> {value, {unicode:unicode_binary(), non_neg_integer(), [banks_fetch_bank:transaction()]}} | {error, invalid_cursor}.
 do_get_last_transactions(Cursor, N, #state{ connection = Connection }) ->
   case decode_cursor(Cursor, Connection) of
-    {error, _} = Err -> Err;
+    {error, _} = Err ->
+      Err;
     {WhereClause, StartId, Offset, Total} ->
-      case pgsql_connection:extended_query(list_to_binary([<<"SELECT transaction_id, bank_id, client_id, account_id, accounting_date, effective_date, amount, description, type FROM transactions WHERE ">>, WhereClause, <<" ORDER BY effective_date DESC, bank_id, client_id, account_id, fetching_at DESC, fetching_position ASC OFFSET $1 LIMIT $2;">>]), [Offset, N, StartId], Connection) of
+      case pgsql_connection:extended_query(list_to_binary([<<"SELECT transaction_id, bank_id, client_id, account_id, accounting_date, effective_date, amount, description, type, ext_date, ext_period, ext_budget_id, ext_categories_id, ext_store_id FROM transactions WHERE ">>, WhereClause, <<" ORDER BY effective_date DESC, bank_id, client_id, account_id, fetching_at DESC, fetching_position ASC OFFSET $1 LIMIT $2;">>]), [Offset, N, StartId], Connection) of
         {{select, _N}, List0} ->
           List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8'),
-                       bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal} } ||
-                    {TransactionId, BankIdVal, ClientIdVal, AccountIdVal, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}} <- List0 ],
+                       bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal},
+                       ext_date => null_to_undefined(Date), ext_period => case OptPeriod of {e_period_type, Period} -> Period; _ -> undefined end, ext_budget_id => null_to_undefined(BudgetId),
+                       ext_categories_id => case CategoriesId of {array, A} -> A; _ -> undefined end, ext_store_id => null_to_undefined(StoreId)} ||
+                    {TransactionId, BankIdVal, ClientIdVal, AccountIdVal, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, Date, OptPeriod, BudgetId, CategoriesId, StoreId} <- List0 ],
           % TODO: cursor is null if we have reached limit
           NewCursor = base64:encode(list_to_binary([integer_to_binary(StartId), <<":">>, integer_to_binary(Offset+length(List1)), <<":">>, integer_to_binary(Total)])),
           {value, {NewCursor, Total, List1}}
@@ -308,6 +385,9 @@ decode_cursor(Cursor, _Connection) ->
   catch
     error:function_clause -> {error, invalid_cursor}
   end.
+
+null_to_undefined(null) -> undefined;
+null_to_undefined(V) -> V.
 
 %%
 %% Upgrade schema

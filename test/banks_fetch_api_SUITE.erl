@@ -11,6 +11,7 @@
 
          should_handle_event_do_nothing/1,
          should_handle_unknown_request/1,
+         should_handle_internal_error/1,
 
          should_return_last_transactions/1,
          should_return_last_transactions_with_client/1,
@@ -24,6 +25,15 @@
          should_return_banks/1,
          should_return_banks_with_client/1,
 
+         should_return_budgets/1,
+         should_return_budgets_with_client/1,
+
+         should_return_categories/1,
+         should_return_categories_with_client/1,
+
+         should_return_stores/1,
+         should_return_stores_with_client/1,
+
          should_return_all_accounts/1,
          should_return_all_accounts_with_client/1
         ]).
@@ -32,6 +42,7 @@ all() ->
   [
    should_handle_event_do_nothing,
    should_handle_unknown_request,
+   should_handle_internal_error,
 
    should_return_last_transactions,
    should_return_last_transactions_with_client,
@@ -44,6 +55,15 @@ all() ->
 
    should_return_banks,
    should_return_banks_with_client,
+
+   should_return_budgets,
+   should_return_budgets_with_client,
+
+   should_return_categories,
+   should_return_categories_with_client,
+
+   should_return_stores,
+   should_return_stores_with_client,
 
    should_return_all_accounts,
    should_return_all_accounts_with_client
@@ -95,6 +115,10 @@ init_per_testcase(should_handle_event_do_nothing, Config) ->
 init_per_testcase(should_handle_unknown_request, Config) ->
   Config;
 
+init_per_testcase(should_handle_internal_error, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
 init_per_testcase(should_return_last_transactions, Config) ->
   meck:new(banks_fetch_storage),
   Config;
@@ -127,6 +151,31 @@ init_per_testcase(should_return_banks_with_client, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
 
+init_per_testcase(should_return_budgets, Config) ->
+  meck:new(banks_fetch_storage),
+  Config;
+
+init_per_testcase(should_return_budgets_with_client, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_return_categories, Config) ->
+  meck:new(banks_fetch_storage),
+  Config;
+
+init_per_testcase(should_return_categories_with_client, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_return_stores, Config) ->
+  meck:new(banks_fetch_storage),
+  Config;
+
+init_per_testcase(should_return_stores_with_client, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+
 init_per_testcase(should_return_all_accounts, Config) ->
   meck:new(banks_fetch_storage),
   Config;
@@ -141,6 +190,11 @@ end_per_testcase(should_handle_event_do_nothing, _Config) ->
   ok;
 
 end_per_testcase(should_handle_unknown_request, _Config) ->
+  ok;
+
+end_per_testcase(should_handle_internal_error, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
   ok;
 
 end_per_testcase(should_return_last_transactions, _Config) ->
@@ -179,6 +233,33 @@ end_per_testcase(should_return_banks_with_client, Config) ->
   teardown_elli(Config),
   ok;
 
+end_per_testcase(should_return_budgets, _Config) ->
+  meck:unload(banks_fetch_storage),
+  ok;
+
+end_per_testcase(should_return_budgets_with_client, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_return_categories, _Config) ->
+  meck:unload(banks_fetch_storage),
+  ok;
+
+end_per_testcase(should_return_categories_with_client, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_return_stores, _Config) ->
+  meck:unload(banks_fetch_storage),
+  ok;
+
+end_per_testcase(should_return_stores_with_client, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
 end_per_testcase(should_return_all_accounts, _Config) ->
   meck:unload(banks_fetch_storage),
   ok;
@@ -205,6 +286,20 @@ should_handle_unknown_request(_Config) ->
   ok.
 
 
+should_handle_internal_error(_Config) ->
+  meck:expect(banks_fetch_storage, get_last_transactions, fun(_MockCursor, _MockN) ->
+                                                              {error, none}
+                                                          end),
+
+  Response = hackney:get("http://localhost:3003/api/1.0/transactions"),
+  500 = status(Response),
+  <<"Internal error">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
 %%
 %% Should return last transactions
 %%
@@ -214,9 +309,10 @@ should_handle_unknown_request(_Config) ->
          #{ id => <<"TRANSACTION_2">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>},
             accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit },
          #{ id => <<"TRANSACTION_1">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client2">>}, account_id => {account_id, <<"account2">>},
-            accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit }
+            accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit,
+            ext_store_id => 3 }
         ]).
--define(TRANSACTIONS_JSON, <<"{\"transactions\":[{\"type\":\"sepa_debit\",\"id\":\"TRANSACTION_2\",\"effective_date\":\"2020-07-22\",\"description\":\"PRLV SEPA XXX\",\"client_id\":\"client1\",\"bank_id\":\"ing\",\"amount\":-14.32,\"accounting_date\":\"2020-07-22\",\"account_id\":\"account1\"},{\"type\":\"card_debit\",\"id\":\"TRANSACTION_1\",\"effective_date\":\"2020-07-21\",\"description\":\"PAIEMENT PAR CARTE 20/07/2020 XXX\",\"client_id\":\"client2\",\"bank_id\":\"ing\",\"amount\":-34.32,\"accounting_date\":\"2020-07-21\",\"account_id\":\"account2\"}],\"total\":8,\"next_cursor\":\"fakecursor\"}">>).
+-define(TRANSACTIONS_JSON, <<"{\"transactions\":[{\"type\":\"sepa_debit\",\"id\":\"TRANSACTION_2\",\"ext_store_id\":null,\"ext_period\":null,\"ext_date\":null,\"ext_categories_id\":null,\"ext_budget_id\":null,\"effective_date\":\"2020-07-22\",\"description\":\"PRLV SEPA XXX\",\"client_id\":\"client1\",\"bank_id\":\"ing\",\"amount\":-14.32,\"accounting_date\":\"2020-07-22\",\"account_id\":\"account1\"},{\"type\":\"card_debit\",\"id\":\"TRANSACTION_1\",\"ext_store_id\":3,\"ext_period\":null,\"ext_date\":null,\"ext_categories_id\":null,\"ext_budget_id\":null,\"effective_date\":\"2020-07-21\",\"description\":\"PAIEMENT PAR CARTE 20/07/2020 XXX\",\"client_id\":\"client2\",\"bank_id\":\"ing\",\"amount\":-34.32,\"accounting_date\":\"2020-07-21\",\"account_id\":\"account2\"}],\"total\":8,\"next_cursor\":\"fakecursor\"}">>).
 
 should_return_last_transactions(_Config) ->
   Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"transactions">>] },
@@ -353,6 +449,88 @@ should_return_banks_with_client(_Config) ->
 
   ok.
 
+
+-define(BUDGETS, [#{ id => 1, name => <<"Aucun">> }, #{ id => 2, name => <<"Courant">> }]).
+-define(BUDGETS_JSON, <<"[{\"name\":\"Aucun\",\"id\":1},{\"name\":\"Courant\",\"id\":2}]">>).
+
+should_return_budgets(_Config) ->
+  Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"budgets">>] },
+  meck:expect(banks_fetch_storage, get_budgets, fun() -> {value, ?BUDGETS} end),
+  {Status, Headers, Body} = banks_fetch_api:handle(Req, no_args),
+  200 = Status,
+  [{<<"Content-Type">>, <<"application/json">>}] = Headers,
+  ?BUDGETS_JSON = Body,
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+should_return_budgets_with_client(_Config) ->
+  meck:expect(banks_fetch_storage, get_budgets, fun() -> {value, ?BUDGETS} end),
+
+  Response = hackney:get("http://localhost:3003/api/1.0/budgets"),
+  200 = status(Response),
+  ?BUDGETS_JSON = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+-define(CATEGORIES, [#{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 } ]).
+-define(CATEGORIES_JSON, <<"[{\"up_category_id\":null,\"name\":\"Alimentation\",\"id\":1},{\"up_category_id\":1,\"name\":\"Supermarché\",\"id\":2}]"/utf8>>).      
+
+should_return_categories(_Config) ->
+  Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"categories">>] },
+  meck:expect(banks_fetch_storage, get_categories, fun() -> {value, ?CATEGORIES} end),
+  {Status, Headers, Body} = banks_fetch_api:handle(Req, no_args),
+  200 = Status,
+  [{<<"Content-Type">>, <<"application/json">>}] = Headers,
+  ?CATEGORIES_JSON = Body,
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_return_categories_with_client(_Config) ->
+  meck:expect(banks_fetch_storage, get_categories, fun() -> {value, ?CATEGORIES} end),
+
+  Response = hackney:get("http://localhost:3003/api/1.0/categories"),
+  200 = status(Response),
+  ?CATEGORIES_JSON = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+-define(STORES, [#{ id => 1, name => <<"SUPERMARCHE">>} ]).
+-define(STORES_JSON, <<"[{\"name\":\"SUPERMARCHE\",\"id\":1}]">>).
+
+should_return_stores(_Config) ->
+  Req = #req{ method = 'GET', path = [<<"api">>,<<"1.0">>,<<"stores">>] },
+  meck:expect(banks_fetch_storage, get_stores, fun() -> {value, ?STORES} end),
+  {Status, Headers, Body} = banks_fetch_api:handle(Req, no_args),
+  200 = Status,
+  [{<<"Content-Type">>, <<"application/json">>}] = Headers,
+  ?STORES_JSON = Body,
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_return_stores_with_client(_Config) ->
+  meck:expect(banks_fetch_storage, get_stores, fun() -> {value, ?STORES} end),
+
+  Response = hackney:get("http://localhost:3003/api/1.0/stores"),
+  200 = status(Response),
+  ?STORES_JSON = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
 
 
 -define(ACCOUNTS, [
