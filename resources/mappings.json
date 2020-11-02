@@ -1,0 +1,47 @@
+{
+  "budgets":[
+    {"id": 0, "name": "aucun"},
+    {"id": 1, "name": "Courant"},
+    {"id": 2, "name": "Extra"},
+    {"id": 3, "name": "Exceptionnel"},
+    {"id": 4, "name": "Épargne"}
+  ],
+  "categories":[
+    {"id": 100000, "name": "Alimentation", "up_category_id": null},
+    {"id": 100100, "name": "Supermarché", "up_category_id": 100000}
+  ],
+  "stores":[
+    {"id": 1000, "name": "LIDL"},
+    {"id": 1001, "name": "Super U"},
+    {"id": 1002, "name": "Monoprix"},
+    {"id": 1003, "name": "Picard"},
+    {"id": 1004, "name": "Carrefour"},
+    {"id": 1005, "name": "E Leclerc"},
+    {"id": 1006, "name": "Intermarché"},
+    {"id": 1007, "name": "Auchan"},
+    {"id": 1008, "name": "Franprix"},
+    {"id": 1009, "name": "Naturalia"},
+    {"id": 1010, "name": "Géant"},
+    {"id": 1011, "name": "Spar"},
+    {"id": 1012, "name": "Supérette"},
+    {"id": 1013, "name": "Petit casino"},
+    {"id": 1014, "name": "Coccimarket"}
+  ],
+  "mappings": [
+    {"pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
+    {"pattern": "(SAS POMARDIS|SUPER U|SAS SAS ST LAZARE)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1001},
+    {"pattern": "(MONOP|MONOPRIX)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1002},
+    {"pattern": "(PICARD)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1003},
+    {"pattern": "(CARREFOUR CHAMB|CARREFOUR|OOSHOP)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1004},
+    {"pattern": "(E LECLERC|E\\.LECLERC)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1005},
+    {"pattern": "(INTERMARCHE|ITM BUXEROLLES)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1006},
+    {"pattern": "(AUCHAN SUPER MA|AUCHAN)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1007},
+    {"pattern": "(FRANPRIX)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1008},
+    {"pattern": "(NATURALIA)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1009},
+    {"pattern": "(GEANT CG319)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1010},
+    {"pattern": "(SPAR)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1011},
+    {"pattern": "(SUPERETTE)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1012},
+    {"pattern": "(PETIT CASINO)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1013},
+    {"pattern": "(COCCI)($| )", "fix_date": "none", "period": null, "budget_id": 1, "categories_id": [100000,100100], "store_id": 1014}
+  ]
+}
