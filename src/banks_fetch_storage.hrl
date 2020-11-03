@@ -92,5 +92,48 @@
                    <<"CREATE TRIGGER analyze_transaction BEFORE INSERT ON transactions FOR EACH ROW EXECUTE PROCEDURE analyze_transaction();">>,
                    <<"CREATE TRIGGER update_transaction BEFORE UPDATE OF description ON transactions FOR EACH ROW EXECUTE PROCEDURE analyze_transaction();">>
                   ]
+                 },
+                 {<<"0.2.4">>, <<"0.2.5">>,
+                  [
+                   <<"ALTER TABLE mapping RENAME TO mappings;">>,
+                   <<"alter sequence mapping_id_seq restart with 1000000;">>,
+                   <<"CREATE OR REPLACE FUNCTION analyze_transaction() RETURNS trigger AS $analyze_transaction$\n",
+                     "DECLARE selected_mapping mappings%rowtype;\n",
+                     "BEGIN\n",
+                     "IF OLD.ext_mapping_id >= 1000000 THEN\n",
+                     "  RETURN NEW;\n"
+                     "ELSE\n",
+                     " SELECT * INTO selected_mapping FROM mappings WHERE NEW.description ~* mappings.pattern order by length(mappings.pattern) desc, mappings.id limit 1;\n",
+                     " IF NOT FOUND THEN\n",
+                     "   NEW.ext_date = compute_real_date(NEW.effective_date, NEW.description);\n",
+                     "   NEW.ext_period = 'month';\n",
+                     "   RETURN NEW;\n",
+                     " END IF;\n",
+                     " NEW.ext_date = CASE WHEN selected_mapping.fix_date = 'none' THEN compute_real_date(NEW.effective_date, NEW.description)\n",
+                     "                     WHEN selected_mapping.fix_date = 'previous2' THEN date_trunc('month', NEW.effective_date) - INTERVAL '1 month' - INTERVAL '1 day'",
+                     "                     WHEN selected_mapping.fix_date = 'previous' THEN date_trunc('month', NEW.effective_date) - interval '1 day'",
+                     "                     WHEN selected_mapping.fix_date = 'previous_if_begin' AND date_part('day', NEW.effective_date) < 15 THEN date_trunc('month', NEW.effective_date) - interval '1 day'",
+                     "                     WHEN selected_mapping.fix_date = 'previous_if_begin' AND date_part('day', NEW.effective_date) >= 15 THEN NEW.effective_date",
+                     "                     WHEN selected_mapping.fix_date = 'next' THEN date_trunc('month', NEW.effective_date) + INTERVAL '1 month'",
+                     "                     WHEN selected_mapping.fix_date = 'next_if_end' AND date_part('day', NEW.effective_date) >= 15 THEN date_trunc('month', NEW.effective_date) + INTERVAL '1 month'",
+                     "                     WHEN selected_mapping.fix_date = 'next_if_end' AND date_part('day', NEW.effective_date) < 15 THEN NEW.effective_date",
+                     "                END;\n",
+                     " NEW.ext_mapping_id = selected_mapping.id;\n",
+                     " NEW.ext_period = selected_mapping.period;\n",
+                     " NEW.ext_budget_id = selected_mapping.budget_id;\n",
+                     " NEW.ext_categories_id = selected_mapping.categories_id;\n",
+                     " NEW.ext_store_id = selected_mapping.store_id;\n",
+                     " RETURN NEW;\n",
+                     "END IF;\n",
+                     "END; $analyze_transaction$ LANGUAGE plpgsql;">>,
+
+                   <<"ALTER TABLE mappings ALTER COLUMN period type VARCHAR(255);">>,
+                   <<"ALTER TABLE transactions ALTER COLUMN ext_period type VARCHAR(255);">>,
+                   <<"DROP TYPE IF EXISTS e_period">>,
+                   <<"CREATE TYPE e_period AS ENUM('month','bimester','quarter','semester','annual')">>,
+                   <<"ALTER TABLE transactions ALTER COLUMN ext_period TYPE e_period USING (ext_period::e_period);">>,
+                   <<"ALTER TABLE mappings ALTER COLUMN period TYPE e_period USING (period::e_period);">>,
+                   <<"ALTER TABLE mappings ALTER COLUMN period SET NOT NULL, ALTER COLUMN fix_date SET NOT NULL;">>
+                  ]
                  }
                 ]).

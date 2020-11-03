@@ -28,6 +28,9 @@
               budget/0,
               category/0,
               store/0,
+              mapping/0,
+              mapping_fix_date/0,
+              mapping_period/0,
               account/0,
               transaction/0
              ]).
@@ -52,7 +55,6 @@
         name := unicode:unicode_binary()
        }.
 
-
 -type category() :: #{
         id := non_neg_integer(),
         name := unicode:unicode_binary(),
@@ -62,6 +64,19 @@
 -type store() :: #{
         id := non_neg_integer(),
         name := unicode:unicode_binary()
+       }.
+
+-type mapping_fix_date() :: previous2 | previous | previous_if_begin | none | next | next_if_end.
+-type mapping_period() :: bimester | quarter | semester | annual | none.
+
+-type mapping() :: #{
+        id := non_neg_integer(),
+        pattern := unicode:unicode_binary(),
+        fix_date := mapping_fix_date(),
+        period := mapping_period(),
+        budget_id := none | non_neg_integer(),
+        categories_id := none | [non_neg_integer()],
+        store_id := none | non_neg_integer()
        }.
 
 -type account_type() :: current | savings | home_loan.

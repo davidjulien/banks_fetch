@@ -33,6 +33,9 @@
          get_categories/0,
          get_stores/0,
 
+         get_mappings/0,
+         upgrade_mappings/4,
+
          store_transactions/5,
          get_last_transactions_id/2,
          get_transactions/3,
@@ -104,6 +107,16 @@ store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
 -spec get_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id()) -> {value, [banks_fetch_bank:account()]}.
 get_accounts(BankId, ClientId) ->
   gen_server:call(?MODULE, {get_accounts, BankId, ClientId}).
+
+% Functions related to mappings
+
+-spec get_mappings() -> {value, [any()]}.
+get_mappings() ->
+  gen_server:call(?MODULE, get_mappings).
+
+-spec upgrade_mappings([banks_fetch_bank:budget()], [banks_fetch_bank:category()],  [banks_fetch_bank:store()], [banks_fetch_bank:mapping()]) -> ok.
+upgrade_mappings(Budgets, Categories, Stores, Mappings) ->
+  gen_server:call(?MODULE, {upgrade_mappings, Budgets, Categories, Stores, Mappings}).
 
 
 %% @doc Store transactions
@@ -180,6 +193,12 @@ handle_call({get_transactions, BankId, ClientId, AccountId}, _From, #state{ } = 
 handle_call({get_last_transactions, CursorOpt, N}, _From, #state{ } = State0) ->
   R = do_get_last_transactions(CursorOpt, N, State0),
   {reply, R, State0};
+handle_call(get_mappings, _From, #state{ } = State0) ->
+  R = do_get_mappings(State0),
+  {reply, R, State0};
+handle_call({upgrade_mappings, Budgets, Categories, Stores, Mappings}, _From, #state{ } = State0) ->
+  R = do_upgrade_mappings(Budgets, Categories, Stores, Mappings, State0),
+  {reply, R, State0};
 handle_call(stop, _From, State0) ->
   {stop, normal, stopped, State0}.
 
@@ -225,6 +244,23 @@ do_get_budgets(#state{ connection = Connection }) ->
       {value, List1}
   end.
 
+-spec do_insert_budget(banks_fetch_bank:budget(), #state{}) -> ok.
+do_insert_budget(#{ id := Id, name := Name }, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"INSERT INTO budgets(id, name) VALUES($1,$2);">>, [Id, Name], Connection) of
+    {{insert,_,1},[]} ->
+      ok
+  end.
+
+-spec do_delete_budgets([non_neg_integer()], #state{}) -> ok.
+do_delete_budgets([], #state{}) ->
+  ok;
+do_delete_budgets(IdList, #state{ connection = Connection }) ->
+  case pgsql_connection:simple_query(list_to_binary([<<"DELETE FROM budgets where id IN (">>, id_list_to_string(IdList), <<");">>]), Connection) of
+    {{delete,_N},[]} ->
+      ok
+  end.
+
+
 %%
 %% @doc Get categories from database
 %%
@@ -238,6 +274,28 @@ do_get_categories(#state{ connection = Connection }) ->
   end.
 
 %%
+%% @doc Insert new category
+%%
+do_insert_category(#{ id := Id, name := Name, up_category_id := UpId }, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"INSERT INTO categories(id, name, up_category_id) VALUES($1,$2,$3);">>, [Id, Name, none_to_null(UpId)], Connection) of
+    {{insert,_,1},[]} ->
+      ok
+  end.
+
+%%
+%% @doc Delete categories from id list
+%%
+-spec do_delete_categories([non_neg_integer()], #state{}) -> ok.
+do_delete_categories([], #state{}) ->
+  ok;
+do_delete_categories(IdList, #state{ connection = Connection }) ->
+  case pgsql_connection:simple_query(list_to_binary([<<"DELETE FROM categories where id IN (">>, id_list_to_string(IdList), <<");">>]), Connection) of
+    {{delete,_N},[]} ->
+      ok
+  end.
+
+
+%%
 %% @doc Get stores from database
 %%
 -spec do_get_stores(#state{}) -> {value, [banks_fetch_bank:store()]}.
@@ -246,6 +304,49 @@ do_get_stores(#state{ connection = Connection }) ->
     {{select, _N}, List0} ->
       List1 = [ #{ id => Id, name => Name } || {Id, Name} <- List0 ],
       {value, List1}
+  end.
+
+%%
+%% @doc Insert new store
+%%
+do_insert_store(#{ id := Id, name := Name }, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"INSERT INTO stores(id, name) VALUES($1,$2);">>, [Id, Name], Connection) of
+    {{insert,_,1},[]} ->
+      ok
+  end.
+
+%%
+%% @doc Delete stores from id list
+%%
+-spec do_delete_stores([non_neg_integer()], #state{}) -> ok.
+do_delete_stores([], #state{}) ->
+  ok;
+do_delete_stores(IdList, #state{ connection = Connection }) ->
+  case pgsql_connection:simple_query(list_to_binary([<<"DELETE FROM stores where id IN (">>, id_list_to_string(IdList), <<");">>]), Connection) of
+    {{delete,_N},[]} ->
+      ok
+  end.
+
+%%
+%% @doc Insert new mapping
+%%
+do_insert_mapping(#{ id := Id, pattern := Pattern, fix_date := FixDate, period := Period, budget_id := BudgetId, categories_id := CategoriesId, store_id := StoreId }, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"INSERT INTO mappings(id, pattern, fix_date, period, budget_id, categories_id, store_id) VALUES($1,$2,$3,$4,$5,$6,$7);">>,
+                                       [Id, Pattern, convert_to_sql_fix_date(FixDate), convert_to_sql_period(Period), none_to_null(BudgetId), convert_to_sql_categories_id(CategoriesId), none_to_null(StoreId)], Connection) of
+    {{insert,_,1},[]} ->
+      ok
+  end.
+
+%%
+%% @doc Delete mappings from id list
+%%
+-spec do_delete_mappings([non_neg_integer()], #state{}) -> ok.
+do_delete_mappings([], #state{}) ->
+  ok;
+do_delete_mappings(IdList, #state{ connection = Connection }) ->
+  case pgsql_connection:simple_query(list_to_binary([<<"DELETE FROM mappings where id IN (">>, id_list_to_string(IdList), <<");">>]), Connection) of
+    {{delete,_N},[]} ->
+      ok
   end.
 
 
@@ -390,6 +491,71 @@ null_to_undefined(null) -> undefined;
 null_to_undefined(V) -> V.
 
 %%
+%% @doc Get all mappings
+%%
+-spec do_get_mappings(#state{}) -> {value, [any()]}.
+do_get_mappings(#state{ connection = Connection }) ->
+  case pgsql_connection:simple_query(<<"SELECT id, pattern, fix_date, period, budget_id, categories_id, store_id FROM mappings;">>, Connection) of
+    {{select, _N}, MappingsSQL} ->
+      {value, [ #{ id => Id, pattern => Pattern, fix_date => convert_from_sql_fix_date(FixDate), period => convert_from_sql_period(Period),
+                   budget_id => null_to_none(BudgetId), categories_id => convert_from_sql_categories_id(CategoriesId), store_id => null_to_none(StoreId) } ||
+                {Id, Pattern, FixDate, Period, BudgetId, CategoriesId, StoreId} <- MappingsSQL ]}
+  end.
+
+
+do_upgrade_mappings(Budgets, Categories, Stores, Mappings, State) ->
+  upgrade_entries(Budgets, fun do_get_budgets/1, fun do_insert_budget/2, fun do_delete_budgets/2, State),
+  upgrade_entries(Categories, fun do_get_categories/1, fun do_insert_category/2, fun do_delete_categories/2, State),
+  upgrade_entries(Stores, fun do_get_stores/1, fun do_insert_store/2, fun do_delete_stores/2, State),
+  upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
+  ok.
+
+upgrade_entries(EntriesUpgrade, LoadFun, InsertFun, DeleteFun, State) ->
+  {value, EntriesStorage} = LoadFun(State),
+  {NewEntries, RemovedEntriesId} = compare_json_storage(EntriesUpgrade, EntriesStorage),
+  error_logger:info_msg("NewEntries=~p\nRemoved=~p", [NewEntries, RemovedEntriesId]),
+  ok = DeleteFun(RemovedEntriesId, State),
+  lists:foreach(fun(NewEntry) -> ok = InsertFun(NewEntry, State) end, NewEntries),
+  ok.
+
+
+compare_json_storage(DataUpgrade, DataStorage) ->
+  DataUpgradeSorted = sort_by_id(DataUpgrade),
+  DataStorageSorted = sort_by_id(DataStorage),
+  compare_json_storage_aux(DataUpgradeSorted, DataStorageSorted, {[], []}).
+
+
+compare_json_storage_aux([], [], Acc) ->
+  % Finished
+  Acc;
+compare_json_storage_aux([Upgrade|NextUpgrade], [], {AccNew, AccRemove}) ->
+  % Upgrade data remaining, add it
+  compare_json_storage_aux(NextUpgrade, [], {[Upgrade|AccNew], AccRemove});
+
+compare_json_storage_aux([], [#{ id := StorageId }|NextStorage], {AccNew, AccRemove}) ->
+  % Storage data remaining, remove it
+  compare_json_storage_aux([], NextStorage, {AccNew, [StorageId|AccRemove]});
+
+compare_json_storage_aux([Upgrade|NextUpgrade], [Storage|NextStorage], {AccNew, AccRemove}) when Upgrade =:= Storage ->
+  % Same data, do nothing
+  compare_json_storage_aux(NextUpgrade, NextStorage, {AccNew, AccRemove});
+
+compare_json_storage_aux([#{ id := UpgradeId } = Upgrade|NextUpgrade], [#{ id := StorageId }|NextStorage], {AccNew, AccRemove}) when UpgradeId =:= StorageId ->
+  % Same id but different content, remove old and add new
+  compare_json_storage_aux(NextUpgrade, NextStorage, {[Upgrade|AccNew],[StorageId|AccRemove]});
+
+compare_json_storage_aux([#{ id := UpgradeId } = Upgrade|NextUpgrade], [#{ id := StorageId }=Storage|NextStorage], {AccNew, AccRemove}) when UpgradeId < StorageId ->
+  % Upgrade not found in storage, add it
+  compare_json_storage_aux(NextUpgrade, [Storage|NextStorage], {[Upgrade|AccNew],AccRemove});
+
+compare_json_storage_aux([#{ id := UpgradeId } = Upgrade|NextUpgrade], [#{ id := StorageId }|NextStorage], {AccNew, AccRemove}) when UpgradeId > StorageId ->
+  % Storage not found in upgrade, remove it
+  compare_json_storage_aux([Upgrade|NextUpgrade], NextStorage, {AccNew,[StorageId|AccRemove]}).
+
+sort_by_id(MapsList) ->
+  lists:sort(fun(#{ id := Id1 }, #{ id := Id2 }) -> Id1 < Id2 end, MapsList).
+
+%%
 %% Upgrade schema
 %%
 upgrade_schema(DatabaseName, Connection) ->
@@ -430,3 +596,31 @@ upgrade_schema_aux_loop_queries([Query | NextQueries], Connection) ->
     _ ->
       upgrade_schema_aux_loop_queries(NextQueries, Connection)
   end.
+
+%% Functions to convert data from sql to erlang (and erlang to sql)
+
+%% @doc Transform none to null
+none_to_null(none) -> null;
+none_to_null(Other) -> Other.
+
+%% @doc Transform null to none
+null_to_none(null) -> none;
+null_to_none(O) -> O.
+
+%% @doc List of integer to string
+id_list_to_string([FirstId | IdList]) ->
+  integer_to_list(FirstId) ++ [ ","++integer_to_list(Id) || Id <- IdList ].
+
+convert_to_sql_fix_date(O) -> atom_to_binary(O, 'utf8').
+
+convert_from_sql_fix_date({e_fix_date, F}) -> binary_to_atom(F, 'utf8').
+
+convert_to_sql_categories_id(none) -> null;
+convert_to_sql_categories_id(L) -> {array, L}.
+
+convert_from_sql_categories_id(null) -> none;
+convert_from_sql_categories_id({array, List}) -> List.
+
+convert_to_sql_period(P) -> atom_to_binary(P, 'utf8').
+
+convert_from_sql_period({e_period, P}) -> binary_to_atom(P, 'utf8').

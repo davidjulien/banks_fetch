@@ -11,6 +11,7 @@ all() -> [should_returns_valid_specs, black_box_tests].
 init_per_testcase(black_box_tests, Config) ->
   meck:new(banks_fetch_client_sup),
   meck:new(banks_fetch_storage),
+  meck:new(banks_fetch_upgrade_mappings_server),
   meck:new(elli),
   Config;
 init_per_testcase(_, Config) ->
@@ -20,6 +21,7 @@ init_per_testcase(_, Config) ->
 end_per_testcase(black_box_tests, _Config) ->
   meck:unload(banks_fetch_client_sup),
   meck:unload(banks_fetch_storage),
+  meck:unload(banks_fetch_upgrade_mappings_server),
   meck:unload(elli),
   ok;
 end_per_testcase(_, _Config) ->
@@ -58,17 +60,22 @@ black_box_tests(_Config) ->
   process_flag(trap_exit, true),
 
   meck:expect(banks_fetch_client_sup, start_link, fun() ->
-                                                      Pid = spawn_link(fun() -> timer:sleep(60*1000) end),
+                                                      Pid = spawn_link(fun() -> timer:sleep(10*1000) end),
                                                       {ok, Pid}
                                                   end),
   meck:expect(banks_fetch_storage, start_link, fun(MockParams) ->
                                                    ?DATABASE_PARAMS = MockParams,
-                                                   Pid = spawn_link(fun() -> timer:sleep(60*1000) end),
+                                                   Pid = spawn_link(fun() -> timer:sleep(10*1000) end),
                                                    {ok, Pid}
                                                end),
+  meck:expect(banks_fetch_upgrade_mappings_server, start_link,  fun() ->
+                                                                    Pid = spawn_link(fun() -> timer:sleep(10*1000) end),
+                                                                    ct:log("PID=~p", [Pid]),
+                                                                    {ok, Pid}
+                                                                end),
   meck:expect(elli, start_link, fun(MockParams) ->
                                     [{callback, banks_fetch_api}, {port, _}] = MockParams,
-                                    Pid = spawn_link(fun() -> timer:sleep(60*1000) end),
+                                    Pid = spawn_link(fun() -> timer:sleep(10*1000) end),
                                     {ok, Pid}
                                 end),
 
@@ -78,10 +85,11 @@ black_box_tests(_Config) ->
 
   ct:comment("Verify that there is a client supervisor and a storage worker"),
   ChildrenList1 = supervisor:which_children(banks_fetch_sup),
-  3 = length(ChildrenList1),
+  4 = length(ChildrenList1),
   {banks_fetch_client_sup, ClientSupPid1, supervisor, [banks_fetch_client_sup]} = lists:keyfind(banks_fetch_client_sup, 1, ChildrenList1),
   {banks_fetch_storage, StoragePid1, worker, [banks_fetch_storage]} = lists:keyfind(banks_fetch_storage, 1, ChildrenList1),
   {banks_fetch_api, ApiPid1, worker, [elli, banks_fetch_api]} = lists:keyfind(banks_fetch_api, 1, ChildrenList1),
+  {banks_fetch_upgrade_mappings_server, UpgradePid1, worker, [banks_fetch_upgrade_mappings_server]} = lists:keyfind(banks_fetch_upgrade_mappings_server, 1, ChildrenList1),
 
   % ------------------------------------------------
   ct:comment("Kill client supervisor ~p", [ClientSupPid1]),
@@ -90,15 +98,17 @@ black_box_tests(_Config) ->
 
   ct:comment("Verify that client supervisor is restarted"),
   ChildrenList2 = supervisor:which_children(banks_fetch_sup),
-  3 = length(ChildrenList2),
+  4 = length(ChildrenList2),
   {banks_fetch_client_sup, ClientSupPid2, supervisor, [banks_fetch_client_sup]} = lists:keyfind(banks_fetch_client_sup, 1, ChildrenList2),
   {banks_fetch_storage, StoragePid1, worker, [banks_fetch_storage]} = lists:keyfind(banks_fetch_storage, 1, ChildrenList2),
   {banks_fetch_api, ApiPid1, worker, [elli, banks_fetch_api]} = lists:keyfind(banks_fetch_api, 1, ChildrenList1),
+  {banks_fetch_upgrade_mappings_server, UpgradePid1, worker, [banks_fetch_upgrade_mappings_server]} = lists:keyfind(banks_fetch_upgrade_mappings_server, 1, ChildrenList1),
 
   false = erlang:is_process_alive(ClientSupPid1),
   true = erlang:is_process_alive(ClientSupPid2),
   true = erlang:is_process_alive(StoragePid1),
   true = erlang:is_process_alive(ApiPid1),
+  true = erlang:is_process_alive(UpgradePid1),
 
   ct:comment("Stop the supervisor"),
   exit(SupervisorPid, normal),
@@ -110,5 +120,6 @@ black_box_tests(_Config) ->
   false = erlang:is_process_alive(ClientSupPid2),
   false = erlang:is_process_alive(StoragePid1),
   false = erlang:is_process_alive(ApiPid1),
+  false = erlang:is_process_alive(UpgradePid1),
 
   ok.

@@ -39,7 +39,10 @@
          should_db_get_transactions/1,
          should_db_get_last_transactions/1,
          should_db_get_last_transactions_invalid_cursor/1,
-         should_db_get_last_transactions_id/1
+         should_db_get_last_transactions_id/1,
+         should_db_upgrade_mappings_empty/1,
+         should_db_upgrade_mappings_identical/1,
+         should_db_upgrade_mappings_updates/1
         ]).
 
 -define(DB_NAME, "banks_fetch_test").
@@ -74,16 +77,16 @@
 
 -define(TRANSACTION_1_STORED,
         [
-         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_5">>, {2020,7,23}, {2020,7,23}, -900.09, <<"PAIEMENT PAR CARTE 22/07/2020 CHARGES">>, {e_transaction_type, <<"transfer">>}, 
+         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_5">>, {2020,7,23}, {2020,7,23}, -900.09, <<"PAIEMENT PAR CARTE 22/07/2020 CHARGES">>, {e_transaction_type, <<"transfer">>},
           {2020,8,1}, 3, {e_period, <<"quarter">>}, 1, {array, [1,42]}, 4}, % next month, for one quarter
-         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_4">>, {2020,7,23}, {2020,7,23}, -4.26, <<"URSSAF 120120">>, {e_transaction_type, <<"transfer">>}, 
-          {2020,6,30}, 2, null, 1, {array, [1,42]}, 3}, % previous month
-         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_3">>, {2020,7,23}, {2020,7,23}, -64.26, <<"PAIEMENT PAR CARTE 20/07/2020 PETITEBOUTIQUE">>, {e_transaction_type, <<"card_debit">>}, 
-          {2020,7,20}, 1, null, 1, {array, [1,52]}, 2},
+         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_4">>, {2020,7,23}, {2020,7,23}, -4.26, <<"URSSAF 120120">>, {e_transaction_type, <<"transfer">>},
+          {2020,6,30}, 2, {e_period, <<"month">>}, 1, {array, [1,42]}, 3}, % previous month
+         {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_3">>, {2020,7,23}, {2020,7,23}, -64.26, <<"PAIEMENT PAR CARTE 20/07/2020 PETITEBOUTIQUE">>, {e_transaction_type, <<"card_debit">>},
+          {2020,7,20}, 1, {e_period, <<"month">>}, 1, {array, [1,52]}, 2},
          {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_2">>, {2020,7,22}, {2020,7,22}, -14.32, <<"PRLV SEPA XXX">>, {e_transaction_type, <<"sepa_debit">>},
-          {2020,7,22}, null, null, null, null, null},
+          {2020,7,22}, null, {e_period, <<"month">>}, null, null, null},
          {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_1">>, {2020,7,20}, {2020,7,20}, -34.32, <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, {e_transaction_type, <<"card_debit">>},
-          {2020,7,20}, null, null, null, null, null}
+          {2020,7,20}, null, {e_period, <<"month">>}, null, null, null}
         ]).
 
 -define(BANK_ID_2, <<"ing">>).
@@ -104,7 +107,8 @@ groups() ->
                          should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
                          should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_invalid_cursor,
-                         should_db_get_last_transactions_id ]}
+                         should_db_get_last_transactions_id,
+                         should_db_upgrade_mappings_empty, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates ]}
   ].
 
 %%
@@ -221,6 +225,13 @@ init_per_testcase(should_db_get_last_transactions_invalid_cursor, Config) ->
 init_per_testcase(should_db_get_last_transactions_id, Config) ->
   setup_database(Config, <<"setup_db_for_get_last_transactions_id.sql">>);
 
+init_per_testcase(should_db_upgrade_mappings_empty, Config) ->
+  setup_database(Config);
+init_per_testcase(should_db_upgrade_mappings_identical, Config) ->
+  setup_database(Config);
+init_per_testcase(should_db_upgrade_mappings_updates, Config) ->
+  setup_database(Config);
+
 % Other cases are without db
 init_per_testcase(_, Config) ->
   Config.
@@ -255,6 +266,12 @@ end_per_testcase(should_db_get_last_transactions, _Config) ->
 end_per_testcase(should_db_get_last_transactions_invalid_cursor, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_last_transactions_id, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_upgrade_mappings_empty, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_upgrade_mappings_identical, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_upgrade_mappings_updates, _Config) ->
   teardown_database();
 
 % Other cases are without db
@@ -330,6 +347,9 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.4';">>, [], fake_connection],
                 {'comment', []}
                },
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.5';">>, [], fake_connection],
+                {'comment', []}
+               },
                {[meck_matcher:new(fun(<<"COMMENT ON DATABASE banks_fetch_test IS ", _/binary>>) -> true; (_) -> false end), [], fake_connection],
                 {error, unexpected_comment}},
                {[<<"COMMIT">>, [], fake_connection],
@@ -340,10 +360,10 @@ should_nodb_start_with_db_upgrade(_Config) ->
 
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   % One COMMIT for each upgrade
-  meck:wait(6, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
+  meck:wait(7, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
   % 3 queries + number of queries to upgrade
-  56 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  69 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 
@@ -659,7 +679,11 @@ should_db_store_transactions(Config) ->
   ct:comment("Verify transactions data"),
   ExpectedDataList = ?TRANSACTION_1_STORED,
 
-  lists:foreach(fun({Expected, Transaction}) -> Expected = Transaction end, lists:zip(ExpectedDataList, TransactionsList)),
+  lists:foreach(fun({Expected, Transaction}) ->
+                    error_logger:info_msg("EX=~1000p", [Expected]),
+                    error_logger:info_msg("TR=~1000p", [Transaction]),
+
+                    Expected = Transaction end, lists:zip(ExpectedDataList, TransactionsList)),
 
   ok.
 
@@ -722,3 +746,106 @@ should_db_get_last_transactions_id(_Config) ->
   ExpectedData = LastTransactionsIdList,
 
   ok.
+
+should_db_upgrade_mappings_empty(_Config) ->
+  ct:comment("Verify current mappings is empty"),
+  {value, []} = banks_fetch_storage:get_budgets(),
+  {value, []} = banks_fetch_storage:get_categories(),
+  {value, []} = banks_fetch_storage:get_stores(),
+  {value, []} = banks_fetch_storage:get_mappings(),
+
+  ct:comment("Upgrade mappings"),
+  Budgets = [#{ id => 0, name => <<"Aucun">> }, #{ id => 1, name => <<"Courant">>}, #{ id => 2, name => <<"Extra">> }],
+  Categories = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }, #{ id => 3, name => <<"Logement">>, up_category_id => none}],
+  Stores = [#{ id => 1, name => <<"Auchan">> }, #{ id => 2, name => <<"Carrefour">> }],
+  Mappings = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_id => [1, 2], store_id => 1 },
+              #{ id => 2, pattern => <<"URSSAF">>, fix_date => previous2, period => month, budget_id => 1, categories_id => none, store_id => none },
+              #{ id => 3, pattern => <<"CHARGES">>, fix_date => none, period => quarter, budget_id => 1, categories_id => none, store_id => none } ],
+  ok = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
+
+  ct:comment("Verify mappings in database"),
+  verify_mappings(Budgets, Categories, Stores, Mappings),
+  ok.
+
+
+should_db_upgrade_mappings_identical(_Config) ->
+  ct:comment("Verify current mappings is empty"),
+  {value, []} = banks_fetch_storage:get_budgets(),
+  {value, []} = banks_fetch_storage:get_categories(),
+  {value, []} = banks_fetch_storage:get_stores(),
+  {value, []} = banks_fetch_storage:get_mappings(),
+
+  ct:comment("Upgrade mappings"),
+  Budgets = [#{ id => 0, name => <<"Aucun">> }, #{ id => 1, name => <<"Courant">>}, #{ id => 2, name => <<"Extra">> }],
+  Categories = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }, #{ id => 3, name => <<"Logement">>, up_category_id => none }],
+  Stores = [#{ id => 1, name => <<"Auchan">> }, #{ id => 2, name => <<"Carrefour">> }],
+  Mappings = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_id => [1, 2], store_id => 1 },
+              #{ id => 2, pattern => <<"URSSAF">>, fix_date => previous2, period => month, budget_id => 1, categories_id => none, store_id => none },
+              #{ id => 3, pattern => <<"CHARGES">>, fix_date => none, period => quarter, budget_id => 1, categories_id => none, store_id => none } ],
+  ok = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
+  verify_mappings(Budgets, Categories, Stores, Mappings),
+
+  ct:comment("Upgrade again mappings"),
+  ok = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
+
+  ct:comment("Verify mappings in database"),
+  verify_mappings(Budgets, Categories, Stores, Mappings),
+
+  ok.
+
+
+should_db_upgrade_mappings_updates(_Config) ->
+  ct:comment("Verify current mappings is empty"),
+  {value, []} = banks_fetch_storage:get_budgets(),
+  {value, []} = banks_fetch_storage:get_categories(),
+  {value, []} = banks_fetch_storage:get_stores(),
+  {value, []} = banks_fetch_storage:get_mappings(),
+
+  ct:comment("Upgrade mappings"),
+  Budgets = [#{ id => 0, name => <<"Aucun">> }, #{ id => 1, name => <<"Courant">>}, #{ id => 2, name => <<"Extra">> }],
+  Categories = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }, #{ id => 3, name => <<"Logement">>, up_category_id => none }],
+  Stores = [#{ id => 1, name => <<"Auchan">> }, #{ id => 5, name => <<"Carrefour">> }],
+  Mappings = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_id => [1, 2], store_id => 1 },
+              #{ id => 2, pattern => <<"URSSAF">>, fix_date => previous2, period => month, budget_id => 1, categories_id => none, store_id => none },
+              #{ id => 3, pattern => <<"CHARGES">>, fix_date => none, period => quarter, budget_id => 1, categories_id => none, store_id => none } ],
+  ok = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
+  verify_mappings(Budgets, Categories, Stores, Mappings),
+
+  ct:comment("Upgrade again mappings"),
+  Budgets2 = [#{ id => 0, name => <<"Aucun">> }, #{ id => 2, name => <<"Extra (update)">> }, #{ id => 3, name => <<"NewBudget">> }],
+  Categories2 = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché (update)"/utf8>>, up_category_id => 1 }, #{ id => 4, name => <<"NewCat">>, up_category_id => none }],
+  Stores2 = [#{ id => 4, name => <<"MONOPRIX">> }, #{ id => 5, name => <<"Carrefour Update">> }],
+  Mappings2 = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_id => [1, 2], store_id => 1 },
+               #{ id => 2, pattern => <<"URSSAF">>, fix_date => previous, period => month, budget_id => 1, categories_id => none, store_id => none } ],
+  ok = banks_fetch_storage:upgrade_mappings(Budgets2, Categories2, Stores2, Mappings2),
+
+  ct:comment("Verify mappings in database"),
+  verify_mappings(Budgets2, Categories2, Stores2, Mappings2),
+
+  ok.
+
+
+
+
+% Functions to verify mappings upgrade
+verify_mappings(ExpectedBudgets, ExpectedCategories, ExpectedStores, ExpectedMappings) ->
+  NbrExpectedBudgets = length(ExpectedBudgets),
+  NbrExpectedCategories = length(ExpectedCategories),
+  NbrExpectedStores = length(ExpectedStores),
+  NbrExpectedMappings = length(ExpectedMappings),
+  {value, NewBudgets} = banks_fetch_storage:get_budgets(),
+  NbrExpectedBudgets = length(NewBudgets),
+  ExpectedBudgets = sort_by_id(NewBudgets),
+  {value, NewCategories} = banks_fetch_storage:get_categories(),
+  NbrExpectedCategories = length(NewCategories),
+  ExpectedCategories = sort_by_id(NewCategories),
+  {value, NewStores} = banks_fetch_storage:get_stores(),
+  NbrExpectedStores = length(NewStores),
+  ExpectedStores = sort_by_id(NewStores),
+  {value, NewMappings} = banks_fetch_storage:get_mappings(),
+  NbrExpectedMappings = length(NewMappings),
+  ExpectedMappings = sort_by_id(NewMappings),
+  ok.
+
+sort_by_id(MapsList) ->
+  lists:sort(fun(#{ id := Id1 }, #{ id := Id2 }) -> Id1 < Id2 end, MapsList).

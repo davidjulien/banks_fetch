@@ -48,6 +48,14 @@ init([]) ->
       type => worker,
       modules => [banks_fetch_storage]
      },
+    UpgradeMappingsSpec = #{
+      id => banks_fetch_upgrade_mappings_server,
+      start => {banks_fetch_upgrade_mappings_server, start_link, []},
+      restart => transient,
+      shutdown => 1,
+      type => worker,
+      modules => [banks_fetch_upgrade_mappings_server]
+     },
     ApiParameters = [{callback, banks_fetch_api}, {port, 2020}],
     ApiSpec = #{
       id  => banks_fetch_api,
@@ -56,7 +64,7 @@ init([]) ->
       type => worker,
       modules => [elli, banks_fetch_api]
      },
-    {ok, {SupFlags, [StorageSup, ClientSupSpec, ApiSpec]}}.
+    {ok, {SupFlags, [StorageSup, ClientSupSpec, UpgradeMappingsSpec, ApiSpec]}}.
 
 %%====================================================================
 %% Internal functions
