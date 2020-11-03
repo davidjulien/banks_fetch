@@ -100,7 +100,7 @@
                    <<"CREATE OR REPLACE FUNCTION analyze_transaction() RETURNS trigger AS $analyze_transaction$\n",
                      "DECLARE selected_mapping mappings%rowtype;\n",
                      "BEGIN\n",
-                     "IF OLD.ext_mapping_id >= 1000000 THEN\n",
+                     "IF NEW.ext_mapping_id >= 1000000 THEN\n",
                      "  RETURN NEW;\n"
                      "ELSE\n",
                      " SELECT * INTO selected_mapping FROM mappings WHERE NEW.description ~* mappings.pattern order by length(mappings.pattern) desc, mappings.id limit 1;\n",
