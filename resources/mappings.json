@@ -25,7 +25,8 @@
     {"id": 1011, "name": "Spar"},
     {"id": 1012, "name": "Supérette"},
     {"id": 1013, "name": "Petit casino"},
-    {"id": 1014, "name": "Coccimarket"}
+    {"id": 1014, "name": "Coccimarket"},
+    {"id": 1014, "name": "Carrefourmarket"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -42,6 +43,7 @@
     {"id": 12, "pattern": "(SPAR)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1011},
     {"id": 13, "pattern": "(SUPERETTE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1012},
     {"id": 14, "pattern": "(PETIT CASINO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1013},
-    {"id": 15, "pattern": "(COCCI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1014}
+    {"id": 15, "pattern": "(COCCI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1014},
+    {"id": 15, "pattern": "(CARREFOURMARKET)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1015}
   ]
 }
