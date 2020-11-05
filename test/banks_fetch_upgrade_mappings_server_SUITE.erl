@@ -9,7 +9,7 @@
 
 -define(FAKE_DATA_JSON, binary_to_list(<<"{\"budgets\": [{\"id\": 1, \"name\": \"Courant\"}], \"categories\": [{\"id\": 1, \"name\": \"Alimentation\", \"up_category_id\": null},{\"id\": 2, \"name\": \"Supermarché\", \"up_category_id\": 1}], \"stores\": [{\"id\": 1, \"name\": \"LIDL\"}], \"mappings\": [{\"id\": 1, \"pattern\": \"(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )\", \"fix_date\": \"none\", \"period\": \"month\", \"budget_id\": 1, \"categories_id\": [1,2], \"store_id\": 1}]}"/utf8>>)).
 -define(FAKE_DATA_BUDGETS, [#{ id => 1, name => <<"Courant">>} ]).
--define(FAKE_DATA_CATEGORIES, [#{ id => 1, name => <<"Alimentation">>, up_category_id => null }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }]).
+-define(FAKE_DATA_CATEGORIES, [#{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }]).
 -define(FAKE_DATA_STORES, [#{ id => 1, name => <<"LIDL">> }]).
 -define(FAKE_DATA_MAPPINGS, [#{ id => 1, pattern => <<"(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )">>, fix_date => none, period => month, 
                                 budget_id => 1, categories_id => [1,2], store_id => 1}]).
@@ -122,8 +122,8 @@ should_fetch_mappings_without_storage(_Config) ->
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(Budgets, Categories, Stores, Mappings) -> 
                                                          5 = length(Budgets),
                                                          2 = length(Categories),
-                                                         15 = length(Stores),
-                                                         15 = length(Mappings),
+                                                         16 = length(Stores),
+                                                         16 = length(Mappings),
                                                          ok 
                                                      end),
 
