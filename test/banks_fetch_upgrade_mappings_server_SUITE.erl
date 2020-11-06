@@ -120,11 +120,11 @@ should_fetch_mappings_without_storage(_Config) ->
                                  end),
 
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(Budgets, Categories, Stores, Mappings) -> 
-                                                         5 = length(Budgets),
-                                                         2 = length(Categories),
-                                                         16 = length(Stores),
-                                                         16 = length(Mappings),
-                                                         ok 
+                                                         check_data(Budgets, 5),
+                                                         check_data(Categories, 2),
+                                                         check_data(Stores, 16),
+                                                         check_data(Mappings, 16),
+                                                         ok
                                                      end),
 
   {ok, UpgradeServerPid} = banks_fetch_upgrade_mappings_server:start_link(),
@@ -141,3 +141,12 @@ should_fetch_mappings_without_storage(_Config) ->
   true = meck:validate(timer),
 
   ok.
+
+check_data(List, ExpectedCount) ->
+  Nbr = length(List),
+  ExpectedCount = Nbr,
+  Unique = lists:usort(extract_ids(List)), % check id unicity
+  ExpectedCount = length(Unique).
+
+extract_ids(L) ->
+  [ ID || #{ id := ID } <- L ].
