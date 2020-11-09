@@ -1,5 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @doc banks_fetch_bank defines expected behavior for modules fetching data from banks
+%% and defines common datatypes.
 %% @end
 %%%-------------------------------------------------------------------
 
