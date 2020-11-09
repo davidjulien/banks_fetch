@@ -1,3 +1,23 @@
+%%%-------------------------------------------------------------------
+%% @doc banks_fetch_api provides an API to fetch data stored in banks_fetch database.
+%% WARNING: access is not yet protected. Check that opened port (2020 by default) is not accessible from outside.
+%%
+%% API endpoints:
+%% - /api/1.0/transactions : return last 10 transactions stored, provides a cursor to fetch next transactions
+%% - /api/1.0/transactions/{CURSOR} : return last 10 transactions stored after {CURSOR}
+%% - /api/1.0/banks : return all banks
+%% - /api/1.0/budgets : return all budgets
+%% - /api/1.0/categories : return all categories
+%% - /api/1.0/stores : return all stores
+%% - /api/1.0/accounts : return all user accounts
+%%
+%% API returns 400 in case of invalid parameters.
+%% API returns 404 for unknown endpoints.
+%% API returns 500 in case of internal error (exception triggered).
+%%
+%% Data are returned in JSON format.
+%% @end
+%%%-------------------------------------------------------------------
 -module(banks_fetch_api).
 -export([
          handle/2,
