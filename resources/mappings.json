@@ -8,7 +8,20 @@
   ],
   "categories":[
     {"id": 100000, "name": "Alimentation", "up_category_id": null},
-    {"id": 100100, "name": "Supermarché", "up_category_id": 100000}
+    {"id": 100100, "name": "Supermarché", "up_category_id": 100000},
+    {"id": 100200, "name": "Boulangerie", "up_category_id": 100000},
+    {"id": 100300, "name": "Boucherie", "up_category_id": 100000},
+    {"id": 100400, "name": "Charcuterie", "up_category_id": 100000},
+    {"id": 100500, "name": "Volaillerie", "up_category_id": 100000},
+    {"id": 100600, "name": "Poisonnerie", "up_category_id": 100000},
+    {"id": 100700, "name": "Fromagerie", "up_category_id": 100000},
+    {"id": 100800, "name": "Fruits et légumes", "up_category_id": 100000},
+    {"id": 100900, "name": "Restaurant", "up_category_id": 100000},
+    {"id": 101000, "name": "Traiteur", "up_category_id": 100000},
+    {"id": 101100, "name": "Cantine scolaire", "up_category_id": 100000},
+    {"id": 101200, "name": "AMAP", "up_category_id": 100000},
+    {"id": 101300, "name": "Ferme", "up_category_id": 100000}
+    {"id": 102000, "name": "Autre commerce", "up_category_id": 100000},
   ],
   "stores":[
     {"id": 1000, "name": "LIDL"},
@@ -26,7 +39,43 @@
     {"id": 1012, "name": "Supérette"},
     {"id": 1013, "name": "Petit casino"},
     {"id": 1014, "name": "Coccimarket"},
-    {"id": 1015, "name": "Carrefourmarket"}
+    {"id": 1015, "name": "Carrefourmarket"},
+
+    {"id": 2000, "name": "Boulangerie Fournil de Pierre"},
+    {"id": 2001, "name": "Boulangerie La tradition"},
+    {"id": 2002, "name": "Boulangerie La fromentine"},
+    {"id": 2003, "name": "Boulangerie Maison Hilaire"},
+    {"id": 2004, "name": "Boulangerie Paradis gourmand"},
+    {"id": 2005, "name": "Boulangerie La gerbe d''or"},
+    {"id": 2006, "name": "Boulangerie du château"},
+    {"id": 2007, "name": "Boulangerie Coquemas"},
+    {"id": 2008, "name": "Boulangerie Au pain du bois"},
+    {"id": 2009, "name": "Boulangerie Au pain du petit bois"},
+    {"id": 2010, "name": "Boulangerie Paul"},
+    {"id": 2011, "name": "Boulangerie La Croissanterie"},
+
+    {"id": 3000, "name": "Boucherie Portheaul"},
+    {"id": 3001, "name": "Gaudin traiteur"},
+
+    {"id": 5000, "name": "Volailles Rôtisserie"},
+    {"id": 5001, "name": "MJ Volailles"},
+    {"id": 5002, "name": "Saint-Germain Volailles"},
+
+    {"id": 6000, "name": "Poissonerie du terre neuve"},
+    {"id": 6001, "name": "Poissonerie Les petites matelines"},
+
+    {"id": 7000, "name": "Fromagerie Foucher"},
+    {"id": 7001, "name": "Fromagerie du marché de Marly"},
+    {"id": 7002, "name": "Fromagerie Devaux Maryse"},
+
+    {"id": 8000, "name": "Saveurs d''antan"},
+
+    {"id": 9000, "name": "Rameau d''olivier"},
+    {"id": 9001, "name": "Miel Famille Mary"},
+    {"id": 9002, "name": "La trinitaine"},
+    {"id": 9003, "name": "Relay Poissy"},
+
+    {"id": 10000, "name": "Ferme de Trégrain"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -44,6 +93,42 @@
     {"id": 13, "pattern": "(SUPERETTE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1012},
     {"id": 14, "pattern": "(PETIT CASINO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1013},
     {"id": 15, "pattern": "(COCCI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1014},
-    {"id": 16, "pattern": "(CARREFOURMARKET)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1015}
+    {"id": 16, "pattern": "(CARREFOURMARKET)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1015},
+
+    {"id": 17, "pattern": "(FOURNIL PIERRE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2000},
+    {"id": 18, "pattern": "(LA TRADITION)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2001},
+    {"id": 19, "pattern": "(LA FROMENTINE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2002},
+    {"id": 20, "pattern": "(BAST 11 ST ANTO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2003},
+    {"id": 21, "pattern": "(PARADIS GOURM)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2004},
+    {"id": 22, "pattern": "(SEDIXEL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2005},
+    {"id": 23, "pattern": "(ELO SAINT GER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2006},
+    {"id": 24, "pattern": "(SARL COQUEMAS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2007},
+    {"id": 25, "pattern": "(AU PAIN DU BOIS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2008},
+    {"id": 26, "pattern": "(AU PAIN DU PETI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2009},
+    {"id": 27, "pattern": "(PAUL|ECGPAUL1017208)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2010},
+    {"id": 28, "pattern": "(LA CROISSANTERIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2011},
+
+    {"id": 29, "pattern": "(BOUCHERIE PORTHEAUL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100300], "store_id": 3000},
+    {"id": 30, "pattern": "(GAUDIN TRAITEUR)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100300], "store_id": 3001},
+
+    {"id": 31, "pattern": "(VOLAILLES ROTIS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100500], "store_id": 5000},
+    {"id": 32, "pattern": "(MJ VOLAILLES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100500], "store_id": 5001},
+    {"id": 33, "pattern": "(ST GERMAIN VOLAI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100500], "store_id": 5002},
+
+    {"id": 34, "pattern": "(DU TERRE NEUVE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100600], "store_id": 6000},
+    {"id": 35, "pattern": "(LES PETITS MATELINE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100600], "store_id": 6001},
+
+    {"id": 36, "pattern": "(FROMAGERIE FOUC|SC-FROM\.FOUCHER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7000},
+    {"id": 37, "pattern": "(EURL FROMAGERIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7001},
+    {"id": 38, "pattern": "(DEVEAUX MARYSE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7002},
+
+    {"id": 39, "pattern": "(SAVEURS D''ANTAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100800], "store_id": 8000},
+
+    {"id": 40, "pattern": "(RAMEAU D'OLIVIER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9000},
+    {"id": 41, "pattern": "(MILLE UNE FLEUR|LE MOULIN A MIEL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9001},
+    {"id": 42, "pattern": "(LA TRINITAINE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9002},
+    {"id": 43, "pattern": "(RELAY 387217PX|RELAY 387217SC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9003},
+
+    {"id": 44, "pattern": "(FERME DE TREGRAI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,101300], "store_id": 10000}
   ]
 }
