@@ -41,9 +41,8 @@ handle(Req, _Args) ->
       {500, [], <<"Internal error">>}
   end.
 
-handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>], _Req) ->
-  handle_transactions(none, ?MAX_TRANSACTIONS_RETURNED);
-handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>, Cursor], _Req) ->
+handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>], Req) ->
+  Cursor = elli_request:get_arg(<<"cursor">>, Req, none),
   handle_transactions(Cursor, ?MAX_TRANSACTIONS_RETURNED);
 
 handle('GET',[<<"api">>, <<"1.0">>, <<"banks">>], _Req) ->

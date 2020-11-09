@@ -259,7 +259,7 @@ should_return_last_transactions_cursor(_Config) ->
                                                               {value, {FakeCursor2, FakeTotal, ?TRANSACTIONS}}
                                                           end),
 
-  Response = hackney:get("http://localhost:3003/api/1.0/transactions/"++binary_to_list(FakeCursor)),
+  Response = hackney:get("http://localhost:3003/api/1.0/transactions?cursor="++binary_to_list(FakeCursor)),
   200 = status(Response),
   ?TRANSACTIONS_JSON = body(Response),
 
@@ -276,7 +276,7 @@ should_return_last_transactions_invalid_cursor(_Config) ->
                                                               {error, invalid_cursor}
                                                           end),
 
-  Response = hackney:get("http://localhost:3003/api/1.0/transactions/"++binary_to_list(FakeCursor)),
+  Response = hackney:get("http://localhost:3003/api/1.0/transactions?cursor="++binary_to_list(FakeCursor)),
   400 = status(Response),
   <<"Invalid cursor">> = body(Response),
 
