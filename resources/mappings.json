@@ -20,8 +20,8 @@
     {"id": 101000, "name": "Traiteur", "up_category_id": 100000},
     {"id": 101100, "name": "Cantine scolaire", "up_category_id": 100000},
     {"id": 101200, "name": "AMAP", "up_category_id": 100000},
-    {"id": 101300, "name": "Ferme", "up_category_id": 100000}
-    {"id": 102000, "name": "Autre commerce", "up_category_id": 100000},
+    {"id": 101300, "name": "Ferme", "up_category_id": 100000},
+    {"id": 102000, "name": "Autre commerce", "up_category_id": 100000}
   ],
   "stores":[
     {"id": 1000, "name": "LIDL"},
@@ -118,7 +118,7 @@
     {"id": 34, "pattern": "(DU TERRE NEUVE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100600], "store_id": 6000},
     {"id": 35, "pattern": "(LES PETITS MATELINE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100600], "store_id": 6001},
 
-    {"id": 36, "pattern": "(FROMAGERIE FOUC|SC-FROM\.FOUCHER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7000},
+    {"id": 36, "pattern": "(FROMAGERIE FOUC|SC-FROM\\.FOUCHER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7000},
     {"id": 37, "pattern": "(EURL FROMAGERIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7001},
     {"id": 38, "pattern": "(DEVEAUX MARYSE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7002},
 
