@@ -24,6 +24,9 @@
 -type ing_bank_auth() :: {bank_auth, ?MODULE, string()}.
 -type ing_client_credential() :: banks_fetch_bank:client_credential({string(), string()}).
 
+%%
+%% @doc Setup. Registers prometheus counter to monitor connections to ING server.
+%%
 -spec setup() -> ok.
 setup() ->
   banks_fetch_http:setup_monitoring("m.ing.fr"),
@@ -41,6 +44,9 @@ setup() ->
   prometheus_counter:declare([{name, 'bank_ing_transactions_ok_count'}, {help, "Bank ING transactions ok count"}]),
   ok.
 
+%%
+%% @doc Connect to ING API
+%%
 -spec connect(banks_fetch_bank:client_id(), ing_client_credential()) -> {ok, ing_bank_auth()} | {error, banks_fetch_bank:connection_error()}.
 connect(ClientId, ClientCredential) ->
   ok = banks_fetch_http:set_options([{cookies,enabled}]),
