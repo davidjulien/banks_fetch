@@ -121,7 +121,7 @@ should_fetch_mappings_without_storage(_Config) ->
 
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(Budgets, Categories, Stores, Mappings) -> 
                                                          check_data(Budgets, 5),
-                                                         check_data(Categories, 15),
+                                                         check_data(Categories, 167),
                                                          check_data(Stores, 44),
                                                          check_data(Mappings, 44),
                                                          ok
@@ -145,8 +145,9 @@ should_fetch_mappings_without_storage(_Config) ->
 check_data(List, ExpectedCount) ->
   Nbr = length(List),
   ExpectedCount = Nbr,
-  Unique = lists:usort(extract_ids(List)), % check id unicity
-  ExpectedCount = length(Unique).
+  Ids = extract_ids(List),
+  UniqueIds = lists:usort(Ids), % check id unicity
+  ExpectedCount = length(UniqueIds).
 
 extract_ids(L) ->
   [ ID || #{ id := ID } <- L ].

@@ -42,7 +42,8 @@
          should_db_get_last_transactions_id/1,
          should_db_upgrade_mappings_empty/1,
          should_db_upgrade_mappings_identical/1,
-         should_db_upgrade_mappings_updates/1
+         should_db_upgrade_mappings_updates/1,
+         should_db_upgrade_mappings_invalid_updates/1
         ]).
 
 -define(DB_NAME, "banks_fetch_test").
@@ -108,7 +109,7 @@ groups() ->
                          should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_invalid_cursor,
                          should_db_get_last_transactions_id,
-                         should_db_upgrade_mappings_empty, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates ]}
+                         should_db_upgrade_mappings_empty, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates, should_db_upgrade_mappings_invalid_updates ]}
   ].
 
 %%
@@ -231,6 +232,8 @@ init_per_testcase(should_db_upgrade_mappings_identical, Config) ->
   setup_database(Config);
 init_per_testcase(should_db_upgrade_mappings_updates, Config) ->
   setup_database(Config);
+init_per_testcase(should_db_upgrade_mappings_invalid_updates, Config) ->
+  setup_database(Config);
 
 % Other cases are without db
 init_per_testcase(_, Config) ->
@@ -272,6 +275,8 @@ end_per_testcase(should_db_upgrade_mappings_empty, _Config) ->
 end_per_testcase(should_db_upgrade_mappings_identical, _Config) ->
   teardown_database();
 end_per_testcase(should_db_upgrade_mappings_updates, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_upgrade_mappings_invalid_updates, _Config) ->
   teardown_database();
 
 % Other cases are without db
@@ -825,6 +830,36 @@ should_db_upgrade_mappings_updates(_Config) ->
   ok.
 
 
+should_db_upgrade_mappings_invalid_updates(_Config) ->
+  ct:comment("Verify current mappings is empty"),
+  {value, []} = banks_fetch_storage:get_budgets(),
+  {value, []} = banks_fetch_storage:get_categories(),
+  {value, []} = banks_fetch_storage:get_stores(),
+  {value, []} = banks_fetch_storage:get_mappings(),
+
+  ct:comment("Upgrade mappings"),
+  Budgets = [#{ id => 0, name => <<"Aucun">> }, #{ id => 1, name => <<"Courant">>}, #{ id => 2, name => <<"Extra">> }],
+  Categories = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }, #{ id => 3, name => <<"Logement">>, up_category_id => none }],
+  Stores = [#{ id => 1, name => <<"Auchan">> }, #{ id => 5, name => <<"Carrefour">> }],
+  Mappings = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_id => [1, 2], store_id => 1 },
+              #{ id => 2, pattern => <<"URSSAF">>, fix_date => previous2, period => month, budget_id => 1, categories_id => none, store_id => none },
+              #{ id => 3, pattern => <<"CHARGES">>, fix_date => none, period => quarter, budget_id => 1, categories_id => none, store_id => none } ],
+  ok = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
+  verify_mappings(Budgets, Categories, Stores, Mappings),
+
+  ct:comment("Upgrade again mappings"),
+  Budgets2 = [#{ id => 0, name => <<"Aucun">> }, #{ id => 2, name => <<"Extra (update)">> }, #{ id => 3, name => <<"NewBudget">> }],
+  Categories2 = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché (update)"/utf8>>, up_category_id => 1 }, #{ id => 4, name => <<"NewCat">>, up_category_id => none }],
+  Stores2 = [#{ id => 4, name => <<"MONOPRIX">> }, #{ id => 5, name => <<"Carrefour Update">> }],
+  % Invalid updates : two entries with same id
+  Mappings2 = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_id => [1, 2], store_id => 1 },
+               #{ id => 1, pattern => <<"URSSAF">>, fix_date => previous, period => month, budget_id => 1, categories_id => none, store_id => none } ],
+  {error, unable_to_upgrade_mappings} = banks_fetch_storage:upgrade_mappings(Budgets2, Categories2, Stores2, Mappings2),
+
+  ct:comment("Verify mappings in database (no changes)"),
+  verify_mappings(Budgets, Categories, Stores, Mappings),
+
+  ok.
 
 
 % Functions to verify mappings upgrade

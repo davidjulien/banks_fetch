@@ -57,7 +57,9 @@ do_fetch_mappings(#state{} = State0) ->
       Categories = convert_from_json(<<"categories">>, JSON),
       Stores = convert_from_json(<<"stores">>, JSON),
       Mappings = convert_from_json(<<"mappings">>, JSON),
-      ok = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
+
+      % Discard result. We will try again later in any cases
+      _ = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
 
       % Fetch again in 24 hours
       {ok, _} = timer:send_after(24*60*60*1000, fetch_mappings),

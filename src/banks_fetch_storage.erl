@@ -114,7 +114,7 @@ get_accounts(BankId, ClientId) ->
 get_mappings() ->
   gen_server:call(?MODULE, get_mappings).
 
--spec upgrade_mappings([banks_fetch_bank:budget()], [banks_fetch_bank:category()],  [banks_fetch_bank:store()], [banks_fetch_bank:mapping()]) -> ok.
+-spec upgrade_mappings([banks_fetch_bank:budget()], [banks_fetch_bank:category()],  [banks_fetch_bank:store()], [banks_fetch_bank:mapping()]) -> ok | {error, unable_to_upgrade_mappings}.
 upgrade_mappings(Budgets, Categories, Stores, Mappings) ->
   gen_server:call(?MODULE, {upgrade_mappings, Budgets, Categories, Stores, Mappings}).
 
@@ -503,17 +503,28 @@ do_get_mappings(#state{ connection = Connection }) ->
   end.
 
 
-do_upgrade_mappings(Budgets, Categories, Stores, Mappings, State) ->
-  upgrade_entries(Budgets, fun do_get_budgets/1, fun do_insert_budget/2, fun do_delete_budgets/2, State),
-  upgrade_entries(Categories, fun do_get_categories/1, fun do_insert_category/2, fun do_delete_categories/2, State),
-  upgrade_entries(Stores, fun do_get_stores/1, fun do_insert_store/2, fun do_delete_stores/2, State),
-  upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
-  ok.
+do_upgrade_mappings(Budgets, Categories, Stores, Mappings, #state{ connection = Connection } = State) ->
+  try
+    {'begin', []} = pgsql_connection:extended_query(<<"BEGIN TRANSACTION">>, [], Connection),
+    upgrade_entries(Budgets, fun do_get_budgets/1, fun do_insert_budget/2, fun do_delete_budgets/2, State),
+    upgrade_entries(Categories, fun do_get_categories/1, fun do_insert_category/2, fun do_delete_categories/2, State),
+    upgrade_entries(Stores, fun do_get_stores/1, fun do_insert_store/2, fun do_delete_stores/2, State),
+    upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
+    % It will trigger postgres function which analyses transactions
+    {{'update', N}, []} = pgsql_connection:extended_query(<<"UPDATE transactions SET description = description">>, [], Connection),
+    ok = lager:info("Number of transactions updated: ~", [N]),
+    {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
+    ok
+  catch
+    _:_ ->
+          {'rollback', []} = pgsql_connection:extended_query(<<"ROLLBACK">>, [], Connection),
+          {error, unable_to_upgrade_mappings}
+
+  end.
 
 upgrade_entries(EntriesUpgrade, LoadFun, InsertFun, DeleteFun, State) ->
   {value, EntriesStorage} = LoadFun(State),
   {NewEntries, RemovedEntriesId} = compare_json_storage(EntriesUpgrade, EntriesStorage),
-  error_logger:info_msg("NewEntries=~p\nRemoved=~p", [NewEntries, RemovedEntriesId]),
   ok = DeleteFun(RemovedEntriesId, State),
   lists:foreach(fun(NewEntry) -> ok = InsertFun(NewEntry, State) end, NewEntries),
   ok.
