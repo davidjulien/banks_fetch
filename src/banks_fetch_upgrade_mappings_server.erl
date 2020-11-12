@@ -75,7 +75,7 @@ convert_from_json(Key, JSON) ->
                                       CV = case K of
                                              <<"period">> -> binary_to_atom(V, 'utf8');
                                              <<"fix_date">> -> binary_to_atom(V, 'utf8');
-                                             <<"up_category_id">> when V =:= null -> none;
+                                             _ when V =:= null -> none;
                                              _ -> V
                                            end,
                                       maps:put(binary_to_atom(K,'utf8'), CV, M)
