@@ -359,7 +359,7 @@
     {"id": 64, "pattern": "(PHARMACIE DU MAR)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19000},
     {"id": 65, "pattern": "(PHIE DES OISEAUX)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19002},
     {"id": 66, "pattern": "(PHARMACIE DU MARCHE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19001},
-    {"id": 67, "pattern": "(LA POSTE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400800,400000], "store_id": 17001},
+    {"id": 67, "pattern": "(LA POSTE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000,400800], "store_id": 17001},
     {"id": 69, "pattern": "(DIAC LOCATION DEPARTEMENT SIGMA SERVICES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601010], "store_id": 27001},
     {"id": 70, "pattern": "(DIAC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601120], "store_id": 28001},
     {"id": 71, "pattern": "(DROITS DE PLACE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
