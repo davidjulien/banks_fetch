@@ -37,10 +37,15 @@ init_per_testcase(should_fetch_mappings_without_http_storage, Config) ->
   meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
   Config;
 init_per_testcase(should_test_local_mappings, Config) ->
-  meck:new(banks_fetch_http),
-  meck:new(banks_fetch_storage),
-  meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
-  Config;
+  case file:read_file(filename:join([?config(data_dir, Config), "../../../../../../resources/mappings.json"])) of
+    {error, enoent} ->
+      {skip, "You may add a link to mappings.json to test it"};
+    {ok, Data} ->
+      meck:new(banks_fetch_http),
+      meck:new(banks_fetch_storage),
+      meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
+      [{mappings_json_data, binary_to_list(Data)}|Config]
+  end;
 init_per_testcase(should_fetch_mappings_without_storage, Config) ->
   meck:new(banks_fetch_storage),
   meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
@@ -156,6 +161,8 @@ should_fetch_mappings_without_storage(_Config) ->
 should_test_local_mappings(Config) ->
   BeforeFetchingDateTime = calendar:universal_time(),
 
+  {mappings_json_data, MappingsData} = lists:keyfind(mappings_json_data, 1, Config),
+
   meck:expect(banks_fetch_http, setup_monitoring, fun(MockServername) ->
                                                       "raw.githubusercontent.com" = MockServername,
                                                       ok
@@ -165,8 +172,7 @@ should_test_local_mappings(Config) ->
                                              {_, []} = MockURL,
                                              [] = MockHTTPOptions,
                                              [] = MockOptions,
-                                             {ok, Data} = file:read_file(filename:join([?config(data_dir, Config), "../../../../../../resources/mappings.json"])),
-                                             {ok, {{"HTTP/1.1", 200, <<"OK">>}, [], binary_to_list(Data)}}
+                                             {ok, {{"HTTP/1.1", 200, <<"OK">>}, [], MappingsData}}
                                          end),
 
   meck:expect(timer, send_after, fun(MockTime, MockCall) ->
