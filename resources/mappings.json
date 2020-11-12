@@ -169,6 +169,7 @@
       {"id": 908070, "name": "Kermesse", "up_category_id": 908000},
       {"id": 908080, "name": "Location vélo", "up_category_id": 908000},
       {"id": 908090, "name": "Transport détente", "up_category_id": 908000},
+      {"id": 908100, "name": "Salle de jeux", "up_category_id": 908000},
 
     {"id": 1000000, "name": "Éducation/formation", "up_category_id": null},
     {"id": 1000100, "name": "Scolarité", "up_category_id": 1000000},
@@ -203,6 +204,7 @@
     {"id": 1013, "name": "Petit casino"},
     {"id": 1014, "name": "Coccimarket"},
     {"id": 1015, "name": "Carrefourmarket"},
+    {"id": 1016, "name": "Atac"},
 
     {"id": 2000, "name": "Boulangerie Fournil de Pierre"},
     {"id": 2001, "name": "Boulangerie La tradition"},
@@ -223,6 +225,7 @@
     {"id": 5000, "name": "Volailles Rôtisserie"},
     {"id": 5001, "name": "MJ Volailles"},
     {"id": 5002, "name": "Saint-Germain Volailles"},
+    {"id": 5003, "name": "La rôtisserie du Roi"},
 
     {"id": 6000, "name": "Poissonerie du terre neuve"},
     {"id": 6001, "name": "Poissonerie Les petites matelines"},
@@ -238,7 +241,56 @@
     {"id": 9002, "name": "La trinitaine"},
     {"id": 9003, "name": "Relay Poissy"},
 
-    {"id": 10000, "name": "Ferme de Trégrain"}
+    {"id": 10000, "name": "Ferme de Trégrain"},
+
+    {"id": 11000, "name": "Bouygues Telecom"},
+    {"id": 11001, "name": "Orange"},
+    {"id": 11002, "name": "SFR"},
+    {"id": 11003, "name": "Free Telecom"},
+
+    {"id": 12000, "name": "Stationnement Indigo"},
+    {"id": 12001, "name": "Stationnement Horodateur"},
+
+    {"id": 13000, "name": "Station-service Relais des Lions"},
+    {"id": 13001, "name": "Station-service Relais Le Pecq"},
+
+    {"id": 14000, "name": "EDF"},
+    {"id": 14001, "name": "ekWateur"},
+    {"id": 14002, "name": "Mint Energie"},
+    {"id": 14003, "name": "Engie"},
+
+    {"id": 15000, "name": "MAIF"},
+    {"id": 15001, "name": "CBP"},
+    {"id": 15002, "name": "Securimut"},
+
+    {"id": 16000, "name": "Charcuterie Lemonnier Breuzard"},
+
+    {"id": 17000, "name": "Bien Servi"},
+    {"id": 17001, "name": "La Poste"},
+    {"id": 17002, "name": "RATP"},
+
+    {"id": 19000, "name": "Pharmacie du marché"},
+    {"id": 19001, "name": "Pharmacie du marché"},
+    {"id": 19002, "name": "Pharmacie des oiseaux"},
+
+    {"id": 20000, "name": "URSSAF"},
+
+    {"id": 21000, "name": "Péage Autoroute A13"},
+    {"id": 21001, "name": "Péage Autoroute du Sud"},
+
+    {"id": 22000, "name": "Nexity"},
+
+    {"id": 23000, "name": "Amazon"},
+
+    {"id": 24000, "name": "Autour du bébé"},
+
+    {"id": 25000, "name": "Restaurant Gourmet Royal"},
+    {"id": 25001, "name": "Restaurant Mac Donald's"},
+
+    {"id": 26000, "name": "Bricolex"},
+
+    {"id": 27000, "name": "ING"},
+    {"id": 27001, "name": "DIAC"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -246,9 +298,9 @@
     {"id": 3, "pattern": "(MONOP|MONOPRIX)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1002},
     {"id": 4, "pattern": "(PICARD)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1003},
     {"id": 5, "pattern": "(CARREFOUR CHAMB|CARREFOUR|OOSHOP)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1004},
-    {"id": 6, "pattern": "(E LECLERC|E\\.LECLERC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1005},
+    {"id": 6, "pattern": "(E LECLERC|E\\.LECLERC|CENTRE LECLERC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1005},
     {"id": 7, "pattern": "(INTERMARCHE|ITM BUXEROLLES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1006},
-    {"id": 8, "pattern": "(AUCHAN SUPER MA|AUCHAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1007},
+    {"id": 8, "pattern": "(AUCHAN SUPER MA|AUCHAN SUPER SC|AUCHAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1007},
     {"id": 9, "pattern": "(FRANPRIX)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1008},
     {"id": 10, "pattern": "(NATURALIA)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1009},
     {"id": 11, "pattern": "(GEANT CG319)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1010},
@@ -257,7 +309,6 @@
     {"id": 14, "pattern": "(PETIT CASINO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1013},
     {"id": 15, "pattern": "(COCCI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1014},
     {"id": 16, "pattern": "(CARREFOURMARKET)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1015},
-
     {"id": 17, "pattern": "(FOURNIL PIERRE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2000},
     {"id": 18, "pattern": "(LA TRADITION)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2001},
     {"id": 19, "pattern": "(LA FROMENTINE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2002},
@@ -270,28 +321,59 @@
     {"id": 26, "pattern": "(AU PAIN DU PETI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2009},
     {"id": 27, "pattern": "(PAUL|ECGPAUL1017208)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2010},
     {"id": 28, "pattern": "(LA CROISSANTERIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2011},
-
     {"id": 29, "pattern": "(BOUCHERIE PORTHEAUL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100300], "store_id": 3000},
     {"id": 30, "pattern": "(GAUDIN TRAITEUR)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100300], "store_id": 3001},
-
     {"id": 31, "pattern": "(VOLAILLES ROTIS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100500], "store_id": 5000},
     {"id": 32, "pattern": "(MJ VOLAILLES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100500], "store_id": 5001},
     {"id": 33, "pattern": "(ST GERMAIN VOLAI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100500], "store_id": 5002},
-
     {"id": 34, "pattern": "(DU TERRE NEUVE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100600], "store_id": 6000},
     {"id": 35, "pattern": "(LES PETITS MATELINE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100600], "store_id": 6001},
-
     {"id": 36, "pattern": "(FROMAGERIE FOUC|SC-FROM\\.FOUCHER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7000},
     {"id": 37, "pattern": "(EURL FROMAGERIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7001},
     {"id": 38, "pattern": "(DEVEAUX MARYSE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7002},
-
     {"id": 39, "pattern": "(SAVEURS D''ANTAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100800], "store_id": 8000},
-
     {"id": 40, "pattern": "(RAMEAU D'OLIVIER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9000},
     {"id": 41, "pattern": "(MILLE UNE FLEUR|LE MOULIN A MIEL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9001},
     {"id": 42, "pattern": "(LA TRINITAINE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9002},
     {"id": 43, "pattern": "(RELAY 387217PX|RELAY 387217SC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9003},
-
-    {"id": 44, "pattern": "(FERME DE TREGRAI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,101300], "store_id": 10000}
+    {"id": 44, "pattern": "(FERME DE TREGRAI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,101300], "store_id": 10000},
+    {"id": 45, "pattern": "(BOUYGUES TELECOM)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11000},
+    {"id": 46, "pattern": "(ORANGE :|ORANGE FACT|ORANGE VAD 73)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11001},
+    {"id": 47, "pattern": "(SFR FIXE ADSL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11002},
+    {"id": 48, "pattern": "(FREE TELECOM)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11003},
+    {"id": 49, "pattern": "(EDF CLIENTS PARTICULIERS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200800], "store_id": 14000},
+    {"id": 50, "pattern": "(EKWATEUR)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200800], "store_id": 14001},
+    {"id": 51, "pattern": "(BUDGET TELECOM MINT ENERGIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200800], "store_id": 14002},
+    {"id": 52, "pattern": "(ENGIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200800], "store_id": 14003},
+    {"id": 53, "pattern": "(MAIF)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": null, "store_id": 15000},
+    {"id": 54, "pattern": "(CBP FRANCE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200400], "store_id": 15001},
+    {"id": 55, "pattern": "(SECURIMUT)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200400], "store_id": 15002},
+    {"id": 56, "pattern": "(RELAIS DES LIONS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 13000},
+    {"id": 57, "pattern": "(RELAIS LE PECQ)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 13001},
+    {"id": 58, "pattern": "(ING BANK N.V.)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200300], "store_id": 27000},
+    {"id": 59, "pattern": "(C L B)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100400], "store_id": 16000},
+    {"id": 60, "pattern": "(LA ROTISSERIE DU|ROTISSERIE DU RO)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100500], "store_id": 5003},
+    {"id": 61, "pattern": "(ATAC MAG)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100100], "store_id": 1016},
+    {"id": 62, "pattern": "(BIEN SERVI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000,400400], "store_id": 17000},
+    {"id": 63, "pattern": "(NAVIGO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,600100], "store_id": 17002},
+    {"id": 64, "pattern": "(PHARMACIE DU MAR)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19000},
+    {"id": 65, "pattern": "(PHIE DES OISEAUX)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19002},
+    {"id": 66, "pattern": "(PHARMACIE DU MARCHE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19001},
+    {"id": 67, "pattern": "(LA POSTE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400800,400000], "store_id": 17001},
+    {"id": 69, "pattern": "(DIAC LOCATION DEPARTEMENT SIGMA SERVICES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601010], "store_id": 27001},
+    {"id": 70, "pattern": "(DIAC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601120], "store_id": 28001},
+    {"id": 71, "pattern": "(DROITS DE PLACE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
+    {"id": 72, "pattern": "(HORODAT ML AUT)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
+    {"id": 73, "pattern": "(INDIGO ST GER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12000},
+    {"id": 74, "pattern": "(AUTOROUTE A 13)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601040], "store_id": 21000},
+    {"id": 75, "pattern": "(AUTOROUTE DU SUD)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601040], "store_id": 21001},
+    {"id": 76, "pattern": "(RICHARDIERE-GLOBAL GERAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201000], "store_id": 22000},
+    {"id": 77, "pattern": "(URSSAF D AUVERGNE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000], "store_id": 20000},
+    {"id": 78, "pattern": "(URSSAF RHONE ALPES - CNCESU CE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000], "store_id": 20000},
+    {"id": 79, "pattern": "(AMAZON|AMZN MKTP)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000], "store_id": 23000},
+    {"id": 80, "pattern": "(AUTOUR DU BEBE)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [500000,500200], "store_id": 24000},
+    {"id": 81, "pattern": "(ROYAL ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25000},
+    {"id": 82, "pattern": "(MAC DONALD S|MC DO)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25001},
+    {"id": 83, "pattern": "(DOCKS ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201400], "store_id": 26000}
   ]
 }
