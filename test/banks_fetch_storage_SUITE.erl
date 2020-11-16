@@ -40,6 +40,7 @@
          should_db_get_last_transactions/1,
          should_db_get_last_transactions_invalid_cursor/1,
          should_db_get_last_transactions_id/1,
+         should_db_update_transaction/1,
          should_db_upgrade_mappings_empty/1,
          should_db_upgrade_mappings_identical/1,
          should_db_upgrade_mappings_updates/1,
@@ -108,7 +109,7 @@ groups() ->
                          should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
                          should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_invalid_cursor,
-                         should_db_get_last_transactions_id,
+                         should_db_get_last_transactions_id, should_db_update_transaction,
                          should_db_upgrade_mappings_empty, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates, should_db_upgrade_mappings_invalid_updates ]}
   ].
 
@@ -223,6 +224,9 @@ init_per_testcase(should_db_get_last_transactions, Config) ->
 init_per_testcase(should_db_get_last_transactions_invalid_cursor, Config) ->
   setup_database(Config,"setup_db_for_get_last_transactions.sql");
 
+init_per_testcase(should_db_update_transaction, Config) ->
+  setup_database(Config,"setup_db_for_update_transaction.sql");
+
 init_per_testcase(should_db_get_last_transactions_id, Config) ->
   setup_database(Config, <<"setup_db_for_get_last_transactions_id.sql">>);
 
@@ -269,6 +273,8 @@ end_per_testcase(should_db_get_last_transactions, _Config) ->
 end_per_testcase(should_db_get_last_transactions_invalid_cursor, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_last_transactions_id, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_update_transaction, _Config) ->
   teardown_database();
 end_per_testcase(should_db_upgrade_mappings_empty, _Config) ->
   teardown_database();
@@ -751,6 +757,29 @@ should_db_get_last_transactions_id(_Config) ->
   ExpectedData = LastTransactionsIdList,
 
   ok.
+
+should_db_update_transaction(_Config) ->
+  ct:comment("Update transaction"),
+  {ok, Transaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client2">>}, {account_id, <<"account3">>}, {transaction_id, <<"transaction5">>}, 
+                                                             {2020,11,16}, 'bimester', undefined, 1, [3,4]),
+  ExpectedTransaction = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
+             accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit,
+             ext_categories_id => [3,4], ext_date => {2020,11,16}, ext_budget_id => undefined, ext_period => bimester, ext_store_id => 1},
+  ExpectedTransaction = Transaction,
+
+  ct:comment("Update again transaction"),
+  {ok, Transaction2} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client2">>}, {account_id, <<"account3">>}, {transaction_id, <<"transaction5">>}, 
+                                                             undefined, undefined, 3, undefined, undefined),
+  ExpectedTransaction2 = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
+             accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit,
+             ext_categories_id => undefined, ext_date => undefined, ext_budget_id => 3, ext_period => undefined, ext_store_id => undefined},
+  ExpectedTransaction2 = Transaction2,
+
+
+  ok.
+
+
+%% Functions related to mappings
 
 should_db_upgrade_mappings_empty(_Config) ->
   ct:comment("Verify current mappings is empty"),

@@ -40,6 +40,7 @@
          get_last_transactions_id/2,
          get_transactions/3,
          get_last_transactions/2,
+         update_transaction/9,
 
          stop/0
         ]).
@@ -50,6 +51,7 @@
           connection :: undefined | pgsql_connection:pgsql_connection()
          }).
 
+-define(LONG_TIMEOUT, 60000).
 
 % Functions related to banks
 
@@ -116,7 +118,7 @@ get_mappings() ->
 
 -spec upgrade_mappings([banks_fetch_bank:budget()], [banks_fetch_bank:category()],  [banks_fetch_bank:store()], [banks_fetch_bank:mapping()]) -> ok | {error, unable_to_upgrade_mappings}.
 upgrade_mappings(Budgets, Categories, Stores, Mappings) ->
-  gen_server:call(?MODULE, {upgrade_mappings, Budgets, Categories, Stores, Mappings}).
+  gen_server:call(?MODULE, {upgrade_mappings, Budgets, Categories, Stores, Mappings}, ?LONG_TIMEOUT).
 
 
 %% @doc Store transactions
@@ -139,7 +141,11 @@ get_transactions(BankId, ClientId, AccountId) ->
 get_last_transactions(CursorOpt, N) ->
   gen_server:call(?MODULE, {get_last_transactions, CursorOpt, N}).
 
-
+-spec update_transaction(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id(),
+                         undefined | calendar:date(), undefined | banks_fetch_bank:mapping_period(), undefined | non_neg_integer(), undefined | non_neg_integer(), undefined | [non_neg_integer()]
+                        ) -> {ok, banks_fetch_bank:transaction()} | {error, any()}.
+update_transaction(BankId, AccountId, ClientId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesId) ->
+  gen_server:call(?MODULE, {update_transaction, BankId, AccountId, ClientId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesId}).
 
 -spec stop() -> ok.
 stop() ->
@@ -192,6 +198,9 @@ handle_call({get_transactions, BankId, ClientId, AccountId}, _From, #state{ } = 
   {reply, R, State0};
 handle_call({get_last_transactions, CursorOpt, N}, _From, #state{ } = State0) ->
   R = do_get_last_transactions(CursorOpt, N, State0),
+  {reply, R, State0};
+handle_call({update_transaction, BankId, ClientId, AccountId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesId}, _From, #state{ } = State0) ->
+  R = do_update_transaction(BankId, ClientId, AccountId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesId, State0),
   {reply, R, State0};
 handle_call(get_mappings, _From, #state{ } = State0) ->
   R = do_get_mappings(State0),
@@ -490,6 +499,23 @@ decode_cursor(Cursor, _Connection) ->
 null_to_undefined(null) -> undefined;
 null_to_undefined(V) -> V.
 
+undefined_to_null(undefined) -> null;
+undefined_to_null(V) -> V.
+
+do_update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal}, Date, Period, StoreId, BudgetId, CategoriesId, #state{ connection = Connection }) ->
+  error_logger:info_msg("Date=~p", [Date]),
+  case pgsql_connection:extended_query(<<"UPDATE transactions SET ext_date = $5, ext_period = $6, ext_budget_id = $7, ext_store_id = $8, ext_categories_id = $9 WHERE bank_id = $1 and client_id = $2 and account_id = $3 and transaction_id = $4 RETURNING accounting_date, effective_date, amount, description, type, ext_date, ext_period, ext_budget_id, ext_store_id, ext_categories_id;">>,
+                                       [BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal,
+                                        undefined_to_null(Date), convert_to_sql_period(Period), undefined_to_null(StoreId), undefined_to_null(BudgetId), convert_to_sql_categories_id(CategoriesId)], Connection) of
+    {{update, 1}, [{AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, ExtDate, ExtPeriod, ExtBudgetId, ExtStoreId, ExtCategoriesId}]} ->
+      Transaction = #{ id => TransactionIdVal, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8'),
+                       bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal},
+                       ext_date => null_to_undefined(ExtDate), ext_period => convert_from_sql_period(ExtPeriod, 'undefined'), ext_budget_id => null_to_undefined(ExtBudgetId), ext_store_id => null_to_undefined(ExtStoreId),
+                       ext_categories_id => convert_from_sql_categories_id(ExtCategoriesId, 'undefined') },
+      {ok, Transaction}
+  end.
+
+
 %%
 %% @doc Get all mappings
 %%
@@ -497,8 +523,8 @@ null_to_undefined(V) -> V.
 do_get_mappings(#state{ connection = Connection }) ->
   case pgsql_connection:simple_query(<<"SELECT id, pattern, fix_date, period, budget_id, categories_id, store_id FROM mappings;">>, Connection) of
     {{select, _N}, MappingsSQL} ->
-      {value, [ #{ id => Id, pattern => Pattern, fix_date => convert_from_sql_fix_date(FixDate), period => convert_from_sql_period(Period),
-                   budget_id => null_to_none(BudgetId), categories_id => convert_from_sql_categories_id(CategoriesId), store_id => null_to_none(StoreId) } ||
+      {value, [ #{ id => Id, pattern => Pattern, fix_date => convert_from_sql_fix_date(FixDate), period => convert_from_sql_period(Period, 'none'),
+                   budget_id => null_to_none(BudgetId), categories_id => convert_from_sql_categories_id(CategoriesId, 'none'), store_id => null_to_none(StoreId) } ||
                 {Id, Pattern, FixDate, Period, BudgetId, CategoriesId, StoreId} <- MappingsSQL ]}
   end.
 
@@ -512,14 +538,14 @@ do_upgrade_mappings(Budgets, Categories, Stores, Mappings, #state{ connection = 
     upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
     % It will trigger postgres function which analyses transactions
     {{'update', N}, []} = pgsql_connection:extended_query(<<"UPDATE transactions SET description = description">>, [], Connection),
-    ok = lager:info("Number of transactions updated: ~", [N]),
+    ok = lager:info("Number of transactions updated: ~p", [N]),
     {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
     ok
   catch
-    _:_ ->
-          {'rollback', []} = pgsql_connection:extended_query(<<"ROLLBACK">>, [], Connection),
-          {error, unable_to_upgrade_mappings}
-
+    E:V:S ->
+      ok = lager:warning("Unable to upgrade mappings : ~p\n~p", [{E,V}, S]),
+      {'rollback', []} = pgsql_connection:extended_query(<<"ROLLBACK">>, [], Connection),
+      {error, unable_to_upgrade_mappings}
   end.
 
 upgrade_entries(EntriesUpgrade, LoadFun, InsertFun, DeleteFun, State) ->
@@ -627,11 +653,14 @@ convert_to_sql_fix_date(O) -> atom_to_binary(O, 'utf8').
 convert_from_sql_fix_date({e_fix_date, F}) -> binary_to_atom(F, 'utf8').
 
 convert_to_sql_categories_id(none) -> null;
+convert_to_sql_categories_id(undefined) -> null;
 convert_to_sql_categories_id(L) -> {array, L}.
 
-convert_from_sql_categories_id(null) -> none;
-convert_from_sql_categories_id({array, List}) -> List.
+convert_from_sql_categories_id(null, Default) -> Default;
+convert_from_sql_categories_id({array, List}, _Default) -> List.
 
+convert_to_sql_period(undefined) -> null;
 convert_to_sql_period(P) -> atom_to_binary(P, 'utf8').
 
-convert_from_sql_period({e_period, P}) -> binary_to_atom(P, 'utf8').
+convert_from_sql_period(null, Default) -> Default;
+convert_from_sql_period({e_period, P}, _Default) -> binary_to_atom(P, 'utf8').

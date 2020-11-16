@@ -68,7 +68,7 @@
        }.
 
 -type mapping_fix_date() :: previous2 | previous | previous_if_begin | none | next | next_if_end.
--type mapping_period() :: bimester | quarter | semester | annual | none.
+-type mapping_period() :: month | bimester | quarter | semester | annual.
 
 -type mapping() :: #{
         id := non_neg_integer(),
@@ -95,7 +95,7 @@
                     }.
 
 -type transaction_type() :: 'card_debit' | 'card_withdrawal' | 'check' | 'sepa_debit' | 'transfer' | 'interests' | 'bank_fees' | 'other'.
--type transaction_period() :: undefined | 'bimester' | 'quarter' | 'semester' | 'annual'.
+-type transaction_period() :: 'month' | 'bimester' | 'quarter' | 'semester' | 'annual'.
 -type transaction() :: #{
         id := unicode:unicode_binary(),
         accounting_date := calendar:date(),
