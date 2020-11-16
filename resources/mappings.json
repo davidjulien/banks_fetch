@@ -56,6 +56,7 @@
       {"id": 301100, "name": "Ophtalmologue", "up_category_id": 301000},
       {"id": 301110, "name": "Cardiologue", "up_category_id": 301000},
       {"id": 301120, "name": "Dentiste", "up_category_id": 301000},
+      {"id": 301130, "name": "Dermatologue", "up_category_id": 301000},
     {"id": 302000, "name": "Pharmacie", "up_category_id": 300000},
     {"id": 303000, "name": "Laboratoire", "up_category_id": 300000},
     {"id": 304000, "name": "Échographie", "up_category_id": 300000},
@@ -262,6 +263,7 @@
     {"id": 15000, "name": "MAIF"},
     {"id": 15001, "name": "CBP"},
     {"id": 15002, "name": "Securimut"},
+    {"id": 15003, "name": "Harmonie Mutuelle"},
 
     {"id": 16000, "name": "Charcuterie Lemonnier Breuzard"},
 
@@ -290,7 +292,22 @@
     {"id": 26000, "name": "Bricolex"},
 
     {"id": 27000, "name": "ING"},
-    {"id": 27001, "name": "DIAC"}
+    {"id": 27001, "name": "DIAC"},
+
+    {"id": 28000, "name": "Dr Zinetti"},
+    {"id": 28001, "name": "Dr Hubinois"},
+    {"id": 28002, "name": "Dr Groisne"},
+    {"id": 28003, "name": "Dr Pétillon"},
+    {"id": 28004, "name": "Dr Auvray"},
+    {"id": 28005, "name": "Dr Thevenet"},
+    {"id": 28006, "name": "Dr Rubin de Cervens"},
+    {"id": 28007, "name": "Dr Serdar"},
+    {"id": 28008, "name": "Dr de la Salmonière"},
+    {"id": 28009, "name": "Dr Cabaillot"},
+    {"id": 28010, "name": "Dr Lemasson"},
+    {"id": 28011, "name": "Dr Aymonin"},
+
+    {"id": 29000, "name": "Dr Dalodier"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -374,6 +391,20 @@
     {"id": 80, "pattern": "(AUTOUR DU BEBE)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [500000,500200], "store_id": 24000},
     {"id": 81, "pattern": "(ROYAL ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25000},
     {"id": 82, "pattern": "(MAC DONALD S|MC DO)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25001},
-    {"id": 83, "pattern": "(DOCKS ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201400], "store_id": 26000}
+    {"id": 83, "pattern": "(DOCKS ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201400], "store_id": 26000},
+    {"id": 84, "pattern": "(HARMONIE MUTUELLE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,307000], "store_id": 15003},
+    {"id": 85, "pattern": "(ZINETTI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301120], "store_id": 28000},
+    {"id": 86, "pattern": "(DALODIER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000,400900], "store_id": 29000},
+    {"id": 87, "pattern": "(DR HUBINOIS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301020], "store_id": 28001},
+    {"id": 88, "pattern": "(GROISNE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301020], "store_id": 28002},
+    {"id": 89, "pattern": "(PETILLON|DR PETILLON)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301110], "store_id": 28003},
+    {"id": 90, "pattern": "(DR AUVRAY)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301010], "store_id": 28004},
+    {"id": 91, "pattern": "(DR THEVENET)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301010], "store_id": 28005},
+    {"id": 92, "pattern": "(RUBIN DE CERVENS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301130], "store_id": 28006},
+    {"id": 93, "pattern": "(DR CELIK SERDAR)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301010], "store_id": 28007},
+    {"id": 94, "pattern": "(DR DE SALMONIERE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301130], "store_id": 28008},
+    {"id": 95, "pattern": "(DR CABAILLOT)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301010], "store_id": 28009},
+    {"id": 96, "pattern": "(LEMASSON 0370519)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301010], "store_id": 28010},
+    {"id": 97, "pattern": "(DR AYMONIN JF)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301130], "store_id": 28011}
   ]
 }
