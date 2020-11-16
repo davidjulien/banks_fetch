@@ -536,10 +536,10 @@ do_upgrade_mappings(Budgets, Categories, Stores, Mappings, #state{ connection = 
     upgrade_entries(Categories, fun do_get_categories/1, fun do_insert_category/2, fun do_delete_categories/2, State),
     upgrade_entries(Stores, fun do_get_stores/1, fun do_insert_store/2, fun do_delete_stores/2, State),
     upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
+    {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
     % It will trigger postgres function which analyses transactions
     {{'update', N}, []} = pgsql_connection:extended_query(<<"UPDATE transactions SET description = description">>, [], Connection),
     ok = lager:info("Number of transactions updated: ~p", [N]),
-    {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
     ok
   catch
     E:V:S ->
