@@ -45,6 +45,10 @@ handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>], Req) ->
   Cursor = elli_request:get_arg(<<"cursor">>, Req, none),
   handle_transactions(Cursor, ?MAX_TRANSACTIONS_RETURNED);
 
+handle(<<"PATCH">>, [<<"api">>, <<"1.0">>, <<"transactions">>, BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr], Req) ->
+  Body = elli_request:body(Req),
+  handle_transactions_update(BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr, Body);
+
 handle('GET',[<<"api">>, <<"1.0">>, <<"banks">>], _Req) ->
   handle_banks();
 
@@ -60,7 +64,8 @@ handle('GET',[<<"api">>, <<"1.0">>, <<"stores">>], _Req) ->
 handle('GET',[<<"api">>, <<"1.0">>, <<"accounts">>], _Req) ->
   handle_accounts();
 
-handle(_, _, _Req) ->
+handle(Method, URL, _Req) ->
+  error_logger:info_msg("Method=~p, URL=~p, _Req=~p", [Method, URL, _Req]),
   {404, [], <<"Not Found">>}.
 
 
@@ -82,6 +87,32 @@ handle_transactions(CursorOpt, N) ->
     {error, invalid_cursor} ->
       {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Invalid cursor">>}
   end.
+
+-spec handle_transactions_update(unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary()) -> elli_handler:result().
+handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal, Body) ->
+  try
+    JSON = jsx:decode(Body),
+    {_, DateStr} = lists:keyfind(<<"ext_date">>, 1, JSON),
+    {_, StoreId} = lists:keyfind(<<"ext_store_id">>, 1, JSON),
+    {_, BudgetId} = lists:keyfind(<<"ext_budget_id">>, 1, JSON),
+    {_, CategoriesId} = lists:keyfind(<<"ext_categories_ids">>, 1, JSON),
+    {_, Period} = lists:keyfind(<<"ext_period">>, 1, JSON),
+    Date = date_to_isoo8601(DateStr),
+    case banks_fetch_storage:update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal},
+                                                null_to_undefined(Date), null_to_undefined(Period), null_to_undefined(StoreId), null_to_undefined(BudgetId), null_to_undefined(CategoriesId)) of
+      {ok, Transaction} ->
+        ResultJSON = jsx:encode(to_json_transaction(Transaction)),
+        {200, [{<<"Content-Type">>, <<"application/json">>}], ResultJSON};
+      {error, R} ->
+        ok = lager:warning("Unable to update transaction ~s/~s/~s/~s: ~p", [BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal, R]),
+        {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Unable to update">>}
+    end
+  catch
+    _E:_V:_Stack ->
+      {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Invalid parameters">>}
+  end.
+
+
 
 -spec handle_banks() -> elli_handler:result().
 handle_banks() ->
@@ -130,6 +161,9 @@ to_json_transaction(#{ bank_id := {bank_id, BankIdVal}, client_id := {client_id,
 undefined_to_null(undefined) -> null;
 undefined_to_null(V) -> V.
 
+null_to_undefined(null) -> undefined;
+null_to_undefined(V) -> V.
+
 %% @doc Transform an internal category data to a json compatible category data
 -spec to_json_category(banks_fetch_bank:category()) -> map().
 to_json_category(#{ up_category_id := none } = Category) ->
@@ -144,3 +178,10 @@ fix_date({Year,Month,Day}) ->
   iolist_to_binary(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B", [Year, Month, Day]));
 fix_date(undefined) ->
   null.
+
+
+date_to_isoo8601(DateStr) ->
+  case re:run(DateStr, <<"([0-9]{4})-([0-9]{2})-([0-9]{2})">>, [{capture,all_but_first,list}]) of
+    {match, [YearStr, MonthStr, DayStr]} ->
+      {list_to_integer(YearStr), list_to_integer(MonthStr), list_to_integer(DayStr)}
+  end.
