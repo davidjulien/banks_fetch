@@ -136,9 +136,9 @@ should_fetch_mappings_without_storage(_Config) ->
 
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(Budgets, Categories, Stores, Mappings) ->
                                                          check_data(Budgets, 5),
-                                                         check_data(Categories, 168),
-                                                         check_data(Stores, 79),
-                                                         check_data(Mappings, 82),
+                                                         check_data(Categories, 169),
+                                                         check_data(Stores, 93),
+                                                         check_data(Mappings, 96),
                                                          ok
                                                      end),
 
