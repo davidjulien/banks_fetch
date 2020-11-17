@@ -137,8 +137,8 @@ should_fetch_mappings_without_storage(_Config) ->
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(Budgets, Categories, Stores, Mappings) ->
                                                          check_data(Budgets, 5),
                                                          check_data(Categories, 169),
-                                                         check_data(Stores, 93),
-                                                         check_data(Mappings, 96),
+                                                         check_data(Stores, 102),
+                                                         check_data(Mappings, 107),
                                                          ok
                                                      end),
 
@@ -182,10 +182,10 @@ should_test_local_mappings(Config) ->
                                  end),
 
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(MockBudgets, MockCategories, MockStores, MockMappings) ->
-                                                         check_data(MockBudgets, none),
-                                                         check_data(MockCategories, none),
-                                                         check_data(MockStores, none),
-                                                         check_data(MockMappings, none),
+                                                         check_data(MockBudgets, 5),
+                                                         check_data(MockCategories, 169),
+                                                         check_data(MockStores, 102),
+                                                         check_data(MockMappings, 107),
                                                          ok
                                                      end),
 
@@ -207,7 +207,7 @@ should_test_local_mappings(Config) ->
 check_data(List, ExpectedCount) ->
   Nbr = length(List),
   if ExpectedCount =/= none -> ExpectedCount = Nbr;
-     true -> ok
+     true -> ct:log("Nbr elements: ~B", [Nbr]), ok
   end,
   Ids = extract_ids(List),
   UniqueIds = lists:usort(Ids), % check id unicity

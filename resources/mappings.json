@@ -264,6 +264,8 @@
     {"id": 15001, "name": "CBP"},
     {"id": 15002, "name": "Securimut"},
     {"id": 15003, "name": "Harmonie Mutuelle"},
+    {"id": 15004, "name": "CPAM"},
+    {"id": 15005, "name": "MGEN"},
 
     {"id": 16000, "name": "Charcuterie Lemonnier Breuzard"},
 
@@ -279,6 +281,7 @@
 
     {"id": 21000, "name": "Péage Autoroute A13"},
     {"id": 21001, "name": "Péage Autoroute du Sud"},
+    {"id": 21002, "name": "Péage Cofiroute"},
 
     {"id": 22000, "name": "Nexity"},
 
@@ -307,7 +310,16 @@
     {"id": 28010, "name": "Dr Lemasson"},
     {"id": 28011, "name": "Dr Aymonin"},
 
-    {"id": 29000, "name": "Dr Dalodier"}
+    {"id": 29000, "name": "Dr Dalodier"},
+
+    {"id": 30000, "name": "Pôle Emploi"},
+    {"id": 30001, "name": "Finances publiques"},
+
+    {"id": 31000, "name": "IKEA"},
+    {"id": 31001, "name": "Conforama"},
+
+    {"id": 32000, "name": "PAJE"},
+    {"id": 32001, "name": "CAF"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -382,8 +394,8 @@
     {"id": 71, "pattern": "(DROITS DE PLACE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
     {"id": 72, "pattern": "(HORODAT ML AUT)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
     {"id": 73, "pattern": "(INDIGO ST GER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12000},
-    {"id": 74, "pattern": "(AUTOROUTE A 13)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601040], "store_id": 21000},
-    {"id": 75, "pattern": "(AUTOROUTE DU SUD)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601040], "store_id": 21001},
+    {"id": 74, "pattern": "(AUTOROUTE A 13)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21000},
+    {"id": 75, "pattern": "(AUTOROUTE DU SUD)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21001},
     {"id": 76, "pattern": "(RICHARDIERE-GLOBAL GERAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201000], "store_id": 22000},
     {"id": 77, "pattern": "(URSSAF D AUVERGNE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000], "store_id": 20000},
     {"id": 78, "pattern": "(URSSAF RHONE ALPES - CNCESU CE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000], "store_id": 20000},
@@ -405,6 +417,17 @@
     {"id": 94, "pattern": "(DR DE SALMONIERE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301130], "store_id": 28008},
     {"id": 95, "pattern": "(DR CABAILLOT)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301010], "store_id": 28009},
     {"id": 96, "pattern": "(LEMASSON 0370519)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301010], "store_id": 28010},
-    {"id": 97, "pattern": "(DR AYMONIN JF)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301130], "store_id": 28011}
+    {"id": 97, "pattern": "(DR AYMONIN JF)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301130], "store_id": 28011},
+    {"id": 98, "pattern": "(CPAM)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,307000], "store_id": 15004},
+    {"id": 99, "pattern": "(MUTUELLE GENERALE EDUCAT)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,307000], "store_id": 15005},
+    {"id": 100, "pattern": "(COFIROUTE)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21002},
+    {"id": 101, "pattern": "(POLE EMPLOI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [800000,800500], "store_id": 30000},
+    {"id": 102, "pattern": "(DDFIP *REMUNERATION)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [800000,800100], "store_id": 30001},
+    {"id": 103, "pattern": "(IKEA)($| )", "fix_date": "none", "period": "month", "budget_id": 3, "categories_id": [200000,201200], "store_id": 31000},
+    {"id": 104, "pattern": "(CONFORAMA)($| )", "fix_date": "none", "period": "month", "budget_id": 3, "categories_id": [200000,201200], "store_id": 31001},
+    {"id": 105, "pattern": "(UNION POUR LE RECOUVREME VERSEMENT PAJE)($| )", "fix_date": "previous_if_begin", "period": "month", "budget_id": 1, "categories_id": [400000,400100], "store_id": 32000},
+    {"id": 106, "pattern": "(CAF)($| )", "fix_date": "previous_if_begin", "period": "month", "budget_id": 1, "categories_id": [], "store_id": 32001},
+    {"id": 107, "pattern": "(DIRECTION GENERALE DES FINANCES PUBLIQUES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000], "store_id": 30001},
+    {"id": 108, "pattern": "(DGFIP FINANCES PUBLIQUES REMB IMPOT REVENUS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [800000,800900,800910], "store_id": 30001}
   ]
 }
