@@ -764,7 +764,7 @@ should_db_update_transaction(_Config) ->
                                                              {2020,11,16}, 'bimester', undefined, 1, [3,4]),
   ExpectedTransaction = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
              accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit,
-             ext_categories_id => [3,4], ext_date => {2020,11,16}, ext_budget_id => undefined, ext_period => bimester, ext_store_id => 1},
+             ext_categories_id => [3,4], ext_date => {2020,11,16}, ext_budget_id => 1, ext_period => bimester, ext_store_id => undefined},
   ExpectedTransaction = Transaction,
 
   ct:comment("Update again transaction"),
@@ -772,7 +772,7 @@ should_db_update_transaction(_Config) ->
                                                              undefined, undefined, 3, undefined, undefined),
   ExpectedTransaction2 = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
              accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit,
-             ext_categories_id => undefined, ext_date => undefined, ext_budget_id => 3, ext_period => undefined, ext_store_id => undefined},
+             ext_categories_id => undefined, ext_date => undefined, ext_budget_id => undefined, ext_period => undefined, ext_store_id => 3},
   ExpectedTransaction2 = Transaction2,
 
 

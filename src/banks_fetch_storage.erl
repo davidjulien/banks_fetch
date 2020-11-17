@@ -504,7 +504,7 @@ undefined_to_null(V) -> V.
 
 do_update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal}, Date, Period, StoreId, BudgetId, CategoriesId, #state{ connection = Connection }) ->
   error_logger:info_msg("Date=~p", [Date]),
-  case pgsql_connection:extended_query(<<"UPDATE transactions SET ext_date = $5, ext_period = $6, ext_budget_id = $7, ext_store_id = $8, ext_categories_id = $9 WHERE bank_id = $1 and client_id = $2 and account_id = $3 and transaction_id = $4 RETURNING accounting_date, effective_date, amount, description, type, ext_date, ext_period, ext_budget_id, ext_store_id, ext_categories_id;">>,
+  case pgsql_connection:extended_query(<<"UPDATE transactions SET ext_date = $5, ext_period = $6, ext_store_id = $7, ext_budget_id = $8, ext_categories_id = $9 WHERE bank_id = $1 and client_id = $2 and account_id = $3 and transaction_id = $4 RETURNING accounting_date, effective_date, amount, description, type, ext_date, ext_period, ext_budget_id, ext_store_id, ext_categories_id;">>,
                                        [BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal,
                                         undefined_to_null(Date), convert_to_sql_period(Period), undefined_to_null(StoreId), undefined_to_null(BudgetId), convert_to_sql_categories_id(CategoriesId)], Connection) of
     {{update, 1}, [{AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, ExtDate, ExtPeriod, ExtBudgetId, ExtStoreId, ExtCategoriesId}]} ->
