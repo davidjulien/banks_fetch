@@ -96,8 +96,12 @@ handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVa
     {_, StoreId} = lists:keyfind(<<"ext_store_id">>, 1, JSON),
     {_, BudgetId} = lists:keyfind(<<"ext_budget_id">>, 1, JSON),
     {_, CategoriesId} = lists:keyfind(<<"ext_categories_ids">>, 1, JSON),
-    {_, Period} = lists:keyfind(<<"ext_period">>, 1, JSON),
+    {_, PeriodStr} = lists:keyfind(<<"ext_period">>, 1, JSON),
     Date = date_to_iso8601(DateStr),
+    Period = case PeriodStr of
+               null -> undefined;
+               _ -> binary_to_atom(PeriodStr, 'utf8')
+             end,
     case banks_fetch_storage:update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal},
                                                 null_to_undefined(Date), null_to_undefined(Period), null_to_undefined(StoreId), null_to_undefined(BudgetId), null_to_undefined(CategoriesId)) of
       {ok, Transaction} ->
@@ -109,6 +113,7 @@ handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVa
     end
   catch
     _E:_V:_Stack ->
+      ok = lager:warning("Exception : ~p", [{_E,_V,_Stack}]),
       {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Invalid parameters">>}
   end.
 
@@ -179,7 +184,8 @@ fix_date({Year,Month,Day}) ->
 fix_date(undefined) ->
   null.
 
-
+date_to_iso8601(null) ->
+  undefined;
 date_to_iso8601(DateStr) ->
   case re:run(DateStr, <<"([0-9]{4})-([0-9]{2})-([0-9]{2})">>, [{capture,all_but_first,list}]) of
     {match, [YearStr, MonthStr, DayStr]} ->

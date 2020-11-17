@@ -17,6 +17,7 @@
          should_return_last_transactions_cursor/1,
          should_return_last_transactions_invalid_cursor/1,
          should_update_transaction_if_exist/1,
+         should_update_transaction_if_exist_all_nulls/1,
          should_update_transaction_failed_if_not_exist/1,
          should_update_transaction_failed_if_parameters_are_invalid/1,
 
@@ -41,6 +42,7 @@ all() ->
    should_return_last_transactions_cursor,
    should_return_last_transactions_invalid_cursor,
    should_update_transaction_if_exist,
+   should_update_transaction_if_exist_all_nulls,
    should_update_transaction_failed_if_not_exist,
    should_update_transaction_failed_if_parameters_are_invalid,
 
@@ -121,6 +123,10 @@ init_per_testcase(should_update_transaction_if_exist, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
 
+init_per_testcase(should_update_transaction_if_exist_all_nulls, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
 init_per_testcase(should_update_transaction_failed_if_not_exist, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
@@ -178,6 +184,11 @@ end_per_testcase(should_return_last_transactions_invalid_cursor, Config) ->
   ok;
 
 end_per_testcase(should_update_transaction_if_exist, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_update_transaction_if_exist_all_nulls, Config) ->
   meck:unload(banks_fetch_storage),
   teardown_elli(Config),
   ok;
@@ -324,7 +335,7 @@ should_update_transaction_if_exist(_Config) ->
                                                            {2020,1,10} = MockDate,
                                                            1011 = MockStoreId,
                                                            2 = MockBudgetId,
-                                                           undefined = MockPeriod,
+                                                           'annual' = MockPeriod,
                                                            [700000, 100900] = MockCategoriesId,
                                                            {ok, #{
                                                               id => <<"TRANSACTION_2">>,
@@ -335,10 +346,40 @@ should_update_transaction_if_exist(_Config) ->
                                                            }
                                                           end),
 
-  Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"2020-01-10\", \"ext_period\": null, \"ext_store_id\": 1011, \"ext_budget_id\": 2, \"ext_categories_ids\": [700000, 100900]}">>),
+  Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"2020-01-10\", \"ext_period\": \"annual\", \"ext_store_id\": 1011, \"ext_budget_id\": 2, \"ext_categories_ids\": [700000, 100900]}">>),
   error_logger:info_msg("Response=~p", [Response]),
   200 = status(Response),
-  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":2,\"ext_categories_id\":[700000,100900],\"ext_date\":\"2020-01-10\",\"ext_period\":null,\"ext_store_id\":1011,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
+  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":2,\"ext_categories_id\":[700000,100900],\"ext_date\":\"2020-01-10\",\"ext_period\":\"annual\",\"ext_store_id\":1011,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_update_transaction_if_exist_all_nulls(_Config) ->
+  meck:expect(banks_fetch_storage, update_transaction, fun(MockBankId, MockClientId, MockAccountId, MockTransactionId, MockDate, MockPeriod, MockStoreId, MockBudgetId, MockCategoriesId) ->
+                                                           {bank_id, <<"ing">>} = MockBankId,
+                                                           {client_id, <<"client1">>} = MockClientId,
+                                                           {account_id, <<"account1">>} = MockAccountId,
+                                                           {transaction_id, <<"123">>} = MockTransactionId,
+                                                           undefined = MockDate,
+                                                           undefined = MockStoreId,
+                                                           undefined = MockBudgetId,
+                                                           undefined = MockPeriod,
+                                                           undefined = MockCategoriesId,
+                                                           {ok, #{
+                                                              id => <<"TRANSACTION_2">>,
+                                                              bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>},
+                                                              accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit,
+                                                              ext_budget_id => MockBudgetId, ext_period => MockPeriod, ext_store_id => MockStoreId, ext_categories_id => MockCategoriesId,
+                                                              ext_date => MockDate}
+                                                           }
+                                                          end),
+
+  Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": null, \"ext_period\": null, \"ext_store_id\": null, \"ext_budget_id\": null, \"ext_categories_ids\": null}">>),
+  error_logger:info_msg("Response=~p", [Response]),
+  200 = status(Response),
+  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":null,\"ext_categories_id\":null,\"ext_date\":null,\"ext_period\":null,\"ext_store_id\":null,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 
