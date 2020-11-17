@@ -476,7 +476,7 @@ do_get_last_transactions(Cursor, N, #state{ connection = Connection }) ->
         {{select, _N}, List0} ->
           List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8'),
                        bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal},
-                       ext_date => null_to_undefined(Date), ext_period => case OptPeriod of {e_period_type, Period} -> Period; _ -> undefined end, ext_budget_id => null_to_undefined(BudgetId),
+                       ext_date => null_to_undefined(Date), ext_period => convert_from_sql_period(OptPeriod, undefined), ext_budget_id => null_to_undefined(BudgetId),
                        ext_categories_id => case CategoriesId of {array, A} -> A; _ -> undefined end, ext_store_id => null_to_undefined(StoreId)} ||
                     {TransactionId, BankIdVal, ClientIdVal, AccountIdVal, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, Date, OptPeriod, BudgetId, CategoriesId, StoreId} <- List0 ],
           % TODO: cursor is null if we have reached limit

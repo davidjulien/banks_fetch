@@ -86,9 +86,9 @@
          {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_3">>, {2020,7,23}, {2020,7,23}, -64.26, <<"PAIEMENT PAR CARTE 20/07/2020 PETITEBOUTIQUE">>, {e_transaction_type, <<"card_debit">>},
           {2020,7,20}, 1, {e_period, <<"month">>}, 1, {array, [1,52]}, 2},
          {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_2">>, {2020,7,22}, {2020,7,22}, -14.32, <<"PRLV SEPA XXX">>, {e_transaction_type, <<"sepa_debit">>},
-          {2020,7,22}, null, {e_period, <<"month">>}, null, null, null},
+          {2020,7,22}, null, null, null, null, null},
          {?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, ?FETCHING_AT_1, <<"TRANSACTION_1">>, {2020,7,20}, {2020,7,20}, -34.32, <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, {e_transaction_type, <<"card_debit">>},
-          {2020,7,20}, null, {e_period, <<"month">>}, null, null, null}
+          {2020,7,20}, null, null, null, null, null}
         ]).
 
 -define(BANK_ID_2, <<"ing">>).
@@ -361,6 +361,9 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.5';">>, [], fake_connection],
                 {'comment', []}
                },
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.6';">>, [], fake_connection],
+                {'comment', []}
+               },
                {[meck_matcher:new(fun(<<"COMMENT ON DATABASE banks_fetch_test IS ", _/binary>>) -> true; (_) -> false end), [], fake_connection],
                 {error, unexpected_comment}},
                {[<<"COMMIT">>, [], fake_connection],
@@ -371,10 +374,10 @@ should_nodb_start_with_db_upgrade(_Config) ->
 
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   % One COMMIT for each upgrade
-  meck:wait(7, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
+  meck:wait(8, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
   % 3 queries + number of queries to upgrade
-  69 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  74 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 
@@ -714,7 +717,7 @@ should_db_get_last_transactions(Config) ->
   <<"NToxOjU=">> = Cursor1,
   5 = Total1,
   1 = length(Transactions1),
-  [#{ id := <<"transaction1">> }] = Transactions1,
+  [#{ id := <<"transaction1">>, ext_period := 'bimester', ext_date := {2020,7,1}, ext_store_id := 8, ext_budget_id := 1, ext_categories_id := [4,5] }] = Transactions1,
 
   ct:comment("Get last 5 transactions"),
   {value, {Cursor2, Total2, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 5),
