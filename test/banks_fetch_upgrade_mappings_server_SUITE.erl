@@ -135,10 +135,10 @@ should_fetch_mappings_without_storage(_Config) ->
                                  end),
 
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(Budgets, Categories, Stores, Mappings) ->
-                                                         check_data(Budgets, 5),
-                                                         check_data(Categories, 169),
-                                                         check_data(Stores, 102),
-                                                         check_data(Mappings, 107),
+                                                         check_data(Budgets, none),
+                                                         check_data(Categories, none),
+                                                         check_data(Stores, none),
+                                                         check_data(Mappings, none),
                                                          ok
                                                      end),
 
@@ -184,8 +184,8 @@ should_test_local_mappings(Config) ->
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(MockBudgets, MockCategories, MockStores, MockMappings) ->
                                                          check_data(MockBudgets, 5),
                                                          check_data(MockCategories, 169),
-                                                         check_data(MockStores, 102),
-                                                         check_data(MockMappings, 107),
+                                                         check_data(MockStores, 108),
+                                                         check_data(MockMappings, 113),
                                                          ok
                                                      end),
 
