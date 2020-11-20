@@ -206,6 +206,7 @@
     {"id": 1014, "name": "Coccimarket"},
     {"id": 1015, "name": "Carrefourmarket"},
     {"id": 1016, "name": "Atac"},
+    {"id": 1017, "name": "Carrefour Express"},
 
     {"id": 2000, "name": "Boulangerie Fournil de Pierre"},
     {"id": 2001, "name": "Boulangerie La tradition"},
@@ -276,6 +277,7 @@
     {"id": 19000, "name": "Pharmacie du marché"},
     {"id": 19001, "name": "Pharmacie du marché 2"},
     {"id": 19002, "name": "Pharmacie des oiseaux"},
+    {"id": 19003, "name": "Pharmacie des oliviers"},
 
     {"id": 20000, "name": "URSSAF"},
 
@@ -319,7 +321,12 @@
     {"id": 31001, "name": "Conforama"},
 
     {"id": 32000, "name": "PAJE"},
-    {"id": 32001, "name": "CAF"}
+    {"id": 32001, "name": "CAF"},
+
+    {"id": 33000, "name": "Photosco"},
+    {"id": 33001, "name": "Photo club L.I.S"},
+    {"id": 33002, "name": "Photomaton"},
+    {"id": 33003, "name": "Photographe Charlotte Sabah"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -371,7 +378,7 @@
     {"id": 47, "pattern": "(SFR FIXE ADSL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11002},
     {"id": 48, "pattern": "(FREE TELECOM)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11003},
     {"id": 49, "pattern": "(EDF CLIENTS PARTICULIERS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200800], "store_id": 14000},
-    {"id": 50, "pattern": "(EKWATEUR)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200800], "store_id": 14001},
+    {"id": 50, "pattern": "(EKWATEUR|JOUL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200800], "store_id": 14001},
     {"id": 51, "pattern": "(BUDGET TELECOM MINT ENERGIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200800], "store_id": 14002},
     {"id": 52, "pattern": "(ENGIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,200800], "store_id": 14003},
     {"id": 53, "pattern": "(MAIF)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": null, "store_id": 15000},
@@ -428,6 +435,12 @@
     {"id": 105, "pattern": "(UNION POUR LE RECOUVREME VERSEMENT PAJE)($| )", "fix_date": "previous_if_begin", "period": "month", "budget_id": 1, "categories_id": [400000,400100], "store_id": 32000},
     {"id": 106, "pattern": "(CAF)($| )", "fix_date": "previous_if_begin", "period": "month", "budget_id": 1, "categories_id": [], "store_id": 32001},
     {"id": 107, "pattern": "(DIRECTION GENERALE DES FINANCES PUBLIQUES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000], "store_id": 30001},
-    {"id": 108, "pattern": "(DGFIP FINANCES PUBLIQUES REMB IMPOT REVENUS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [800000,800900,800910], "store_id": 30001}
+    {"id": 108, "pattern": "(DGFIP FINANCES PUBLIQUES REMB IMPOT REVENUS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [800000,800900,800910], "store_id": 30001},
+    {"id": 109, "pattern": "(YATIDIS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1017},
+    {"id": 110, "pattern": "(PHOTOSCO|MAPHOTODECLASSE)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,701100], "store_id": 33000},
+    {"id": 111, "pattern": "(PHOTO CLUB)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,701100], "store_id": 33001},
+    {"id": 112, "pattern": "(PHOTOMATON)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,701100], "store_id": 33002},
+    {"id": 113, "pattern": "(CHARLOTTE SABAH)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,701100], "store_id": 33003},
+    {"id": 114, "pattern": "(PHIE OLIVIER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19003}
   ]
 }
