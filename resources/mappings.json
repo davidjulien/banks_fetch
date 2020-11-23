@@ -293,6 +293,7 @@
 
     {"id": 25000, "name": "Restaurant Gourmet Royal"},
     {"id": 25001, "name": "Restaurant Mac Donald's"},
+    {"id": 25002, "name": "Restaurant Burger King"},
 
     {"id": 26000, "name": "Bricolex"},
 
@@ -311,6 +312,7 @@
     {"id": 28009, "name": "Dr Cabaillot"},
     {"id": 28010, "name": "Dr Lemasson"},
     {"id": 28011, "name": "Dr Aymonin"},
+    {"id": 28012, "name": "Dr Anne Amoric"},
 
     {"id": 29000, "name": "Dr Dalodier"},
 
@@ -326,7 +328,20 @@
     {"id": 33000, "name": "Photosco"},
     {"id": 33001, "name": "Photo club L.I.S"},
     {"id": 33002, "name": "Photomaton"},
-    {"id": 33003, "name": "Photographe Charlotte Sabah"}
+    {"id": 33003, "name": "Photographe Charlotte Sabah"},
+
+    {"id": 34000, "name": "Régie centralisée Saint-Germain-en-Laye"},
+
+    {"id": 35000, "name": "Station-service Total"},
+    {"id": 35001, "name": "Station-service Relais des lions (Port-Marly)"},
+    {"id": 35002, "name": "Station-service Total Access (St-Brevin)"},
+    {"id": 35003, "name": "Station-service Relais de Saclay"},
+    {"id": 35004, "name": "Station-service Super U"},
+    {"id": 35005, "name": "Station-service Relais Bougival Boissy"},
+    {"id": 35006, "name": "Station-service Relais des Amazones (Le Mesnil le Roi)"},
+    {"id": 35007, "name": "Station-service MEDEA (Montignac-Lascaux)"},
+    {"id": 35008, "name": "Station-service Les Eyzies)"},
+    {"id": 35009, "name": "Station-service Carrefour)"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -441,6 +456,19 @@
     {"id": 111, "pattern": "(PHOTO CLUB)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,701100], "store_id": 33001},
     {"id": 112, "pattern": "(PHOTOMATON)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,701100], "store_id": 33002},
     {"id": 113, "pattern": "(CHARLOTTE SABAH)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,701100], "store_id": 33003},
-    {"id": 114, "pattern": "(PHIE OLIVIER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19003}
+    {"id": 114, "pattern": "(PHIE OLIVIER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19003},
+    {"id": 115, "pattern": "(BURGER KING)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25002},
+    {"id": 116, "pattern": "(COMMUNE DE SAINT GERMA)($| )", "fix_date": "previous", "period": "month", "budget_id": 1, "categories_id": [], "store_id": 34000},
+    {"id": 117, "pattern": "(DR ANNE AMORIC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301130], "store_id": 28012},
+    {"id": 118, "pattern": "(TOTAL|STATION TOTAL|TOTAL MKT FR|REL\\.TOTAL 03423)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35000},
+    {"id": 119, "pattern": "(RELAIS DES LIONS)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35001},
+    {"id": 120, "pattern": "(ELF ST BREVIN)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35002},
+    {"id": 121, "pattern": "(REL. DE SACLAY)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35003},
+    {"id": 122, "pattern": "(SAS SAS SOBREDIS)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35004},
+    {"id": 123, "pattern": "(BOUGIVAL BOISSY)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35005},
+    {"id": 124, "pattern": "(REL\\.DES AMAZONES)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35006},
+    {"id": 125, "pattern": "(DAC MEDEA)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35007},
+    {"id": 126, "pattern": "(DAC CHRISFANIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35008},
+    {"id": 127, "pattern": "(CARREFOUR DAC|CARREFOUR STATIO)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35009}
   ]
 }
