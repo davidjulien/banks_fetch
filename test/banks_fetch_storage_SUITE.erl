@@ -41,6 +41,11 @@
          should_db_get_last_transactions_invalid_cursor/1,
          should_db_get_last_transactions_id/1,
          should_db_update_transaction/1,
+         should_db_update_transaction_with_amount/1,
+         should_db_update_transaction_with_amount_fails_because_not_subtransaction/1,
+         should_db_update_transaction_with_amount_fails_because_remaining/1,
+         should_db_split_transaction/1,
+         should_db_split_transaction_fails_because_not_found/1,
          should_db_upgrade_mappings_empty/1,
          should_db_upgrade_mappings_identical/1,
          should_db_upgrade_mappings_updates/1,
@@ -109,7 +114,8 @@ groups() ->
                          should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
                          should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_invalid_cursor,
-                         should_db_get_last_transactions_id, should_db_update_transaction,
+                         should_db_get_last_transactions_id, should_db_update_transaction, should_db_split_transaction, should_db_split_transaction_fails_because_not_found,
+                         should_db_update_transaction_with_amount, should_db_update_transaction_with_amount_fails_because_not_subtransaction, should_db_update_transaction_with_amount_fails_because_remaining,
                          should_db_upgrade_mappings_empty, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates, should_db_upgrade_mappings_invalid_updates ]}
   ].
 
@@ -147,6 +153,7 @@ setup_database(Config, FilenameOpt) ->
     none -> ok;
     _ ->
       % Load queries to init database content
+      ct:comment("Load file ~s", [FilenameOpt]),
       {ok, FileData} = file:read_file(filename:join([?config(data_dir, Config), FilenameOpt])),
       Queries = binary:split(FileData, <<"\n">>, [global]),
       ok = lists:foldl(fun(_Query, stop) -> stop;
@@ -227,6 +234,21 @@ init_per_testcase(should_db_get_last_transactions_invalid_cursor, Config) ->
 init_per_testcase(should_db_update_transaction, Config) ->
   setup_database(Config,"setup_db_for_update_transaction.sql");
 
+init_per_testcase(should_db_update_transaction_with_amount, Config) ->
+  setup_database(Config,"setup_db_for_update_transaction_with_amount.sql");
+
+init_per_testcase(should_db_update_transaction_with_amount_fails_because_not_subtransaction, Config) ->
+  setup_database(Config,"setup_db_for_update_transaction_with_amount.sql");
+
+init_per_testcase(should_db_update_transaction_with_amount_fails_because_remaining, Config) ->
+  setup_database(Config,"setup_db_for_update_transaction_with_amount.sql");
+
+init_per_testcase(should_db_split_transaction, Config) ->
+  setup_database(Config,"setup_db_for_split_transaction.sql");
+
+init_per_testcase(should_db_split_transaction_fails_because_not_found, Config) ->
+  setup_database(Config,"setup_db_for_split_transaction.sql");
+
 init_per_testcase(should_db_get_last_transactions_id, Config) ->
   setup_database(Config, <<"setup_db_for_get_last_transactions_id.sql">>);
 
@@ -275,6 +297,16 @@ end_per_testcase(should_db_get_last_transactions_invalid_cursor, _Config) ->
 end_per_testcase(should_db_get_last_transactions_id, _Config) ->
   teardown_database();
 end_per_testcase(should_db_update_transaction, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_update_transaction_with_amount, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_update_transaction_with_amount_fails_because_not_subtransaction, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_update_transaction_with_amount_fails_because_remaining, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_split_transaction, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_split_transaction_fails_because_not_found, _Config) ->
   teardown_database();
 end_per_testcase(should_db_upgrade_mappings_empty, _Config) ->
   teardown_database();
@@ -364,6 +396,9 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.6';">>, [], fake_connection],
                 {'comment', []}
                },
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.7';">>, [], fake_connection],
+                {'comment', []}
+               },
                {[meck_matcher:new(fun(<<"COMMENT ON DATABASE banks_fetch_test IS ", _/binary>>) -> true; (_) -> false end), [], fake_connection],
                 {error, unexpected_comment}},
                {[<<"COMMIT">>, [], fake_connection],
@@ -374,10 +409,10 @@ should_nodb_start_with_db_upgrade(_Config) ->
 
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   % One COMMIT for each upgrade
-  meck:wait(8, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
+  meck:wait(9, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
   % 3 queries + number of queries to upgrade
-  74 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  79 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 
@@ -763,23 +798,173 @@ should_db_get_last_transactions_id(_Config) ->
 
 should_db_update_transaction(_Config) ->
   ct:comment("Update transaction"),
-  {ok, Transaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client2">>}, {account_id, <<"account3">>}, {transaction_id, <<"transaction5">>}, 
-                                                             {2020,11,16}, 'bimester', undefined, 1, [3,4]),
+  {ok, Transaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client2">>}, {account_id, <<"account3">>}, {transaction_id, <<"transaction5">>},
+                                                             {2020,11,16}, 'bimester', undefined, 1, [3,4], undefined),
   ExpectedTransaction = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
              accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit,
-             ext_categories_id => [3,4], ext_date => {2020,11,16}, ext_budget_id => 1, ext_period => bimester, ext_store_id => undefined},
+             ext_categories_id => [3,4], ext_date => {2020,11,16}, ext_budget_id => 1, ext_period => bimester, ext_store_id => undefined, ext_split_of_id => none, ext_splitted => false},
   ExpectedTransaction = Transaction,
 
   ct:comment("Update again transaction"),
-  {ok, Transaction2} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client2">>}, {account_id, <<"account3">>}, {transaction_id, <<"transaction5">>}, 
-                                                             undefined, undefined, 3, undefined, undefined),
+  {ok, Transaction2} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client2">>}, {account_id, <<"account3">>}, {transaction_id, <<"transaction5">>},
+                                                             undefined, undefined, 3, undefined, undefined, undefined),
   ExpectedTransaction2 = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
              accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit,
-             ext_categories_id => undefined, ext_date => undefined, ext_budget_id => undefined, ext_period => undefined, ext_store_id => 3},
+             ext_categories_id => undefined, ext_date => undefined, ext_budget_id => undefined, ext_period => undefined, ext_store_id => 3, ext_split_of_id => none, ext_splitted => false},
   ExpectedTransaction2 = Transaction2,
 
+  ok.
+
+should_db_update_transaction_with_amount(_Config) ->
+  {value, {_, NbrTransactions0, Transactions0}} = banks_fetch_storage:get_last_transactions(none, 10),
+  8 = NbrTransactions0,
+  [#{ id := <<"transaction1">>, amount := -44.44 } = Transaction1,
+   #{ id := <<"transaction1-001">>, amount := -30.00 } = Transaction11,
+   #{ id := <<"transaction1-002">>, amount := -5.00 } = Transaction12,
+   #{ id := <<"transaction1-REM">>, amount := -9.44 } = Transaction1Rem,
+   #{ id := <<"transaction3">>, amount := -77.77 } = Transaction3,
+   #{ id := <<"transaction4">>, amount := -66.66 } = Transaction4,
+   #{ id := <<"transaction5">>, amount := -55.55 } = Transaction5,
+   #{ id := <<"transaction2">>, amount := -88.88 } = Transaction2 ] = Transactions0,
+
+  ct:comment("Update transaction"),
+  {ok, UpdatedTransaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1-001">>},
+                                                             {2020,11,16}, 'bimester', undefined, 1, [3,4], -25.0),
+  ExpectedTransaction = maps:merge(Transaction11, #{ amount => -25.0, ext_date => {2020,11,16}, ext_period => 'bimester', ext_budget_id => 1, ext_store_id => undefined, ext_categories_id => [3,4] }),
+  ExpectedTransaction = UpdatedTransaction,
+
+  {value, {_, NbrTransactions1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
+  NbrTransactions0 = NbrTransactions1,
+  Transaction1RemExpected = maps:put(amount, -14.44, Transaction1Rem),
+  [Transaction1, ExpectedTransaction, Transaction12, Transaction1RemExpected, Transaction3, Transaction4, Transaction5, Transaction2] = Transactions1,
 
   ok.
+
+
+should_db_update_transaction_with_amount_fails_because_not_subtransaction(_Config) ->
+  {value, {_, NbrTransactions0, Transactions0}} = banks_fetch_storage:get_last_transactions(none, 10),
+  8 = NbrTransactions0,
+  [#{ id := <<"transaction1">>, amount := -44.44 },
+   #{ id := <<"transaction1-001">>, amount := -30.00 },
+   #{ id := <<"transaction1-002">>, amount := -5.00 },
+   #{ id := <<"transaction1-REM">>, amount := -9.44 },
+   #{ id := <<"transaction3">>, amount := -77.77 },
+   #{ id := <<"transaction4">>, amount := -66.66 },
+   #{ id := <<"transaction5">>, amount := -55.55 },
+   #{ id := <<"transaction2">>, amount := -88.88 } ] = Transactions0,
+
+  ct:comment("Update transaction failed"),
+  {error, not_subtransaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1">>},
+                                                                       {2020,11,16}, 'bimester', undefined, 1, [3,4], -25.0),
+
+  ct:comment("Update transaction faileed"),
+  {error, not_subtransaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account2">>}, {transaction_id, <<"transaction3">>},
+                                                                       {2020,11,16}, 'bimester', undefined, 1, [3,4], -25.0),
+
+  {value, {_, NbrTransactions1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
+  NbrTransactions0 = NbrTransactions1,
+  Transactions0 = Transactions1,
+
+  ok.
+
+
+should_db_update_transaction_with_amount_fails_because_remaining(_Config) ->
+  {value, {_, NbrTransactions0, Transactions0}} = banks_fetch_storage:get_last_transactions(none, 10),
+  8 = NbrTransactions0,
+  [#{ id := <<"transaction1">>, amount := -44.44 },
+   #{ id := <<"transaction1-001">>, amount := -30.00 },
+   #{ id := <<"transaction1-002">>, amount := -5.00 },
+   #{ id := <<"transaction1-REM">>, amount := -9.44 },
+   #{ id := <<"transaction3">>, amount := -77.77 },
+   #{ id := <<"transaction4">>, amount := -66.66 },
+   #{ id := <<"transaction5">>, amount := -55.55 },
+   #{ id := <<"transaction2">>, amount := -88.88 } ] = Transactions0,
+
+  ct:comment("Update transaction failed"),
+  {error, remaining_subtransaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1-REM">>},
+                                                                       {2020,11,16}, 'bimester', undefined, 1, [3,4], -25.0),
+
+  {value, {_, NbrTransactions1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
+  NbrTransactions0 = NbrTransactions1,
+  Transactions0 = Transactions1,
+
+  ok.
+
+
+
+should_db_split_transaction(_Config) ->
+  ct:comment("Get last 5 transactions"),
+  {value, {Cursor1, Total1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 5),
+  <<"NTo1OjU=">> = Cursor1,
+  5 = Total1,
+  5 = length(Transactions1),
+  [#{ id := <<"transaction1">> }, #{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }, #{ id := <<"transaction5">> }, #{ id := <<"transaction2">> }] = Transactions1,
+
+  ct:comment("Split transaction1"),
+  {ok, [SubTransaction1, SubTransaction2]} = banks_fetch_storage:split_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1">>}),
+  ExpectedSubTransaction1 = #{id => <<"transaction1-001">>,
+                               accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit,
+                               ext_categories_id => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
+  ExpectedSubTransaction2 = #{id => <<"transaction1-REM">>, % bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
+                               accounting_date => {2020,7,8}, amount => -44.44, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit,
+                               ext_categories_id => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
+  ExpectedSubTransaction1 = SubTransaction1,
+  ExpectedSubTransaction2 = SubTransaction2,
+
+  ct:comment("Get last 5 transactions"),
+  {value, {Cursor2, Total2, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 5),
+  <<"Nzo1Ojc=">> = Cursor2,
+  ct:comment("Verify we have 2 more transactions"),
+  7 = Total2,
+  5 = length(Transactions2),
+  ct:comment("Verify we have 2 sub-transactions after splitted one"),
+  [#{ id := <<"transaction1">>, ext_splitted := true, ext_split_of_id := none },
+   #{ id := <<"transaction1-001">>, ext_splitted := false, ext_split_of_id := {transaction_id, <<"transaction1">>} },
+   #{ id := <<"transaction1-REM">>, ext_splitted := false, ext_split_of_id := {transaction_id, <<"transaction1">>}  },
+   #{ id := <<"transaction3">> },
+   #{ id := <<"transaction4">> }] = Transactions2,
+
+  ct:comment("Split again transaction1"),
+  {ok, [SubTransaction2_2]} = banks_fetch_storage:split_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1">>}),
+  ExpectedSubTransaction2_2 = #{id => <<"transaction1-002">>, % bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
+                               accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit,
+                               ext_categories_id => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
+  ExpectedSubTransaction2_2 = SubTransaction2_2,
+
+  ct:comment("Get last 5 transactions"),
+  {value, {Cursor3, Total3, Transactions3}} = banks_fetch_storage:get_last_transactions(none, 5),
+  <<"ODo1Ojg=">> = Cursor3,
+  ct:comment("Verify we have 1 more transactions"),
+  8 = Total3,
+  5 = length(Transactions3),
+  ct:comment("Verify we have 3 sub-transactions after splitted one"),
+  [#{ id := <<"transaction1">>, ext_splitted := true, ext_split_of_id := none },
+   #{ id := <<"transaction1-001">>, ext_splitted := false, ext_split_of_id := {transaction_id, <<"transaction1">>} },
+   #{ id := <<"transaction1-002">>, ext_splitted := false, ext_split_of_id := {transaction_id, <<"transaction1">>} },
+   #{ id := <<"transaction1-REM">>, ext_splitted := false, ext_split_of_id := {transaction_id, <<"transaction1">>} },
+   #{ id := <<"transaction3">> }] = Transactions3,
+
+  ok.
+
+should_db_split_transaction_fails_because_not_found(_Config) ->
+  ct:comment("Get last 5 transactions"),
+  {value, {Cursor1, Total1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 5),
+  <<"NTo1OjU=">> = Cursor1,
+  5 = Total1,
+  5 = length(Transactions1),
+  [#{ id := <<"transaction1">> }, #{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }, #{ id := <<"transaction5">> }, #{ id := <<"transaction2">> }] = Transactions1,
+
+  ct:comment("Split transaction1"),
+  {error, not_found} = banks_fetch_storage:split_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transactionUNK">>}),
+
+  ct:comment("Verify that transactions have not changed"),
+  {value, {Cursor2, Total2, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 5),
+  Cursor1 = Cursor2,
+  Total1 = Total2,
+  Transactions1 = Transactions2,
+
+  ok.
+
 
 
 %% Functions related to mappings

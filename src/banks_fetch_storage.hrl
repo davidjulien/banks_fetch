@@ -170,5 +170,11 @@
                      "END; $analyze_transaction$ LANGUAGE plpgsql;">>,
                    <<"alter sequence stores_id_seq restart with 1000000;">>
                   ]
+                 },
+                 {<<"0.2.6">>, <<"0.2.7">>,
+                  [ % Transaction may be splitted in sub-transactions
+                   <<"ALTER TABLE transactions ADD COLUMN ext_splitted BOOLEAN NOT NULL DEFAULT FALSE;">>,
+                   <<"ALTER TABLE transactions ADD COLUMN ext_split_of_id TEXT;">>
+                  ]
                  }
                 ]).

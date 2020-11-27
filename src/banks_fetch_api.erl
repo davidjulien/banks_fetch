@@ -102,8 +102,13 @@ handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVa
                null -> undefined;
                _ -> binary_to_atom(PeriodStr, 'utf8')
              end,
+    Amount = case lists:keyfind(<<"amount">>, 1, JSON) of
+               false -> null;
+               {_, Amount0} -> Amount0
+             end,
     case banks_fetch_storage:update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal},
-                                                null_to_undefined(Date), null_to_undefined(Period), null_to_undefined(StoreId), null_to_undefined(BudgetId), null_to_undefined(CategoriesId)) of
+                                                null_to_undefined(Date), null_to_undefined(Period), null_to_undefined(StoreId), null_to_undefined(BudgetId), null_to_undefined(CategoriesId),
+                                                null_to_undefined(Amount)) of
       {ok, Transaction} ->
         ResultJSON = jsx:encode(to_json_transaction(Transaction)),
         {200, [{<<"Content-Type">>, <<"application/json">>}], ResultJSON};
@@ -159,9 +164,14 @@ to_json_transaction(#{ bank_id := {bank_id, BankIdVal}, client_id := {client_id,
   ExtBudgetId = maps:get('ext_budget_id', Transaction, undefined),
   ExtCategoriesId = maps:get('ext_categories_id', Transaction, undefined),
   ExtStoreId = maps:get('ext_store_id', Transaction, undefined),
+  ExtSplitOfId = case maps:get('ext_split_of_id', Transaction) of
+                   {transaction_id, MainTransactionId} -> MainTransactionId;
+                   _ -> null
+                 end,
   Transaction#{ bank_id := BankIdVal, client_id := ClientIdVal, account_id := AccountIdVal, accounting_date := fix_date(AccountingDate), effective_date := fix_date(EffectiveDate),
                 ext_date => fix_date(ExtDate), ext_period => undefined_to_null(ExtPeriod), ext_budget_id => undefined_to_null(ExtBudgetId), ext_categories_id => undefined_to_null(ExtCategoriesId),
-                ext_store_id => undefined_to_null(ExtStoreId) }.
+                ext_split_of_id => ExtSplitOfId, ext_store_id => undefined_to_null(ExtStoreId) }.
+
 
 undefined_to_null(undefined) -> null;
 undefined_to_null(V) -> V.

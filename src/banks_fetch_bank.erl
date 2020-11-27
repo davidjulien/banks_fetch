@@ -112,7 +112,9 @@
         ext_period => undefined | transaction_period(),
         ext_budget_id => undefined | non_neg_integer(),
         ext_categories_id => undefined | [non_neg_integer()],
-        ext_store_id => undefined | non_neg_integer()
+        ext_store_id => undefined | non_neg_integer(),
+        ext_split_of_id => undefined | none | transaction_id(),
+        ext_splitted => undefined | boolean()
        }.
 
 -type connection_error() :: invalid_credential | account_locked | internal_error | network_error.
