@@ -222,6 +222,7 @@
     {"id": 2009, "name": "Boulangerie Au pain du petit bois"},
     {"id": 2010, "name": "Boulangerie Paul"},
     {"id": 2011, "name": "Boulangerie La Croissanterie"},
+    {"id": 2012, "name": "Boulangerie Le fournil de Moissac"},
 
     {"id": 3000, "name": "Boucherie Portheaul"},
     {"id": 3001, "name": "Gaudin traiteur"},
@@ -239,6 +240,7 @@
     {"id": 7002, "name": "Fromagerie Devaux Maryse"},
 
     {"id": 8000, "name": "Saveurs d''antan"},
+    {"id": 8001, "name": "Terre y fruit (Chinon)"},
 
     {"id": 9000, "name": "Rameau d''olivier"},
     {"id": 9001, "name": "Miel Famille Mary"},
@@ -280,6 +282,10 @@
     {"id": 19001, "name": "Pharmacie du marché 2"},
     {"id": 19002, "name": "Pharmacie des oiseaux"},
     {"id": 19003, "name": "Pharmacie des oliviers"},
+    {"id": 19004, "name": "Pharmacie du Sarlac (Moissac)"},
+    {"id": 19005, "name": "Pharmacie Kanoui"},
+    {"id": 19006, "name": "Pharmacie du Véron"},
+    {"id": 19007, "name": "Pharmacie"},
 
     {"id": 20000, "name": "URSSAF"},
 
@@ -295,10 +301,13 @@
     {"id": 24001, "name": "Decathlon"},
     {"id": 24002, "name": "Orchestra"},
     {"id": 24003, "name": "Gemo"},
+    {"id": 24004, "name": "Sergent Major"},
+    {"id": 24005, "name": "Intersport"},
 
     {"id": 25000, "name": "Restaurant Gourmet Royal"},
     {"id": 25001, "name": "Restaurant Mac Donald's"},
     {"id": 25002, "name": "Restaurant Burger King"},
+    {"id": 25003, "name": "Glacier Fresh and Mix"},
 
     {"id": 26000, "name": "Bricolex"},
     {"id": 26001, "name": "Capuline"},
@@ -360,7 +369,11 @@
 
     {"id": 40000, "name": "Kalidea"},
 
-    {"id": 41000, "name": "Coiffeur Natif"}
+    {"id": 41000, "name": "Coiffeur Natif"},
+
+    {"id": 42000, "name": "Fnac"},
+
+    {"id": 43000, "name": "Grandir Nature"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN|LIDL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -436,14 +449,14 @@
     {"id": 72, "pattern": "(HORODAT ML AUT)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
     {"id": 73, "pattern": "(INDIGO ST GER|INDIGO 780015|INDIGO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12000},
     {"id": 74, "pattern": "(AUTOROUTE A 13)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21000},
-    {"id": 75, "pattern": "(AUTOROUTE DU S(UD)?)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21001},
+    {"id": 75, "pattern": "(AUTOROUTE DU SUD|AUTOROUTE DU S)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21001},
     {"id": 76, "pattern": "(RICHARDIERE-GLOBAL GERAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201000], "store_id": 22000},
     {"id": 77, "pattern": "(URSSAF D AUVERGNE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000], "store_id": 20000},
     {"id": 78, "pattern": "(URSSAF RHONE ALPES - CNCESU CE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000], "store_id": 20000},
     {"id": 79, "pattern": "(AMAZON|AMZN MKTP)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000], "store_id": 23000},
     {"id": 80, "pattern": "(AUTOUR DU BEBE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24000},
     {"id": 81, "pattern": "(ROYAL ST GERMAIN)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25000},
-    {"id": 82, "pattern": "(MAC DONALD S|MC DO)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25001},
+    {"id": 82, "pattern": "(MAC DONALD S|MC DO|MC DONALD'S)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25001},
     {"id": 83, "pattern": "(DOCKS ST GERMAIN|BRICOLEX)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201400], "store_id": 26000},
     {"id": 84, "pattern": "(HARMONIE MUTUELLE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,307000], "store_id": 15003},
     {"id": 85, "pattern": "(ZINETTI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301120], "store_id": 28000},
@@ -489,18 +502,29 @@
     {"id": 125, "pattern": "(DAC MEDEA)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35007},
     {"id": 126, "pattern": "(DAC CHRISFANIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35008},
     {"id": 127, "pattern": "(CARREFOUR DAC|CARREFOUR STATIO)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601020], "store_id": 35009},
-    {"id": 128, "pattern": "(TOTALDALTYSA)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,903000], "store_id": 36000},
+    {"id": 128, "pattern": "(TOTALDALTYSA)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,903000], "store_id": 36000},
     {"id": 129, "pattern": "(KRYS JAMES OPT)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,308000], "store_id": 37000},
     {"id": 130, "pattern": "(LE GRAND BAZAR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": null, "store_id": 38000},
     {"id": 131, "pattern": "(MOD AUTO)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601110], "store_id": 39000},
     {"id": 132, "pattern": "(COMMUNE DE MAISONS LAF)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
-    {"id": 133, "pattern": "(DECATHLON)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24001},
+    {"id": 133, "pattern": "(DECATHLON)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [900000,906000,906010], "store_id": 24001},
     {"id": 134, "pattern": "(KALIDEA)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000], "store_id": 40000},
     {"id": 135, "pattern": "(CAPULINE\\.COM)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201400], "store_id": 26001},
-    {"id": 136, "pattern": "(NEWORCH 0318)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24002},
+    {"id": 136, "pattern": "(NEWORCH 0318|SHOP\\.ORCHESTRA\\.)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24002},
     {"id": 137, "pattern": "(GIFI|GIFI MAG)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201400], "store_id": 26002},
-    {"id": 138, "pattern": "(NATIF)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [500000,500100], "store_id": 41000},
+    {"id": 138, "pattern": "(NATIF)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500100], "store_id": 41000},
     {"id": 139, "pattern": "(BIOCOOPCHOUETTE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1018},
-    {"id": 140, "pattern": "(GEMO)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24003}
+    {"id": 140, "pattern": "(GEMO)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24003},
+    {"id": 141, "pattern": "(FNAC)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700100], "store_id": 42000},
+    {"id": 142, "pattern": "(GRANDIR NATURE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,306000], "store_id": 43000},
+    {"id": 143, "pattern": "(FRESH AND MIX)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,902000], "store_id": 25003},
+    {"id": 144, "pattern": "(SERGENT MAJOR)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24004},
+    {"id": 145, "pattern": "(INTERSPORT)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [900000,906000,906010], "store_id": 24005},
+    {"id": 146, "pattern": "(TERRE Y FRUIT)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100800], "store_id": 8001},
+    {"id": 147, "pattern": "(SOCA LE FOURNIL)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2012},
+    {"id": 148, "pattern": "(PHARMACIE SARLAC)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19004},
+    {"id": 149, "pattern": "(PHARMACIE KANOUI)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19005},
+    {"id": 150, "pattern": "(PHARMACIE DU VER)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19006},
+    {"id": 151, "pattern": "(PHARMACIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19007}
   ]
 }
