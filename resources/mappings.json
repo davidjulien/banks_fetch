@@ -256,6 +256,7 @@
 
     {"id": 12000, "name": "Stationnement Indigo"},
     {"id": 12001, "name": "Stationnement Horodateur"},
+    {"id": 12002, "name": "Stationnement Poissy"},
 
     {"id": 13000, "name": "Station-service Relais des Lions"},
     {"id": 13001, "name": "Station-service Relais Le Pecq"},
@@ -329,6 +330,7 @@
     {"id": 28010, "name": "Dr Lemasson"},
     {"id": 28011, "name": "Dr Aymonin"},
     {"id": 28012, "name": "Dr Anne Amoric"},
+    {"id": 28013, "name": "Dr Saad Toumeur"},
 
     {"id": 29000, "name": "Dr Dalodier"},
 
@@ -373,7 +375,9 @@
 
     {"id": 42000, "name": "Fnac"},
 
-    {"id": 43000, "name": "Grandir Nature"}
+    {"id": 43000, "name": "Grandir Nature"},
+
+    {"id": 44000, "name": "Piscine de Saint-Germain-en-Laye"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN|LIDL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -445,11 +449,11 @@
     {"id": 67, "pattern": "(LA POSTE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000,400800], "store_id": 17001},
     {"id": 69, "pattern": "(DIAC LOCATION DEPARTEMENT SIGMA SERVICES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601010], "store_id": 27001},
     {"id": 70, "pattern": "(DIAC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601120], "store_id": 28001},
-    {"id": 71, "pattern": "(DROITS DE PLACE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
-    {"id": 72, "pattern": "(HORODAT ML AUT)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
-    {"id": 73, "pattern": "(INDIGO ST GER|INDIGO 780015|INDIGO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12000},
+    {"id": 71, "pattern": "(DROITS DE PLACE)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12001},
+    {"id": 72, "pattern": "(HORODAT ML AUT)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12001},
+    {"id": 73, "pattern": "(INDIGO ST GER|INDIGO 780015|INDIGO)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12000},
     {"id": 74, "pattern": "(AUTOROUTE A 13)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21000},
-    {"id": 75, "pattern": "(AUTOROUTE DU SUD|AUTOROUTE DU S)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21001},
+    {"id": 75, "pattern": "(AUTOROUTE DU SUD|AUTOROUTES DU S)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21001},
     {"id": 76, "pattern": "(RICHARDIERE-GLOBAL GERAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201000], "store_id": 22000},
     {"id": 77, "pattern": "(URSSAF D AUVERGNE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000], "store_id": 20000},
     {"id": 78, "pattern": "(URSSAF RHONE ALPES - CNCESU CE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000], "store_id": 20000},
@@ -506,7 +510,7 @@
     {"id": 129, "pattern": "(KRYS JAMES OPT)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,308000], "store_id": 37000},
     {"id": 130, "pattern": "(LE GRAND BAZAR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": null, "store_id": 38000},
     {"id": 131, "pattern": "(MOD AUTO)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601110], "store_id": 39000},
-    {"id": 132, "pattern": "(COMMUNE DE MAISONS LAF)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601030], "store_id": 12001},
+    {"id": 132, "pattern": "(COMMUNE DE MAISONS LAF)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12001},
     {"id": 133, "pattern": "(DECATHLON)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [900000,906000,906010], "store_id": 24001},
     {"id": 134, "pattern": "(KALIDEA)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000], "store_id": 40000},
     {"id": 135, "pattern": "(CAPULINE\\.COM)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201400], "store_id": 26001},
@@ -525,6 +529,8 @@
     {"id": 148, "pattern": "(PHARMACIE SARLAC)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19004},
     {"id": 149, "pattern": "(PHARMACIE KANOUI)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19005},
     {"id": 150, "pattern": "(PHARMACIE DU VER)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19006},
-    {"id": 151, "pattern": "(PHARMACIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19007}
+    {"id": 151, "pattern": "(PHARMACIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19007},
+    {"id": 152, "pattern": "(M SAAD TOUMEUR)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301100], "store_id": 28013},
+    {"id": 153, "pattern": "(COMMUNE DE POISSY)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12003}
   ]
 }

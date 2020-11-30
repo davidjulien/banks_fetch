@@ -5,7 +5,8 @@
          should_handle_cast_do_nothing/1,
          should_fetch_mappings_without_http_storage/1,
          should_fetch_mappings_without_storage/1,
-         should_test_local_mappings/1
+         should_test_local_mappings/1,
+         should_fetch_mappings_network_error_without_http_storage/1
         ]).
 
 -define(FAKE_DATA_JSON, binary_to_list(<<"{\"budgets\": [{\"id\": 1, \"name\": \"Courant\"}], \"categories\": [{\"id\": 1, \"name\": \"Alimentation\", \"up_category_id\": null},{\"id\": 2, \"name\": \"Supermarché\", \"up_category_id\": 1}], \"stores\": [{\"id\": 1, \"name\": \"LIDL\"}], \"mappings\": [{\"id\": 1, \"pattern\": \"(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )\", \"fix_date\": \"none\", \"period\": \"month\", \"budget_id\": 1, \"categories_id\": [1,2], \"store_id\": 1}]}"/utf8>>)).
@@ -19,6 +20,7 @@ all() -> [
           should_handle_cast_do_nothing,
           should_fetch_mappings_without_http_storage,
           should_fetch_mappings_without_storage,
+          should_fetch_mappings_network_error_without_http_storage,
           should_test_local_mappings
          ].
 
@@ -50,6 +52,11 @@ init_per_testcase(should_fetch_mappings_without_storage, Config) ->
   meck:new(banks_fetch_storage),
   meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
   ok = application:start(prometheus),
+  Config;
+init_per_testcase(should_fetch_mappings_network_error_without_http_storage, Config) ->
+  meck:new(banks_fetch_http),
+  meck:new(banks_fetch_storage),
+  meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
   Config.
 
 end_per_testcase(should_handle_cast_do_nothing, _Config) ->
@@ -68,6 +75,11 @@ end_per_testcase(should_fetch_mappings_without_storage, _Config) ->
   ok = application:stop(prometheus),
   meck:unload(timer),
   meck:unload(banks_fetch_storage),
+  ok;
+end_per_testcase(should_fetch_mappings_network_error_without_http_storage, _Config) ->
+  meck:unload(timer),
+  meck:unload(banks_fetch_storage),
+  meck:unload(banks_fetch_http),
   ok.
 
 
@@ -115,7 +127,7 @@ should_fetch_mappings_without_http_storage(_Config) ->
   LastFetch = banks_fetch_upgrade_mappings_server:last_fetch(UpgradeServerPid),
   true = LastFetch =/= none andalso LastFetch >= BeforeFetchingDateTime,
 
-  ct:comment("Verify that expected functions has been called"),
+  ct:comment("Verify that expected functions have been called"),
   true = meck:validate(banks_fetch_http),
   true = meck:validate(banks_fetch_storage),
   true = meck:validate(timer),
@@ -184,8 +196,8 @@ should_test_local_mappings(Config) ->
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(MockBudgets, MockCategories, MockStores, MockMappings) ->
                                                          check_data(MockBudgets, 5),
                                                          check_data(MockCategories, 170),
-                                                         check_data(MockStores, 144),
-                                                         check_data(MockMappings, 150),
+                                                         check_data(MockStores, 147),
+                                                         check_data(MockMappings, 152),
                                                          ok
                                                      end),
 
@@ -215,3 +227,38 @@ check_data(List, ExpectedCount) ->
 
 extract_ids(L) ->
   [ ID || #{ id := ID } <- L ].
+
+
+should_fetch_mappings_network_error_without_http_storage(_Config) ->
+  meck:expect(banks_fetch_http, setup_monitoring, fun(MockServername) ->
+                                                      "raw.githubusercontent.com" = MockServername,
+                                                      ok
+                                                  end),
+  meck:expect(banks_fetch_http, request, fun(MockMethod, MockURL, MockHTTPOptions, MockOptions) ->
+                                             get = MockMethod,
+                                             {_, []} = MockURL,
+                                             [] = MockHTTPOptions,
+                                             [] = MockOptions,
+                                             {error, network_error}
+                                         end),
+
+  meck:expect(timer, send_after, fun(MockTime, MockCall) ->
+                                     2 * 60 * 60 * 1000 = MockTime,
+                                     fetch_mappings = MockCall,
+                                     {ok, tref}
+                                 end),
+
+  {ok, UpgradeServerPid} = banks_fetch_upgrade_mappings_server:start_link(),
+
+  ct:comment("Verify that last_fetch datetime has been updated"),
+  LastFetch = banks_fetch_upgrade_mappings_server:last_fetch(UpgradeServerPid),
+  none = LastFetch,
+
+  ct:comment("Verify that expected functions have been called"),
+  true = meck:validate(banks_fetch_http),
+  true = meck:validate(banks_fetch_storage),
+  true = meck:validate(timer),
+
+  ok.
+
+

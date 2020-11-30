@@ -64,7 +64,11 @@ do_fetch_mappings(#state{} = State0) ->
       % Fetch again in 24 hours
       {ok, _} = timer:send_after(24*60*60*1000, fetch_mappings),
 
-      State0#state{ last_fetch = FetchingDatetime }
+      State0#state{ last_fetch = FetchingDatetime };
+    {error, _} ->
+      % Fetch again in 2 hours
+      {ok, _} = timer:send_after(2*60*60*1000, fetch_mappings),
+      State0
   end.
 
 convert_from_json(Key, JSON) ->
