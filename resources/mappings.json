@@ -209,6 +209,7 @@
     {"id": 1016, "name": "Atac"},
     {"id": 1017, "name": "Carrefour Express"},
     {"id": 1018, "name": "Biocoop"},
+    {"id": 1019, "name": "Carrefour Contact"},
 
     {"id": 2000, "name": "Boulangerie Fournil de Pierre"},
     {"id": 2001, "name": "Boulangerie La tradition"},
@@ -223,6 +224,7 @@
     {"id": 2010, "name": "Boulangerie Paul"},
     {"id": 2011, "name": "Boulangerie La Croissanterie"},
     {"id": 2012, "name": "Boulangerie Le fournil de Moissac"},
+    {"id": 2013, "name": "Pâtisserie Au plaisir de Chinon"},
 
     {"id": 3000, "name": "Boucherie Portheaul"},
     {"id": 3001, "name": "Gaudin traiteur"},
@@ -257,6 +259,7 @@
     {"id": 12000, "name": "Stationnement Indigo"},
     {"id": 12001, "name": "Stationnement Horodateur"},
     {"id": 12002, "name": "Stationnement Poissy"},
+    {"id": 12003, "name": "Stationnement Parking du Maine (Gare Montparnasse)"},
 
     {"id": 13000, "name": "Station-service Relais des Lions"},
     {"id": 13001, "name": "Station-service Relais Le Pecq"},
@@ -293,6 +296,7 @@
     {"id": 21000, "name": "Péage Autoroute A13"},
     {"id": 21001, "name": "Péage Autoroute du Sud"},
     {"id": 21002, "name": "Péage Cofiroute"},
+    {"id": 21003, "name": "Péage SAPN"},
 
     {"id": 22000, "name": "Nexity"},
 
@@ -309,10 +313,15 @@
     {"id": 25001, "name": "Restaurant Mac Donald's"},
     {"id": 25002, "name": "Restaurant Burger King"},
     {"id": 25003, "name": "Glacier Fresh and Mix"},
+    {"id": 25004, "name": "Restaurant Hippopotamus"},
+    {"id": 25005, "name": "Restaurant Chez Lulu"},
+    {"id": 25006, "name": "Restaurant Le Comptoir Breton"},
 
     {"id": 26000, "name": "Bricolex"},
     {"id": 26001, "name": "Capuline"},
     {"id": 26002, "name": "Gifi"},
+    {"id": 26003, "name": "Castorama"},
+    {"id": 26004, "name": "Bureau Vallee"},
 
     {"id": 27000, "name": "ING"},
     {"id": 27001, "name": "DIAC"},
@@ -377,7 +386,20 @@
 
     {"id": 43000, "name": "Grandir Nature"},
 
-    {"id": 44000, "name": "Piscine de Saint-Germain-en-Laye"}
+    {"id": 44000, "name": "Piscine de Saint-Germain-en-Laye"},
+
+    {"id": 45000, "name": "Airbnb"},
+
+    {"id": 46000, "name": "Ferme de Gally"},
+
+    {"id": 47000, "name": "Château de Langeais"},
+    {"id": 47001, "name": "Château de Castelnaud"},
+
+    {"id": 48000, "name": "Oxybul"},
+
+    {"id": 49000, "name": "Jeff de Bruges"},
+
+    {"id": 50000, "name": "Observatoire panoramique de la Tour Montparnasse"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN|LIDL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -531,6 +553,22 @@
     {"id": 150, "pattern": "(PHARMACIE DU VER)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19006},
     {"id": 151, "pattern": "(PHARMACIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19007},
     {"id": 152, "pattern": "(M SAAD TOUMEUR)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,301000,301100], "store_id": 28013},
-    {"id": 153, "pattern": "(COMMUNE DE POISSY)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12003}
+    {"id": 153, "pattern": "(COMMUNE DE POISSY)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12002},
+    {"id": 154, "pattern": "(SAPN)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601040], "store_id": 21003},
+    {"id": 155, "pattern": "(CARREFOURCONTAC)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1019},
+    {"id": 156, "pattern": "(AIRBNB \\* )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,901000], "store_id": 45000},
+    {"id": 157, "pattern": "(SOPAG PARKING)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12003},
+    {"id": 158, "pattern": "(HIPPOPOTAMUS)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25004},
+    {"id": 159, "pattern": "(CUEILLETTE ?GALLY)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,101300], "store_id": 46000},
+    {"id": 160, "pattern": "(PLAISIR DE CHINON)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2013},
+    {"id": 161, "pattern": "(CHATEAU DE LANGEAIS)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907040], "store_id": 47000},
+    {"id": 162, "pattern": "(CHATEAU CASTELNAUD)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907040], "store_id": 47001},
+    {"id": 163, "pattern": "(EVEILJEUX)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700200], "store_id": 48000},
+    {"id": 164, "pattern": "(CASTORAMA)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201400], "store_id": 26003},
+    {"id": 165, "pattern": "(BUREAU VALLEE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201400], "store_id": 26004},
+    {"id": 166, "pattern": "(MAMIE A ST GER)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25005},
+    {"id": 167, "pattern": "(JEFF DE BRUGES)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700400], "store_id": 49000},
+    {"id": 168, "pattern": "(OBS PANORAM MONT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50000},
+    {"id": 169, "pattern": "(COMPTOIR BRETON)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25006}
   ]
 }
