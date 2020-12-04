@@ -9,6 +9,7 @@
 %% - /api/1.0/budgets : return all budgets
 %% - /api/1.0/categories : return all categories
 %% - /api/1.0/stores : return all stores
+%% - /api/1.0/stores/new (POST) : add a new store, returns a store object
 %% - /api/1.0/accounts : return all user accounts
 %%
 %% API returns 400 in case of invalid parameters.
@@ -68,6 +69,10 @@ handle('GET',[<<"api">>, <<"1.0">>, <<"categories">>], _Req) ->
 
 handle('GET',[<<"api">>, <<"1.0">>, <<"stores">>], _Req) ->
   handle_stores();
+
+handle('POST',[<<"api">>, <<"1.0">>, <<"stores">>, <<"new">>], Req) ->
+  StoreName = elli_request:body(Req),
+  handle_stores_new(StoreName);
 
 handle('GET',[<<"api">>, <<"1.0">>, <<"accounts">>], _Req) ->
   handle_accounts();
@@ -192,6 +197,16 @@ handle_stores() ->
   {value, Stores} = banks_fetch_storage:get_stores(),
   JSON = jiffy:encode(Stores),
   {200, [{<<"Content-Type">>, <<"application/json">>}], JSON}.
+
+-spec handle_stores_new(unicode:unicode_binary()) -> elli_handler:result().
+handle_stores_new(StoreName) ->
+  case banks_fetch_storage:insert_store(StoreName) of
+    {ok, Store} ->
+      JSON = jiffy:encode(Store),
+      {200, [{<<"Content-Type">>, <<"application/json">>}], JSON};
+    {error, already_inserted} ->
+      {400, [{<<"Content-Type">>, <<"application/json">>}], <<"Store already inserted">>}
+  end.
 
 
 %% @doc Transform an internal transaction data to a json compatible transaction data (transform dates and protected ids)

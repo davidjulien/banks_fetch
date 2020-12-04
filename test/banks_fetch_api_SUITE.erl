@@ -29,6 +29,8 @@
          should_return_categories/1,
 
          should_return_stores/1,
+         should_insert_store/1,
+         should_not_insert_store_already_existing/1,
 
          should_return_all_accounts/1,
 
@@ -58,6 +60,8 @@ all() ->
    should_return_categories,
 
    should_return_stores,
+   should_insert_store,
+   should_not_insert_store_already_existing,
 
    should_return_all_accounts,
 
@@ -163,6 +167,14 @@ init_per_testcase(should_return_stores, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
 
+init_per_testcase(should_insert_store, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_not_insert_store_already_existing, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
 init_per_testcase(should_return_all_accounts, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
@@ -241,6 +253,16 @@ end_per_testcase(should_return_categories, Config) ->
   ok;
 
 end_per_testcase(should_return_stores, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_insert_store, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_not_insert_store_already_existing, Config) ->
   meck:unload(banks_fetch_storage),
   teardown_elli(Config),
   ok;
@@ -533,6 +555,38 @@ should_return_stores(_Config) ->
   true = meck:validate(banks_fetch_storage),
 
   ok.
+
+should_insert_store(_Config) ->
+  StoreName = <<"MyNewStore">>,
+  Store = #{ id => 1, name => StoreName },
+  meck:expect(banks_fetch_storage, insert_store, fun(MockStoreName) ->
+                                                     StoreName = MockStoreName,
+                                                     {ok, Store}
+                                                 end),
+
+  Response = hackney:post("http://localhost:3003/api/1.0/stores/new", [], StoreName),
+  200 = status(Response),
+  <<"{\"name\":\"MyNewStore\",\"id\":1}">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+should_not_insert_store_already_existing(_Config) ->
+  StoreName = <<"MyNewStore">>,
+  meck:expect(banks_fetch_storage, insert_store, fun(MockStoreName) ->
+                                                     StoreName = MockStoreName,
+                                                     {error, already_inserted}
+                                                 end),
+
+  Response = hackney:post("http://localhost:3003/api/1.0/stores/new", [], StoreName),
+  400 = status(Response),
+  <<"Store already inserted">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
 
 
 -define(ACCOUNTS, [
