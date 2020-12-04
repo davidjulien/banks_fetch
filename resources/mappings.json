@@ -166,12 +166,13 @@
       {"id": 908020, "name": "Ferme", "up_category_id": 908000},
       {"id": 908030, "name": "Croisière", "up_category_id": 908000},
       {"id": 908040, "name": "Plage", "up_category_id": 908000},
-      {"id": 908050, "name": "Parc d''attraction", "up_category_id": 908000},
+      {"id": 908050, "name": "Parc d'attraction", "up_category_id": 908000},
       {"id": 908060, "name": "Zoo", "up_category_id": 908000},
       {"id": 908070, "name": "Kermesse", "up_category_id": 908000},
       {"id": 908080, "name": "Location vélo", "up_category_id": 908000},
       {"id": 908090, "name": "Transport détente", "up_category_id": 908000},
       {"id": 908100, "name": "Salle de jeux", "up_category_id": 908000},
+      {"id": 908110, "name": "Transport", "up_category_id": 908000},
 
     {"id": 1000000, "name": "Éducation/formation", "up_category_id": null},
     {"id": 1000100, "name": "Scolarité", "up_category_id": 1000000},
@@ -210,6 +211,7 @@
     {"id": 1017, "name": "Carrefour Express"},
     {"id": 1018, "name": "Biocoop"},
     {"id": 1019, "name": "Carrefour Contact"},
+    {"id": 1020, "name": "Hyper U"},
 
     {"id": 2000, "name": "Boulangerie Fournil de Pierre"},
     {"id": 2001, "name": "Boulangerie La tradition"},
@@ -228,6 +230,7 @@
 
     {"id": 3000, "name": "Boucherie Portheaul"},
     {"id": 3001, "name": "Gaudin traiteur"},
+    {"id": 3002, "name": "Boucherie Charcuterie Marchais (Avoine)"},
 
     {"id": 5000, "name": "Volailles Rôtisserie"},
     {"id": 5001, "name": "MJ Volailles"},
@@ -260,6 +263,7 @@
     {"id": 12001, "name": "Stationnement Horodateur"},
     {"id": 12002, "name": "Stationnement Poissy"},
     {"id": 12003, "name": "Stationnement Parking du Maine (Gare Montparnasse)"},
+    {"id": 12004, "name": "Stationnement Rocamadour"},
 
     {"id": 13000, "name": "Station-service Relais des Lions"},
     {"id": 13001, "name": "Station-service Relais Le Pecq"},
@@ -281,6 +285,8 @@
     {"id": 17000, "name": "Bien Servi"},
     {"id": 17001, "name": "La Poste"},
     {"id": 17002, "name": "RATP"},
+    {"id": 17003, "name": "Tisséo (Toulouse)"},
+    {"id": 17004, "name": "Le petit train"},
 
     {"id": 19000, "name": "Pharmacie du marché"},
     {"id": 19001, "name": "Pharmacie du marché 2"},
@@ -316,6 +322,7 @@
     {"id": 25004, "name": "Restaurant Hippopotamus"},
     {"id": 25005, "name": "Restaurant Chez Lulu"},
     {"id": 25006, "name": "Restaurant Le Comptoir Breton"},
+    {"id": 25007, "name": "Restaurant L'écho de Rabelais (Chinon)"},
 
     {"id": 26000, "name": "Bricolex"},
     {"id": 26001, "name": "Capuline"},
@@ -399,7 +406,14 @@
 
     {"id": 49000, "name": "Jeff de Bruges"},
 
-    {"id": 50000, "name": "Observatoire panoramique de la Tour Montparnasse"}
+    {"id": 50000, "name": "Observatoire panoramique de la Tour Montparnasse"},
+    {"id": 50001, "name": "Grotte de Roufignac"},
+    {"id": 50002, "name": "Grotte de Tourtoirac"},
+    {"id": 50003, "name": "La Roque Saint Christophe"},
+
+    {"id": 51000, "name": "Wanimo"},
+
+    {"id": 52000, "name": "Nocibé"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN|LIDL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -446,7 +460,7 @@
     {"id": 42, "pattern": "(LA TRINITAINE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9002},
     {"id": 43, "pattern": "(RELAY 387217PX|RELAY 387217SC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9003},
     {"id": 44, "pattern": "(FERME DE TREGRAI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,101300], "store_id": 10000},
-    {"id": 45, "pattern": "(BOUYGUES TELECOM)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11000},
+    {"id": 45, "pattern": "(BOUYGUES TELECOM|BOUYGTEL VAD)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11000},
     {"id": 46, "pattern": "(ORANGE :|ORANGE FACT|ORANGE VAD 73)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11001},
     {"id": 47, "pattern": "(SFR FIXE ADSL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11002},
     {"id": 48, "pattern": "(FREE TELECOM)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [200000,201100], "store_id": 11003},
@@ -569,6 +583,18 @@
     {"id": 166, "pattern": "(MAMIE A ST GER)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25005},
     {"id": 167, "pattern": "(JEFF DE BRUGES)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700400], "store_id": 49000},
     {"id": 168, "pattern": "(OBS PANORAM MONT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50000},
-    {"id": 169, "pattern": "(COMPTOIR BRETON)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25006}
+    {"id": 169, "pattern": "(COMPTOIR BRETON)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25006},
+    {"id": 170, "pattern": "(DGFIP FINANCES PUBLIQUES MENSUALISE .* REMB\\. EXCD\\. IMPOT)$", "fix_date": "none", "period": "annual", "budget_id": 1, "categories_id": [200000], "store_id": 30001},
+    {"id": 171, "pattern": "(BOUCHERIE MARCHA)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100300], "store_id": 3002},
+    {"id": 172, "pattern": "(L ECHO DE RABEL)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25007},
+    {"id": 173, "pattern": "(LA GRANDE PRAIRIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1020},
+    {"id": 174, "pattern": "(WANIMO.COM)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102100], "store_id": 51000},
+    {"id": 175, "pattern": "(SIVOM TRANS EN COMMUN)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,600100], "store_id": 17003},
+    {"id": 176, "pattern": "(SM GRAND SITE ROCAMADO)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12004},
+    {"id": 177, "pattern": "(LE PETIT TRAIN)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,908000,908110], "store_id": 17004},
+    {"id": 178, "pattern": "(GROTTE ROUFFIGNAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50001},
+    {"id": 179, "pattern": "(COMMUNE DE TOURTOIRAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50002},
+    {"id": 180, "pattern": "(LA ROQUE ST CHR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50003},
+    {"id": 181, "pattern": "(NOCIBE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [500000,500300], "store_id": 52000}
   ]
 }
