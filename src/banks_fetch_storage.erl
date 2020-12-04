@@ -58,18 +58,18 @@
 
 -spec get_banks() -> {value, [banks_fetch_bank:bank()]}.
 get_banks() ->
-  gen_server:call(?MODULE, get_banks).
+  gen_server:call(?MODULE, get_banks, ?LONG_TIMEOUT).
 
 
 % Functions related to clients
 
 -spec get_clients() -> {value, [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())}]}.
 get_clients() ->
-  gen_server:call(?MODULE, get_clients).
+  gen_server:call(?MODULE, get_clients, ?LONG_TIMEOUT).
 
 -spec insert_client(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())) -> ok | {error, already_inserted}.
 insert_client(BankId, ClientId, ClientCredential) ->
-  gen_server:call(?MODULE, {insert_client, BankId, ClientId, ClientCredential}).
+  gen_server:call(?MODULE, {insert_client, BankId, ClientId, ClientCredential}, ?LONG_TIMEOUT).
 
 
 % Functions related to budgets
@@ -77,7 +77,7 @@ insert_client(BankId, ClientId, ClientCredential) ->
 %% @doc Return all stored budgets
 -spec get_budgets() -> {value, [banks_fetch_bank:budget()]}.
 get_budgets() ->
-  gen_server:call(?MODULE, get_budgets).
+  gen_server:call(?MODULE, get_budgets, ?LONG_TIMEOUT).
 
 
 % Functions related to categories
@@ -85,7 +85,7 @@ get_budgets() ->
 %% @doc Return all stored categories
 -spec get_categories() -> {value, [banks_fetch_bank:category()]}.
 get_categories() ->
-  gen_server:call(?MODULE, get_categories).
+  gen_server:call(?MODULE, get_categories, ?LONG_TIMEOUT).
 
 
 % Functions related to stores
@@ -93,7 +93,7 @@ get_categories() ->
 %% @doc Return all stored stores
 -spec get_stores() -> {value, [banks_fetch_bank:store()]}.
 get_stores() ->
-  gen_server:call(?MODULE, get_stores).
+  gen_server:call(?MODULE, get_stores, ?LONG_TIMEOUT).
 
 
 % Functions related to accounts
@@ -101,21 +101,21 @@ get_stores() ->
 %% @doc Return all stored accounts
 -spec get_all_accounts() -> {value, [banks_fetch_bank:account()]}.
 get_all_accounts() ->
-  gen_server:call(?MODULE, get_all_accounts).
+  gen_server:call(?MODULE, get_all_accounts, ?LONG_TIMEOUT).
 
 -spec store_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), calendar:datetime(), [banks_fetch_bank:account()]) -> ok.
 store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
-  gen_server:call(?MODULE, {store_accounts, BankId, ClientId, FetchingAt, AccountsList}).
+  gen_server:call(?MODULE, {store_accounts, BankId, ClientId, FetchingAt, AccountsList}, ?LONG_TIMEOUT).
 
 -spec get_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id()) -> {value, [banks_fetch_bank:account()]}.
 get_accounts(BankId, ClientId) ->
-  gen_server:call(?MODULE, {get_accounts, BankId, ClientId}).
+  gen_server:call(?MODULE, {get_accounts, BankId, ClientId}, ?LONG_TIMEOUT).
 
 % Functions related to mappings
 
 -spec get_mappings() -> {value, [any()]}.
 get_mappings() ->
-  gen_server:call(?MODULE, get_mappings).
+  gen_server:call(?MODULE, get_mappings, ?LONG_TIMEOUT).
 
 -spec upgrade_mappings([banks_fetch_bank:budget()], [banks_fetch_bank:category()],  [banks_fetch_bank:store()], [banks_fetch_bank:mapping()]) -> ok | {error, unable_to_upgrade_mappings}.
 upgrade_mappings(Budgets, Categories, Stores, Mappings) ->
@@ -129,34 +129,34 @@ upgrade_mappings(Budgets, Categories, Stores, Mappings) ->
 %% @doc Store transactions
 -spec store_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), calendar:datetime(), [banks_fetch_bank:transaction()]) -> ok.
 store_transactions(BankId, ClientId, AccountId, FetchingAt, TransactionsList) ->
-  gen_server:call(?MODULE, {store_transactions, BankId, ClientId, AccountId, FetchingAt, TransactionsList}).
+  gen_server:call(?MODULE, {store_transactions, BankId, ClientId, AccountId, FetchingAt, TransactionsList}, ?LONG_TIMEOUT).
 
 %% @doc Returns last transaction id for each account for a given bank/client
 -spec get_last_transactions_id(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id()) -> {value, [{banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()}]}.
 get_last_transactions_id(BankId, ClientId) ->
-  gen_server:call(?MODULE, {get_last_transactions_id, BankId, ClientId}).
+  gen_server:call(?MODULE, {get_last_transactions_id, BankId, ClientId}, ?LONG_TIMEOUT).
 
 %% @doc Returns all transactions for a given account
 -spec get_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id()) -> {value, [banks_fetch_bank:transaction()]}.
 get_transactions(BankId, ClientId, AccountId) ->
-  gen_server:call(?MODULE, {get_transactions, BankId, ClientId, AccountId}).
+  gen_server:call(?MODULE, {get_transactions, BankId, ClientId, AccountId}, ?LONG_TIMEOUT).
 
 %% @doc Returns last N transactions for any account
 -spec get_last_transactions(none | unicode:unicode_binary(), non_neg_integer()) -> {value, {unicode:unicode_binary(), non_neg_integer(), [banks_fetch_bank:transaction()]}} | {error, invalid_cursor}.
 get_last_transactions(CursorOpt, N) ->
-  gen_server:call(?MODULE, {get_last_transactions, CursorOpt, N}).
+  gen_server:call(?MODULE, {get_last_transactions, CursorOpt, N}, ?LONG_TIMEOUT).
 
 -spec update_transaction(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id(),
                          undefined | calendar:date(), undefined | banks_fetch_bank:mapping_period(), undefined | non_neg_integer(), undefined | non_neg_integer(), undefined | [non_neg_integer()],
                          undefined | float()
                         ) -> {ok, banks_fetch_bank:transaction()} | {error, any()}.
 update_transaction(BankId, AccountId, ClientId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesId, Amount) ->
-  gen_server:call(?MODULE, {update_transaction, BankId, AccountId, ClientId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesId, Amount}).
+  gen_server:call(?MODULE, {update_transaction, BankId, AccountId, ClientId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesId, Amount}, ?LONG_TIMEOUT).
 
 %% @doc Split a transaction. Useful when a transaction merged different kind of payment
 -spec split_transaction(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()) -> {ok, banks_fetch_bank:transaction_id()} | {error, not_found}.
 split_transaction(BankId, AccountId, ClientId, TransactionId) ->
-  gen_server:call(?MODULE, {split_transaction, BankId, AccountId, ClientId, TransactionId}).
+  gen_server:call(?MODULE, {split_transaction, BankId, AccountId, ClientId, TransactionId}, ?LONG_TIMEOUT).
 
 
 
