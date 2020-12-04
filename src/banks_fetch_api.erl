@@ -26,6 +26,14 @@
          handle_transactions/2
         ]).
 
+-ifdef(TEST).
+-export([
+         join_strings/2,
+         verify_type/2
+        ]).
+-endif.
+
+
 -include_lib("elli/include/elli.hrl").
 -behaviour(elli_handler).
 
@@ -90,38 +98,68 @@ handle_transactions(CursorOpt, N) ->
 
 -spec handle_transactions_update(unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary()) -> elli_handler:result().
 handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal, Body) ->
-  try
-    JSON = jsx:decode(Body),
-    {_, DateStr} = lists:keyfind(<<"ext_date">>, 1, JSON),
-    {_, StoreId} = lists:keyfind(<<"ext_store_id">>, 1, JSON),
-    {_, BudgetId} = lists:keyfind(<<"ext_budget_id">>, 1, JSON),
-    {_, CategoriesId} = lists:keyfind(<<"ext_categories_ids">>, 1, JSON),
-    {_, PeriodStr} = lists:keyfind(<<"ext_period">>, 1, JSON),
-    Date = date_to_iso8601(DateStr),
-    Period = case PeriodStr of
-               null -> undefined;
-               _ -> binary_to_atom(PeriodStr, 'utf8')
-             end,
-    Amount = case lists:keyfind(<<"amount">>, 1, JSON) of
-               false -> null;
-               {_, Amount0} -> Amount0
-             end,
-    case banks_fetch_storage:update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal},
-                                                null_to_undefined(Date), null_to_undefined(Period), null_to_undefined(StoreId), null_to_undefined(BudgetId), null_to_undefined(CategoriesId),
-                                                null_to_undefined(Amount)) of
-      {ok, Transaction} ->
-        ResultJSON = jsx:encode(to_json_transaction(Transaction)),
-        {200, [{<<"Content-Type">>, <<"application/json">>}], ResultJSON};
-      {error, R} ->
-        ok = lager:warning("Unable to update transaction ~s/~s/~s/~s: ~p", [BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal, R]),
-        {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Unable to update">>}
-    end
-  catch
-    _E:_V:_Stack ->
-      ok = lager:warning("Exception : ~p", [{_E,_V,_Stack}]),
-      {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Invalid parameters">>}
+  JSON = jsx:decode(Body),
+  {_, DateStr} = lists:keyfind(<<"ext_date">>, 1, JSON),
+  {_, StoreId} = lists:keyfind(<<"ext_store_id">>, 1, JSON),
+  {_, BudgetId} = lists:keyfind(<<"ext_budget_id">>, 1, JSON),
+  {_, CategoriesId} = lists:keyfind(<<"ext_categories_ids">>, 1, JSON),
+  {_, PeriodStr} = lists:keyfind(<<"ext_period">>, 1, JSON),
+  Amount = case lists:keyfind(<<"amount">>, 1, JSON) of
+             false -> null;
+             {_, Amount0} -> Amount0
+           end,
+  Date = date_to_iso8601(DateStr),
+  case verify_types([{<<"ext_date">>, Date, {optional, date}}, {<<"ext_store_id">>, StoreId, {optional, integer}}, {<<"ext_budget_id">>, BudgetId, {optional, integer}},
+                     {<<"ext_categories_ids">>, CategoriesId, {optional, {array, integer}}}, {<<"ext_period">>, PeriodStr, {optional, period}}, {<<"amount">>, Amount, {optional, float}}]) of
+    [] ->
+      Period = case PeriodStr of
+                 null -> undefined;
+                 _ -> binary_to_atom(PeriodStr, 'utf8')
+               end,
+      case banks_fetch_storage:update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal},
+                                                  null_to_undefined(Date), null_to_undefined(Period), null_to_undefined(StoreId), null_to_undefined(BudgetId), null_to_undefined(CategoriesId),
+                                                  null_to_undefined(Amount)) of
+        {ok, Transaction} ->
+          ResultJSON = jsx:encode(to_json_transaction(Transaction)),
+          {200, [{<<"Content-Type">>, <<"application/json">>}], ResultJSON};
+        {error, R} ->
+          ok = lager:warning("Unable to update transaction ~s/~s/~s/~s: ~p", [BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal, R]),
+          {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Unable to update">>}
+      end;
+    InvalidFields ->
+      ok = lager:warning("Invalid parameters: ~p", [InvalidFields]),
+      {400, [{<<"Content-Type">>, <<"text/plain">>}], list_to_binary([<<"Invalid parameters: ">>, join_strings(InvalidFields, <<", ">>)]) }
   end.
 
+verify_types(List) ->
+  Filtered = lists:filter(fun({_Name, Value, Type}) -> not verify_type(Value, Type) end, List),
+  [ Name || {Name, _, _} <- Filtered ].
+
+verify_type(V, string) -> is_binary(V);
+verify_type(V, float) -> is_float(V);
+verify_type(V, integer) -> is_integer(V);
+verify_type(undefined, {optional, _T}) -> true;
+verify_type(null, {optional, _T}) -> true;
+verify_type(V, {optional, T}) -> verify_type(V, T);
+verify_type(V, {array, T}) ->
+  case is_list(V) of
+    true -> lists:all(fun(SV) -> verify_type(SV, T) end, V);
+    false -> false
+  end;
+verify_type({_,_,_} = D, date) -> calendar:valid_date(D);
+verify_type(_, date) -> false;
+verify_type(<<"month">>, period) -> true;
+verify_type(<<"bimester">>, period) -> true;
+verify_type(<<"quarter">>, period) -> true;
+verify_type(<<"semester">>, period) -> true;
+verify_type(<<"annual">>, period) -> true;
+verify_type(_, period) -> false.
+
+-spec join_strings([unicode:unicode_binary()], unicode:unicode_binary()) -> unicode:unicode_binary().
+join_strings([E], _Sep) -> E;
+join_strings([E|L], Sep) ->
+  L1 = [ [Sep, Item] || Item <- L ],
+  list_to_binary([ E | L1 ]).
 
 
 -spec handle_banks() -> elli_handler:result().
@@ -198,6 +236,7 @@ date_to_iso8601(null) ->
   undefined;
 date_to_iso8601(DateStr) ->
   case re:run(DateStr, <<"([0-9]{4})-([0-9]{2})-([0-9]{2})">>, [{capture,all_but_first,list}]) of
+    nomatch -> invalid_format;
     {match, [YearStr, MonthStr, DayStr]} ->
       {list_to_integer(YearStr), list_to_integer(MonthStr), list_to_integer(DayStr)}
   end.

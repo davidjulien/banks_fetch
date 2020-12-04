@@ -30,7 +30,10 @@
 
          should_return_stores/1,
 
-         should_return_all_accounts/1
+         should_return_all_accounts/1,
+
+         should_join_strings/1,
+         should_verify_types/1
         ]).
 
 all() ->
@@ -56,7 +59,10 @@ all() ->
 
    should_return_stores,
 
-   should_return_all_accounts
+   should_return_all_accounts,
+
+   should_join_strings,
+   should_verify_types
   ].
 
 
@@ -159,7 +165,12 @@ init_per_testcase(should_return_stores, Config) ->
 
 init_per_testcase(should_return_all_accounts, Config) ->
   meck:new(banks_fetch_storage),
-  init_elli(Config).
+  init_elli(Config);
+
+init_per_testcase(should_join_strings, Config) ->
+  Config;
+init_per_testcase(should_verify_types, Config) ->
+  Config.
 
 
 
@@ -237,8 +248,12 @@ end_per_testcase(should_return_stores, Config) ->
 end_per_testcase(should_return_all_accounts, Config) ->
   meck:unload(banks_fetch_storage),
   teardown_elli(Config),
-  ok.
+  ok;
 
+end_per_testcase(should_join_strings, _Config) ->
+  ok;
+end_per_testcase(should_verify_types, _Config) ->
+  ok.
 
 
 should_handle_event_do_nothing(_Config) ->
@@ -346,7 +361,7 @@ should_update_transaction_if_exist(_Config) ->
                                                            {2020,1,10} = MockDate,
                                                            1011 = MockStoreId,
                                                            2 = MockBudgetId,
-                                                           'annual' = MockPeriod,
+                                                           'month' = MockPeriod,
                                                            [700000, 100900] = MockCategoriesId,
                                                            undefined = MockAmount,
                                                            {ok, #{
@@ -358,10 +373,10 @@ should_update_transaction_if_exist(_Config) ->
                                                            }
                                                           end),
 
-  Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"2020-01-10\", \"ext_period\": \"annual\", \"ext_store_id\": 1011, \"ext_budget_id\": 2, \"ext_categories_ids\": [700000, 100900]}">>),
+  Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"2020-01-10\", \"ext_period\": \"month\", \"ext_store_id\": 1011, \"ext_budget_id\": 2, \"ext_categories_ids\": [700000, 100900]}">>),
   error_logger:info_msg("Response=~p", [Response]),
   200 = status(Response),
-  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":2,\"ext_categories_id\":[700000,100900],\"ext_date\":\"2020-01-10\",\"ext_period\":\"annual\",\"ext_split_of_id\":null,\"ext_splitted\":true,\"ext_store_id\":1011,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
+  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":2,\"ext_categories_id\":[700000,100900],\"ext_date\":\"2020-01-10\",\"ext_period\":\"month\",\"ext_split_of_id\":null,\"ext_splitted\":true,\"ext_store_id\":1011,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 
@@ -390,7 +405,6 @@ should_update_transaction_if_exist_all_nulls(_Config) ->
                                                           end),
 
   Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": null, \"ext_period\": null, \"ext_store_id\": null, \"ext_budget_id\": null, \"ext_categories_ids\": null}">>),
-  error_logger:info_msg("Response=~p", [Response]),
   200 = status(Response),
   <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":null,\"ext_categories_id\":null,\"ext_date\":null,\"ext_period\":null,\"ext_split_of_id\":null,\"ext_splitted\":false,\"ext_store_id\":null,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
 
@@ -453,14 +467,13 @@ should_update_transaction_failed_if_not_exist(_Config) ->
   ok.
 
 should_update_transaction_failed_if_parameters_are_invalid(_Config) ->
-  Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"FAIL020-01-10\", \"ext_period\": null, \"ext_store_id\": 1011, \"ext_budget_id\": 2, \"ext_categories_ids\": [700000, 100900]}">>),
+  Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"FAIL020-01-10\", \"ext_period\": 22, \"ext_store_id\": \"1011\", \"ext_budget_id\": 2, \"ext_categories_ids\": 700000}">>),
   400 = status(Response),
-  <<"Invalid parameters">> = body(Response),
+  <<"Invalid parameters: ext_date, ext_store_id, ext_categories_ids, ext_period">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 
   ok.
-
 
 -define(BANKS, [#{ id => <<"ing">>, name => <<"ING">>} ]).
 -define(BANKS_JSON, <<"[{\"name\":\"ING\",\"id\":\"ing\"}]">>).
@@ -493,7 +506,7 @@ should_return_budgets(_Config) ->
 
 
 -define(CATEGORIES, [#{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 } ]).
--define(CATEGORIES_JSON, <<"[{\"up_category_id\":null,\"name\":\"Alimentation\",\"id\":1},{\"up_category_id\":1,\"name\":\"Supermarché\",\"id\":2}]"/utf8>>).      
+-define(CATEGORIES_JSON, <<"[{\"up_category_id\":null,\"name\":\"Alimentation\",\"id\":1},{\"up_category_id\":1,\"name\":\"Supermarché\",\"id\":2}]"/utf8>>).
 
 should_return_categories(_Config) ->
   meck:expect(banks_fetch_storage, get_categories, fun() -> {value, ?CATEGORIES} end),
@@ -539,6 +552,43 @@ should_return_all_accounts(_Config) ->
 
   ok.
 
+should_join_strings(_Config) ->
+  <<"a">> = banks_fetch_api:join_strings([<<"a">>], <<", ">>),
+  <<"a, b">> = banks_fetch_api:join_strings([<<"a">>, <<"b">>], <<", ">>),
+
+  ok.
+
+should_verify_types(_Config) ->
+  true  = banks_fetch_api:verify_type(<<"a">>, string),
+  false = banks_fetch_api:verify_type("a", string),
+
+  true  = banks_fetch_api:verify_type(1.0, float),
+  false = banks_fetch_api:verify_type(1, float),
+
+  true  = banks_fetch_api:verify_type(1, integer),
+  false = banks_fetch_api:verify_type(1.0, integer),
+
+  true  = banks_fetch_api:verify_type(1, {optional, integer}),
+  true  = banks_fetch_api:verify_type(undefined, {optional, integer}),
+  true  = banks_fetch_api:verify_type(null, {optional, integer}),
+  false = banks_fetch_api:verify_type(1.0, {optional, integer}),
+
+  true  = banks_fetch_api:verify_type([<<"a">>,<<"b">>], {array, string}),
+  false = banks_fetch_api:verify_type([<<"a">>,1], {array, string}),
+  false = banks_fetch_api:verify_type(<<"a">>, {array, string}),
+
+  true  = banks_fetch_api:verify_type({2020,12,4}, date),
+  false = banks_fetch_api:verify_type({2020,14,4}, date),
+  false = banks_fetch_api:verify_type({2020}, date),
+
+  true  = banks_fetch_api:verify_type(<<"month">>, period),
+  true  = banks_fetch_api:verify_type(<<"bimester">>, period),
+  true  = banks_fetch_api:verify_type(<<"quarter">>, period),
+  true  = banks_fetch_api:verify_type(<<"semester">>, period),
+  true  = banks_fetch_api:verify_type(<<"annual">>, period),
+  false = banks_fetch_api:verify_type(<<"other">>, period),
+
+  ok.
 
 %%
 %% Functions to extract data from hackney response (from elli_test.hrl)
