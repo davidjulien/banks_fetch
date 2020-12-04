@@ -28,10 +28,15 @@
          should_db_get_banks/1,
          should_db_get_budgets/1,
          should_db_get_categories/1,
+
          should_db_get_stores/1,
+         should_db_insert_store/1,
+         should_db_not_insert_store_already_existing/1,
+
          should_db_get_clients/1,
          should_db_insert_client/1,
          should_db_not_insert_client_already_existing/1,
+
          should_db_store_accounts/1,
          should_db_get_accounts/1,
          should_db_get_all_accounts/1,
@@ -110,7 +115,8 @@ all() ->
 groups() ->
   [
    {tests_without_db, [], [ should_nodb_start_without_db_upgrade, should_nodb_start_with_db_upgrade, should_nodb_start_with_db_upgrade_error, should_nodb_get_clients, should_nodb_insert_client, should_nodb_store_accounts ]},
-   {tests_with_db, [], [ should_db_get_banks, should_db_get_budgets, should_db_get_categories, should_db_get_stores,
+   {tests_with_db, [], [ should_db_get_banks, should_db_get_budgets, should_db_get_categories,
+                         should_db_get_stores, should_db_insert_store, should_db_not_insert_store_already_existing,
                          should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
                          should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_invalid_cursor,
@@ -201,6 +207,12 @@ init_per_testcase(should_db_get_categories, Config) ->
 init_per_testcase(should_db_get_stores, Config) ->
   setup_database(Config, <<"setup_db_for_get_stores.sql">>);
 
+init_per_testcase(should_db_insert_store, Config) ->
+  setup_database(Config, <<"setup_db_for_get_stores.sql">>);
+
+init_per_testcase(should_db_not_insert_store_already_existing, Config) ->
+  setup_database(Config, <<"setup_db_for_get_stores.sql">>);
+
 init_per_testcase(should_db_get_clients, Config) ->
   setup_database(Config, <<"setup_db_for_get_clients.sql">>);
 
@@ -273,6 +285,10 @@ end_per_testcase(should_db_get_budgets, _Config) ->
 end_per_testcase(should_db_get_categories, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_stores, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_insert_store, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_not_insert_store_already_existing, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_clients, _Config) ->
   teardown_database();
@@ -625,6 +641,39 @@ should_db_get_stores(_Config) ->
   ct:comment("Verify returned stores"),
   {value, [#{ id := 1, name := <<"Carrefour">> }, #{ id := 2, name := <<"LIDL">> }, #{ id := 3, name := <<"Monoprix">> }, #{ id := 4, name := <<"Casino">> }]} = Stores,
   ok.
+
+should_db_insert_store(_Config) ->
+  ct:comment("Get stores"),
+  Stores = banks_fetch_storage:get_stores(),
+
+  ct:comment("Verify returned stores"),
+  {value, [#{ id := 1, name := <<"Carrefour">> }, #{ id := 2, name := <<"LIDL">> }, #{ id := 3, name := <<"Monoprix">> }, #{ id := 4, name := <<"Casino">> }]} = Stores,
+
+  ct:comment("Insert store by name"),
+  {ok, NewStore} = banks_fetch_storage:insert_store(<<"MyNewStore">>),
+  #{ id := 1000000, name := <<"MyNewStore">> } = NewStore,
+
+  ct:comment("Verify returned stores contain new inserted store"),
+  Stores2 = banks_fetch_storage:get_stores(),
+  {value, [#{ id := 1, name := <<"Carrefour">> }, #{ id := 2, name := <<"LIDL">> }, #{ id := 3, name := <<"Monoprix">> }, #{ id := 4, name := <<"Casino">> }, NewStore]} = Stores2,
+
+  ok.
+
+should_db_not_insert_store_already_existing(_Config) ->
+  ct:comment("Get stores"),
+  Stores = banks_fetch_storage:get_stores(),
+
+  ct:comment("Verify returned stores"),
+  {value, [#{ id := 1, name := <<"Carrefour">> }, #{ id := 2, name := <<"LIDL">> }, #{ id := 3, name := <<"Monoprix">> }, #{ id := 4, name := <<"Casino">> }]} = Stores,
+
+  ct:comment("Insert store by name"),
+  {error, already_inserted} = banks_fetch_storage:insert_store(<<"Carrefour">>),
+
+  ct:comment("Verify stores have not been modified"),
+  Stores = banks_fetch_storage:get_stores(),
+
+  ok.
+
 
 should_db_get_clients(_Config) ->
   ct:comment("Get clients"),

@@ -31,7 +31,9 @@
 
          get_budgets/0,
          get_categories/0,
+
          get_stores/0,
+         insert_store/1,
 
          get_mappings/0,
          upgrade_mappings/4,
@@ -94,6 +96,11 @@ get_categories() ->
 -spec get_stores() -> {value, [banks_fetch_bank:store()]}.
 get_stores() ->
   gen_server:call(?MODULE, get_stores, ?LONG_TIMEOUT).
+
+%% @doc Insert store
+-spec insert_store(unicode:unicode_binary()) -> {ok, banks_fetch_bank:store()} | {error, already_inserted}.
+insert_store(StoreName) ->
+  gen_server:call(?MODULE, {insert_store, StoreName}, ?LONG_TIMEOUT).
 
 
 % Functions related to accounts
@@ -184,6 +191,9 @@ handle_call(get_categories, _From, #state{ } = State0) ->
   {reply, R, State0};
 handle_call(get_stores, _From, #state{ } = State0) ->
   R = do_get_stores(State0),
+  {reply, R, State0};
+handle_call({insert_store, StoreName}, _From, #state{ } = State0) ->
+  R = do_insert_store_with_name(StoreName, State0),
   {reply, R, State0};
 handle_call(get_clients, _From, #state{ } = State0) ->
   R = do_get_clients(State0),
@@ -339,6 +349,17 @@ do_insert_store(#{ id := Id, name := Name }, #state{ connection = Connection }) 
     {{insert,_,1},[]} ->
       ok
   end.
+
+-spec do_insert_store_with_name(unicode:unicode_binary(), #state{}) -> {ok, banks_fetch_bank:store()} | {error, already_inserted}.
+do_insert_store_with_name(Name, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"INSERT INTO stores(name) VALUES($1) RETURNING id;">>, [Name], Connection) of
+    {{insert,_,1},[{Id}]} ->
+      {ok, #{ id => Id, name => Name }};
+    {error, Error} ->
+      true = pgsql_error:is_integrity_constraint_violation(Error),
+      {error, already_inserted}
+  end.
+
 
 %%
 %% @doc Delete stores from id list
