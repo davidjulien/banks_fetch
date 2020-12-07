@@ -108,6 +108,7 @@
         client_id => client_id(),
         account_id => account_id(),
 
+        ext_mapping_id => undefined | non_neg_integer(),
         ext_date => undefined | calendar:date(),
         ext_period => undefined | transaction_period(),
         ext_budget_id => undefined | non_neg_integer(),
