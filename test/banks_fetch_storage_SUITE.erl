@@ -44,6 +44,7 @@
          should_db_get_transactions/1,
          should_db_get_last_transactions/1,
          should_db_get_last_transactions_invalid_cursor/1,
+         should_db_get_last_transactions_empty/1,
          should_db_get_last_transactions_id/1,
          should_db_update_transaction/1,
          should_db_update_transaction_with_amount/1,
@@ -119,7 +120,7 @@ groups() ->
                          should_db_get_stores, should_db_insert_store, should_db_not_insert_store_already_existing,
                          should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
                          should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
-                         should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_invalid_cursor,
+                         should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_empty, should_db_get_last_transactions_invalid_cursor,
                          should_db_get_last_transactions_id, should_db_update_transaction, should_db_split_transaction, should_db_split_transaction_fails_because_not_found,
                          should_db_update_transaction_with_amount, should_db_update_transaction_with_amount_fails_because_not_subtransaction, should_db_update_transaction_with_amount_fails_because_remaining,
                          should_db_upgrade_mappings_empty, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates, should_db_upgrade_mappings_invalid_updates ]}
@@ -243,6 +244,9 @@ init_per_testcase(should_db_get_last_transactions, Config) ->
 init_per_testcase(should_db_get_last_transactions_invalid_cursor, Config) ->
   setup_database(Config,"setup_db_for_get_last_transactions.sql");
 
+init_per_testcase(should_db_get_last_transactions_empty, Config) ->
+  setup_database(Config);
+
 init_per_testcase(should_db_update_transaction, Config) ->
   setup_database(Config,"setup_db_for_update_transaction.sql");
 
@@ -307,6 +311,8 @@ end_per_testcase(should_db_store_transactions, _Config) ->
 end_per_testcase(should_db_get_transactions, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_last_transactions, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_get_last_transactions_empty, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_last_transactions_invalid_cursor, _Config) ->
   teardown_database();
@@ -805,7 +811,7 @@ should_db_get_last_transactions(Config) ->
 
   ct:comment("Get last 5 transactions"),
   {value, {Cursor2, Total2, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 5),
-  <<"NTo1OjU=">> = Cursor2,
+  none = Cursor2,
   Total1 = Total2,
   5 = length(Transactions2),
   [#{ id := <<"transaction1">> }, #{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }, #{ id := <<"transaction5">> }, #{ id := <<"transaction2">> }] = Transactions2,
@@ -826,6 +832,16 @@ should_db_get_last_transactions(Config) ->
   {value, {Cursor3, Total3, Transactions3}} = banks_fetch_storage:get_last_transactions(Cursor1, 2),
 
   ok.
+
+should_db_get_last_transactions_empty(_Config) ->
+  ct:comment("Get last 1 transactions"),
+  {value, {Cursor1, Total1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 1),
+  none = Cursor1,
+  0 = Total1,
+  [] = Transactions1,
+
+  ok.
+
 
 should_db_get_last_transactions_invalid_cursor(_Config) ->
   ct:comment("Get last 1 transactions with an invalid cursor"),
@@ -944,7 +960,7 @@ should_db_update_transaction_with_amount_fails_because_remaining(_Config) ->
 should_db_split_transaction(_Config) ->
   ct:comment("Get last 5 transactions"),
   {value, {Cursor1, Total1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 5),
-  <<"NTo1OjU=">> = Cursor1,
+  none = Cursor1,
   5 = Total1,
   5 = length(Transactions1),
   [#{ id := <<"transaction1">> }, #{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }, #{ id := <<"transaction5">> }, #{ id := <<"transaction2">> }] = Transactions1,
@@ -998,7 +1014,7 @@ should_db_split_transaction(_Config) ->
 should_db_split_transaction_fails_because_not_found(_Config) ->
   ct:comment("Get last 5 transactions"),
   {value, {Cursor1, Total1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 5),
-  <<"NTo1OjU=">> = Cursor1,
+  none = Cursor1,
   5 = Total1,
   5 = length(Transactions1),
   [#{ id := <<"transaction1">> }, #{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }, #{ id := <<"transaction5">> }, #{ id := <<"transaction2">> }] = Transactions1,

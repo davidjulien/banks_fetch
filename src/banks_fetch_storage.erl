@@ -149,7 +149,7 @@ get_transactions(BankId, ClientId, AccountId) ->
   gen_server:call(?MODULE, {get_transactions, BankId, ClientId, AccountId}, ?LONG_TIMEOUT).
 
 %% @doc Returns last N transactions for any account
--spec get_last_transactions(none | unicode:unicode_binary(), non_neg_integer()) -> {value, {unicode:unicode_binary(), non_neg_integer(), [banks_fetch_bank:transaction()]}} | {error, invalid_cursor}.
+-spec get_last_transactions(none | unicode:unicode_binary(), non_neg_integer()) -> {value, {none | unicode:unicode_binary(), non_neg_integer(), [banks_fetch_bank:transaction()]}} | {error, invalid_cursor}.
 get_last_transactions(CursorOpt, N) ->
   gen_server:call(?MODULE, {get_last_transactions, CursorOpt, N}, ?LONG_TIMEOUT).
 
@@ -508,28 +508,33 @@ do_get_transactions({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account
 %%
 %% @doc Get last N transactions for all accounts. Order by effective_date desc. If effective_dates are identical, grouped transactions by bank/client/account
 %%
--spec do_get_last_transactions(none | unicode:unicode_binary(), non_neg_integer(), #state{}) -> {value, {unicode:unicode_binary(), non_neg_integer(), [banks_fetch_bank:transaction()]}} | {error, invalid_cursor}.
+-spec do_get_last_transactions(none | unicode:unicode_binary(), non_neg_integer(), #state{}) -> {value, {none | unicode:unicode_binary(), non_neg_integer(), [banks_fetch_bank:transaction()]}} | {error, invalid_cursor}.
 do_get_last_transactions(Cursor, N, #state{ connection = Connection }) ->
   case decode_cursor(Cursor, Connection) of
     {error, _} = Err ->
       Err;
+    none ->
+      {value, {none, 0, []}};
     {WhereClause, StartId, Offset, Total} ->
       case pgsql_connection:extended_query(list_to_binary([<<"SELECT transaction_id, bank_id, client_id, account_id, accounting_date, effective_date, amount, description, type, ext_date, ext_period, ext_budget_id, ext_categories_id, ext_store_id, ext_splitted, ext_split_of_id FROM transactions WHERE ">>, WhereClause, <<" ORDER BY effective_date DESC, bank_id, client_id, account_id, fetching_at DESC, fetching_position ASC, ext_split_of_id NULLS FIRST, transaction_id OFFSET $1 LIMIT $2;">>]), [Offset, N, StartId], Connection) of
-        {{select, _N}, List0} ->
+        {{select, Count}, List0} ->
           List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8'),
                        bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal},
                        ext_date => null_to_undefined(Date), ext_period => convert_from_sql_period(OptPeriod, undefined), ext_budget_id => null_to_undefined(BudgetId),
                        ext_categories_id => case CategoriesId of {array, A} -> A; _ -> undefined end, ext_store_id => null_to_undefined(StoreId),
                        ext_splitted => Splitted, ext_split_of_id => convert_from_sql_transaction_id(SplitOfId) } ||
                     {TransactionId, BankIdVal, ClientIdVal, AccountIdVal, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, Date, OptPeriod, BudgetId, CategoriesId, StoreId, Splitted, SplitOfId} <- List0 ],
-          % TODO: cursor is null if we have reached limit
-          NewCursor = base64:encode(list_to_binary([integer_to_binary(StartId), <<":">>, integer_to_binary(Offset+length(List1)), <<":">>, integer_to_binary(Total)])),
+          NewOffset = Offset+Count,
+          NewCursor = if NewOffset >= Total -> none;
+                         true -> base64:encode(list_to_binary([integer_to_binary(StartId), <<":">>, integer_to_binary(Offset+Count), <<":">>, integer_to_binary(Total)]))
+                      end,
           {value, {NewCursor, Total, List1}}
       end
   end.
 
 decode_cursor(none, Connection) ->
   case pgsql_connection:simple_query(<<"SELECT max(id), count(*) FROM transactions">>, Connection) of
+    {{select, 1}, [{null, 0}]} -> none;
     {{select, 1}, [{MaxId, Count0}]} -> {<<"id <= $3">>, MaxId, 0, Count0}
   end;
 decode_cursor(Cursor, _Connection) ->
