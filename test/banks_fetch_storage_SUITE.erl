@@ -43,8 +43,8 @@
          should_db_store_transactions/1,
          should_db_get_transactions/1,
          should_db_get_last_transactions/1,
-         should_db_get_last_transactions_invalid_cursor/1,
          should_db_get_last_transactions_empty/1,
+         should_db_get_last_transactions_invalid_cursor/1,
          should_db_get_last_transactions_id/1,
          should_db_update_transaction/1,
          should_db_update_transaction_with_amount/1,
@@ -53,6 +53,7 @@
          should_db_split_transaction/1,
          should_db_split_transaction_fails_because_not_found/1,
          should_db_upgrade_mappings_empty/1,
+         should_db_upgrade_mappings_do_not_update_manual_updates/1,
          should_db_upgrade_mappings_identical/1,
          should_db_upgrade_mappings_updates/1,
          should_db_upgrade_mappings_invalid_updates/1
@@ -123,7 +124,7 @@ groups() ->
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_empty, should_db_get_last_transactions_invalid_cursor,
                          should_db_get_last_transactions_id, should_db_update_transaction, should_db_split_transaction, should_db_split_transaction_fails_because_not_found,
                          should_db_update_transaction_with_amount, should_db_update_transaction_with_amount_fails_because_not_subtransaction, should_db_update_transaction_with_amount_fails_because_remaining,
-                         should_db_upgrade_mappings_empty, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates, should_db_upgrade_mappings_invalid_updates ]}
+                         should_db_upgrade_mappings_empty, should_db_upgrade_mappings_do_not_update_manual_updates, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates, should_db_upgrade_mappings_invalid_updates ]}
   ].
 
 %%
@@ -241,11 +242,11 @@ init_per_testcase(should_db_get_transactions, Config) ->
 init_per_testcase(should_db_get_last_transactions, Config) ->
   setup_database(Config,"setup_db_for_get_last_transactions.sql");
 
-init_per_testcase(should_db_get_last_transactions_invalid_cursor, Config) ->
-  setup_database(Config,"setup_db_for_get_last_transactions.sql");
-
 init_per_testcase(should_db_get_last_transactions_empty, Config) ->
   setup_database(Config);
+
+init_per_testcase(should_db_get_last_transactions_invalid_cursor, Config) ->
+  setup_database(Config,"setup_db_for_get_last_transactions.sql");
 
 init_per_testcase(should_db_update_transaction, Config) ->
   setup_database(Config,"setup_db_for_update_transaction.sql");
@@ -269,9 +270,11 @@ init_per_testcase(should_db_get_last_transactions_id, Config) ->
   setup_database(Config, <<"setup_db_for_get_last_transactions_id.sql">>);
 
 init_per_testcase(should_db_upgrade_mappings_empty, Config) ->
-  setup_database(Config);
+  setup_database(Config, <<"setup_db_for_upgrade_mappings.sql">>);
+init_per_testcase(should_db_upgrade_mappings_do_not_update_manual_updates, Config) ->
+  setup_database(Config, <<"setup_db_for_upgrade_mappings.sql">>);
 init_per_testcase(should_db_upgrade_mappings_identical, Config) ->
-  setup_database(Config);
+  setup_database(Config, <<"setup_db_for_upgrade_mappings.sql">>);
 init_per_testcase(should_db_upgrade_mappings_updates, Config) ->
   setup_database(Config);
 init_per_testcase(should_db_upgrade_mappings_invalid_updates, Config) ->
@@ -331,6 +334,8 @@ end_per_testcase(should_db_split_transaction, _Config) ->
 end_per_testcase(should_db_split_transaction_fails_because_not_found, _Config) ->
   teardown_database();
 end_per_testcase(should_db_upgrade_mappings_empty, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_upgrade_mappings_do_not_update_manual_updates, _Config) ->
   teardown_database();
 end_per_testcase(should_db_upgrade_mappings_identical, _Config) ->
   teardown_database();
@@ -421,6 +426,9 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.7';">>, [], fake_connection],
                 {'comment', []}
                },
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.8';">>, [], fake_connection],
+                {'comment', []}
+               },
                {[meck_matcher:new(fun(<<"COMMENT ON DATABASE banks_fetch_test IS ", _/binary>>) -> true; (_) -> false end), [], fake_connection],
                 {error, unexpected_comment}},
                {[<<"COMMIT">>, [], fake_connection],
@@ -431,10 +439,10 @@ should_nodb_start_with_db_upgrade(_Config) ->
 
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   % One COMMIT for each upgrade
-  meck:wait(9, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
+  meck:wait(10, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
   % 3 queries + number of queries to upgrade
-  79 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  83 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 
@@ -842,7 +850,6 @@ should_db_get_last_transactions_empty(_Config) ->
 
   ok.
 
-
 should_db_get_last_transactions_invalid_cursor(_Config) ->
   ct:comment("Get last 1 transactions with an invalid cursor"),
   {error, invalid_cursor} = banks_fetch_storage:get_last_transactions(<<"invalidcursor">>, 1),
@@ -866,7 +873,7 @@ should_db_update_transaction(_Config) ->
   {ok, Transaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client2">>}, {account_id, <<"account3">>}, {transaction_id, <<"transaction5">>},
                                                              {2020,11,16}, 'bimester', undefined, 1, [3,4], undefined),
   ExpectedTransaction = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
-             accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit,
+             accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit, ext_mapping_id => -1,
              ext_categories_id => [3,4], ext_date => {2020,11,16}, ext_budget_id => 1, ext_period => bimester, ext_store_id => undefined, ext_split_of_id => none, ext_splitted => false},
   ExpectedTransaction = Transaction,
 
@@ -874,7 +881,7 @@ should_db_update_transaction(_Config) ->
   {ok, Transaction2} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client2">>}, {account_id, <<"account3">>}, {transaction_id, <<"transaction5">>},
                                                              undefined, undefined, 3, undefined, undefined, undefined),
   ExpectedTransaction2 = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
-             accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit,
+             accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit, ext_mapping_id => -1,
              ext_categories_id => undefined, ext_date => undefined, ext_budget_id => undefined, ext_period => undefined, ext_store_id => 3, ext_split_of_id => none, ext_splitted => false},
   ExpectedTransaction2 = Transaction2,
 
@@ -895,7 +902,7 @@ should_db_update_transaction_with_amount(_Config) ->
   ct:comment("Update transaction"),
   {ok, UpdatedTransaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1-001">>},
                                                              {2020,11,16}, 'bimester', undefined, 1, [3,4], -25.0),
-  ExpectedTransaction = maps:merge(Transaction11, #{ amount => -25.0, ext_date => {2020,11,16}, ext_period => 'bimester', ext_budget_id => 1, ext_store_id => undefined, ext_categories_id => [3,4] }),
+  ExpectedTransaction = maps:merge(Transaction11, #{ amount => -25.0, ext_mapping_id => -1, ext_date => {2020,11,16}, ext_period => 'bimester', ext_budget_id => 1, ext_store_id => undefined, ext_categories_id => [3,4] }),
   ExpectedTransaction = UpdatedTransaction,
 
   {value, {_, NbrTransactions1, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
@@ -968,10 +975,10 @@ should_db_split_transaction(_Config) ->
   ct:comment("Split transaction1"),
   {ok, [SubTransaction1, SubTransaction2]} = banks_fetch_storage:split_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1">>}),
   ExpectedSubTransaction1 = #{id => <<"transaction1-001">>,
-                               accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit,
+                               accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit, ext_mapping_id => undefined,
                                ext_categories_id => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
   ExpectedSubTransaction2 = #{id => <<"transaction1-REM">>, % bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
-                               accounting_date => {2020,7,8}, amount => -44.44, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit,
+                               accounting_date => {2020,7,8}, amount => -44.44, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit, ext_mapping_id => undefined,
                                ext_categories_id => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
   ExpectedSubTransaction1 = SubTransaction1,
   ExpectedSubTransaction2 = SubTransaction2,
@@ -992,7 +999,7 @@ should_db_split_transaction(_Config) ->
   ct:comment("Split again transaction1"),
   {ok, [SubTransaction2_2]} = banks_fetch_storage:split_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1">>}),
   ExpectedSubTransaction2_2 = #{id => <<"transaction1-002">>, % bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
-                               accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit,
+                               accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit, ext_mapping_id => undefined,
                                ext_categories_id => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
   ExpectedSubTransaction2_2 = SubTransaction2_2,
 
@@ -1041,6 +1048,17 @@ should_db_upgrade_mappings_empty(_Config) ->
   {value, []} = banks_fetch_storage:get_stores(),
   {value, []} = banks_fetch_storage:get_mappings(),
 
+  ct:comment("Get transactions"),
+  {value, {none, 5, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
+  5 = length(Transactions1),
+  [
+   #{ id := <<"transaction1">>, ext_mapping_id := undefined, ext_date := {2020,10,10}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined },
+   #{ id := <<"transaction3">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined },
+   #{ id := <<"transaction4">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined },
+   #{ id := <<"transaction5">>, ext_mapping_id := undefined, ext_date := {2020,7,7}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined },
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_date := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined }
+  ] = Transactions1,
+
   ct:comment("Upgrade mappings"),
   Budgets = [#{ id => 0, name => <<"Aucun">> }, #{ id => 1, name => <<"Courant">>}, #{ id => 2, name => <<"Extra">> }],
   Categories = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }, #{ id => 3, name => <<"Logement">>, up_category_id => none}],
@@ -1052,6 +1070,66 @@ should_db_upgrade_mappings_empty(_Config) ->
 
   ct:comment("Verify mappings in database"),
   verify_mappings(Budgets, Categories, Stores, Mappings),
+
+  ct:comment("Get transactions"),
+  {value, {none, 5, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 10),
+  5 = length(Transactions2),
+  [
+   #{ id := <<"transaction1">>, ext_mapping_id := 1, ext_date := {2020,10,10}, ext_store_id := 1, ext_budget_id := 1, ext_categories_id := [1,2], ext_period := 'month' },
+   #{ id := <<"transaction3">>, ext_mapping_id := 2, ext_date := {2020,5,31}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_id := undefined, ext_period := 'month' },
+   #{ id := <<"transaction4">>, ext_mapping_id := 3, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_id := undefined, ext_period := 'quarter' },
+   #{ id := <<"transaction5">>, ext_mapping_id := 3, ext_date := {2020,7,7}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_id := undefined, ext_period := 'quarter' },
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined }
+  ] = Transactions2,
+
+  ok.
+
+% Same test as above but one transaction has been updated manually and should not be updated automatically by mappings
+should_db_upgrade_mappings_do_not_update_manual_updates(_Config) ->
+  ct:comment("Verify current mappings is empty"),
+  {value, []} = banks_fetch_storage:get_budgets(),
+  {value, []} = banks_fetch_storage:get_categories(),
+  {value, []} = banks_fetch_storage:get_stores(),
+  {value, []} = banks_fetch_storage:get_mappings(),
+
+  ct:comment("Get transactions"),
+  {value, {none, 5, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
+  5 = length(Transactions1),
+  [
+   #{ id := <<"transaction1">>, ext_mapping_id := undefined, ext_date := {2020,10,10}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined },
+   #{ id := <<"transaction3">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined },
+   #{ id := <<"transaction4">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined },
+   #{ id := <<"transaction5">>, ext_mapping_id := undefined, ext_date := {2020,7,7}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined },
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_date := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined }
+  ] = Transactions1,
+
+  ct:comment("Update transaction5 manually"),
+  {ok, UpdatedTransaction} = banks_fetch_storage:update_transaction({bank_id, <<"ing">>}, {client_id, <<"client2">>}, {account_id, <<"account3">>}, {transaction_id, <<"transaction5">>}, {2020,12,6}, 'semester', 4, undefined, undefined, undefined),
+  #{ ext_mapping_id := -1 } = UpdatedTransaction,
+
+  ct:comment("Upgrade mappings"),
+  Budgets = [#{ id => 0, name => <<"Aucun">> }, #{ id => 1, name => <<"Courant">>}, #{ id => 2, name => <<"Extra">> }],
+  Categories = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }, #{ id => 3, name => <<"Logement">>, up_category_id => none}],
+  Stores = [#{ id => 1, name => <<"Auchan">> }, #{ id => 2, name => <<"Carrefour">> }],
+  Mappings = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_id => [1, 2], store_id => 1 },
+              #{ id => 2, pattern => <<"URSSAF">>, fix_date => previous2, period => month, budget_id => 1, categories_id => none, store_id => none },
+              #{ id => 3, pattern => <<"CHARGES">>, fix_date => none, period => quarter, budget_id => 1, categories_id => none, store_id => none } ],
+  ok = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
+
+  ct:comment("Verify mappings in database"),
+  verify_mappings(Budgets, Categories, Stores, Mappings),
+
+  ct:comment("Get transactions"),
+  {value, {none, 5, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 10),
+  5 = length(Transactions2),
+  [
+   #{ id := <<"transaction1">>, ext_mapping_id := 1, ext_date := {2020,10,10}, ext_store_id := 1, ext_budget_id := 1, ext_categories_id := [1,2], ext_period := 'month' },
+   #{ id := <<"transaction3">>, ext_mapping_id := 2, ext_date := {2020,5,31}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_id := undefined, ext_period := 'month' },
+   #{ id := <<"transaction4">>, ext_mapping_id := 3, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_id := undefined, ext_period := 'quarter' },
+   UpdatedTransaction,
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_id := undefined, ext_period := undefined }
+  ] = Transactions2,
+
   ok.
 
 
@@ -1142,7 +1220,6 @@ should_db_upgrade_mappings_invalid_updates(_Config) ->
   verify_mappings(Budgets, Categories, Stores, Mappings),
 
   ok.
-
 
 % Functions to verify mappings upgrade
 verify_mappings(ExpectedBudgets, ExpectedCategories, ExpectedStores, ExpectedMappings) ->

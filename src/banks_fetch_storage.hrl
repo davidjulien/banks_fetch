@@ -176,5 +176,39 @@
                    <<"ALTER TABLE transactions ADD COLUMN ext_splitted BOOLEAN NOT NULL DEFAULT FALSE;">>,
                    <<"ALTER TABLE transactions ADD COLUMN ext_split_of_id TEXT;">>
                   ]
+                 },
+                 {<<"0.2.7">>, <<"0.2.8">>,
+                  [
+                   <<"CREATE OR REPLACE FUNCTION analyze_transaction() RETURNS trigger AS $analyze_transaction$\n",
+                     "DECLARE selected_mapping mappings%rowtype;\n",
+                     "BEGIN\n",
+                     "IF NEW.ext_mapping_id >= 1000000 OR NEW.ext_mapping_id < 0 THEN\n", % Private mapping or fields updated manually
+                     "  RETURN NEW;\n"
+                     "ELSE\n",
+                     " SELECT * INTO selected_mapping FROM mappings WHERE NEW.description ~* mappings.pattern order by length(mappings.pattern) desc, mappings.id limit 1;\n",
+                     " IF NOT FOUND THEN\n",
+                     "   IF NEW.ext_date IS NULL THEN\n",
+                     "     NEW.ext_date = compute_real_date(NEW.effective_date, NEW.description);\n",
+                     "   END IF;"
+                     "   RETURN NEW;\n",
+                     " END IF;\n",
+                     " NEW.ext_date = CASE WHEN selected_mapping.fix_date = 'none' THEN compute_real_date(NEW.effective_date, NEW.description)\n",
+                     "                     WHEN selected_mapping.fix_date = 'previous2' THEN date_trunc('month', NEW.effective_date) - INTERVAL '1 month' - INTERVAL '1 day'",
+                     "                     WHEN selected_mapping.fix_date = 'previous' THEN date_trunc('month', NEW.effective_date) - interval '1 day'",
+                     "                     WHEN selected_mapping.fix_date = 'previous_if_begin' AND date_part('day', NEW.effective_date) < 15 THEN date_trunc('month', NEW.effective_date) - interval '1 day'",
+                     "                     WHEN selected_mapping.fix_date = 'previous_if_begin' AND date_part('day', NEW.effective_date) >= 15 THEN NEW.effective_date",
+                     "                     WHEN selected_mapping.fix_date = 'next' THEN date_trunc('month', NEW.effective_date) + INTERVAL '1 month'",
+                     "                     WHEN selected_mapping.fix_date = 'next_if_end' AND date_part('day', NEW.effective_date) >= 15 THEN date_trunc('month', NEW.effective_date) + INTERVAL '1 month'",
+                     "                     WHEN selected_mapping.fix_date = 'next_if_end' AND date_part('day', NEW.effective_date) < 15 THEN NEW.effective_date",
+                     "                END;\n",
+                     " NEW.ext_mapping_id = selected_mapping.id;\n",
+                     " NEW.ext_period = selected_mapping.period;\n",
+                     " NEW.ext_budget_id = selected_mapping.budget_id;\n",
+                     " NEW.ext_categories_id = selected_mapping.categories_id;\n",
+                     " NEW.ext_store_id = selected_mapping.store_id;\n",
+                     " RETURN NEW;\n",
+                     "END IF;\n",
+                     "END; $analyze_transaction$ LANGUAGE plpgsql;">>
+                  ]
                  }
                 ]).
