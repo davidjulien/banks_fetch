@@ -1086,10 +1086,13 @@ should_db_upgrade_mappings_empty(_Config) ->
 
 % Same test as above but one transaction has been updated manually and should not be updated automatically by mappings
 should_db_upgrade_mappings_do_not_update_manual_updates(_Config) ->
-  ct:comment("Verify current mappings is empty"),
+  ct:comment("Add a store"),
+  {ok, MyStore} = banks_fetch_storage:insert_store(<<"MyStore">>),
+
+  ct:comment("Verify current mappings is empty except MyStore"),
   {value, []} = banks_fetch_storage:get_budgets(),
   {value, []} = banks_fetch_storage:get_categories(),
-  {value, []} = banks_fetch_storage:get_stores(),
+  {value, [MyStore]} = banks_fetch_storage:get_stores(),
   {value, []} = banks_fetch_storage:get_mappings(),
 
   ct:comment("Get transactions"),
@@ -1117,7 +1120,7 @@ should_db_upgrade_mappings_do_not_update_manual_updates(_Config) ->
   ok = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
 
   ct:comment("Verify mappings in database"),
-  verify_mappings(Budgets, Categories, Stores, Mappings),
+  verify_mappings(Budgets, Categories, Stores++[MyStore], Mappings),
 
   ct:comment("Get transactions"),
   {value, {none, 5, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 10),

@@ -725,8 +725,11 @@ compare_json_storage_aux([Upgrade|NextUpgrade], [], {AccNew, AccRemove}) ->
   compare_json_storage_aux(NextUpgrade, [], {[Upgrade|AccNew], AccRemove});
 
 compare_json_storage_aux([], [#{ id := StorageId }|NextStorage], {AccNew, AccRemove}) ->
-  % Storage data remaining, remove it
-  compare_json_storage_aux([], NextStorage, {AccNew, [StorageId|AccRemove]});
+  if StorageId >= 1000000 -> % Keep custom entry
+       compare_json_storage_aux([], NextStorage, {AccNew, AccRemove});
+     true -> % Storage data remaining, remove it
+       compare_json_storage_aux([], NextStorage, {AccNew, [StorageId|AccRemove]})
+  end;
 
 compare_json_storage_aux([Upgrade|NextUpgrade], [Storage|NextStorage], {AccNew, AccRemove}) when Upgrade =:= Storage ->
   % Same data, do nothing
