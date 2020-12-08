@@ -227,6 +227,7 @@
     {"id": 2011, "name": "Boulangerie La Croissanterie"},
     {"id": 2012, "name": "Boulangerie Le fournil de Moissac"},
     {"id": 2013, "name": "Pâtisserie Au plaisir de Chinon"},
+    {"id": 2014, "name": "Boulangerie Courgeon"},
 
     {"id": 3000, "name": "Boucherie Portheaul"},
     {"id": 3001, "name": "Gaudin traiteur"},
@@ -264,6 +265,7 @@
     {"id": 12002, "name": "Stationnement Poissy"},
     {"id": 12003, "name": "Stationnement Parking du Maine (Gare Montparnasse)"},
     {"id": 12004, "name": "Stationnement Rocamadour"},
+    {"id": 12005, "name": "Stationnement Castelnaud"},
 
     {"id": 13000, "name": "Station-service Relais des Lions"},
     {"id": 13001, "name": "Station-service Relais Le Pecq"},
@@ -314,6 +316,7 @@
     {"id": 24003, "name": "Gemo"},
     {"id": 24004, "name": "Sergent Major"},
     {"id": 24005, "name": "Intersport"},
+    {"id": 24006, "name": "La Halle aux chaussures"},
 
     {"id": 25000, "name": "Restaurant Gourmet Royal"},
     {"id": 25001, "name": "Restaurant Mac Donald's"},
@@ -323,6 +326,7 @@
     {"id": 25005, "name": "Restaurant Chez Lulu"},
     {"id": 25006, "name": "Restaurant Le Comptoir Breton"},
     {"id": 25007, "name": "Restaurant L'écho de Rabelais (Chinon)"},
+    {"id": 25008, "name": "Cafeteria d'Uzurat (Limoges)"},
 
     {"id": 26000, "name": "Bricolex"},
     {"id": 26001, "name": "Capuline"},
@@ -413,7 +417,15 @@
 
     {"id": 51000, "name": "Wanimo"},
 
-    {"id": 52000, "name": "Nocibé"}
+    {"id": 52000, "name": "Nocibé"},
+
+    {"id": 53000, "name": "Truffaut"},
+
+    {"id": 54000, "name": "Plage de Montaigu"},
+
+    {"id": 55000, "name": "Fleuriste La main verte (Chinon)"},
+
+    {"id": 56000, "name": "Cagnotte Leetchi"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN|LIDL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -545,7 +557,7 @@
     {"id": 128, "pattern": "(TOTALDALTYSA)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,903000], "store_id": 36000},
     {"id": 129, "pattern": "(KRYS JAMES OPT)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,308000], "store_id": 37000},
     {"id": 130, "pattern": "(LE GRAND BAZAR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": null, "store_id": 38000},
-    {"id": 131, "pattern": "(MOD AUTO)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601110], "store_id": 39000},
+    {"id": 131, "pattern": "(MOD AUTO|NORAUTO 09)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601110], "store_id": 39000},
     {"id": 132, "pattern": "(COMMUNE DE MAISONS LAF)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12001},
     {"id": 133, "pattern": "(DECATHLON)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [900000,906000,906010], "store_id": 24001},
     {"id": 134, "pattern": "(KALIDEA)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000], "store_id": 40000},
@@ -573,7 +585,7 @@
     {"id": 156, "pattern": "(AIRBNB \\* )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,901000], "store_id": 45000},
     {"id": 157, "pattern": "(SOPAG PARKING)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12003},
     {"id": 158, "pattern": "(HIPPOPOTAMUS)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25004},
-    {"id": 159, "pattern": "(CUEILLETTE ?GALLY)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,101300], "store_id": 46000},
+    {"id": 159, "pattern": "(CUEILLETTE ?GALLY|GALLY SARL)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,101300], "store_id": 46000},
     {"id": 160, "pattern": "(PLAISIR DE CHINON)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2013},
     {"id": 161, "pattern": "(CHATEAU DE LANGEAIS)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907040], "store_id": 47000},
     {"id": 162, "pattern": "(CHATEAU CASTELNAUD)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907040], "store_id": 47001},
@@ -595,6 +607,14 @@
     {"id": 178, "pattern": "(GROTTE ROUFFIGNAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50001},
     {"id": 179, "pattern": "(COMMUNE DE TOURTOIRAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50002},
     {"id": 180, "pattern": "(LA ROQUE ST CHR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50003},
-    {"id": 181, "pattern": "(NOCIBE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [500000,500300], "store_id": 52000}
+    {"id": 181, "pattern": "(NOCIBE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [500000,500300], "store_id": 52000},
+    {"id": 182, "pattern": "(TRUFFAUT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201500], "store_id": 53000},
+    {"id": 183, "pattern": "(MONTAIGU PLAGE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,908000,908040], "store_id": 54000},
+    {"id": 184, "pattern": "(COMMUNE DE CASTELNAUD)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12005},
+    {"id": 185, "pattern": "(CAFETERIA D'UZURAT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25008},
+    {"id": 186, "pattern": "(CHAUSSEA LA HALLE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24006},
+    {"id": 187, "pattern": "(LA MAIN VERTE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700300], "store_id": 55000},
+    {"id": 188, "pattern": "(COURGEON BOULANG)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2014},
+    {"id": 189, "pattern": "(MGP\\*LEETCHI\\.COM)", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700800], "store_id": 56000}
   ]
 }

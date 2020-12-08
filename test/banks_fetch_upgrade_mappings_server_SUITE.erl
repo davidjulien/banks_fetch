@@ -196,8 +196,8 @@ should_test_local_mappings(Config) ->
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(MockBudgets, MockCategories, MockStores, MockMappings) ->
                                                          check_data(MockBudgets, 5),
                                                          check_data(MockCategories, 171),
-                                                         check_data(MockStores, 174),
-                                                         check_data(MockMappings, 180),
+                                                         check_data(MockStores, 182),
+                                                         check_data(MockMappings, 188),
                                                          ok
                                                      end),
 
