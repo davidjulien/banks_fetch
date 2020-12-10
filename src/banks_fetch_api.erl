@@ -11,6 +11,7 @@
 %% - /api/1.0/stores : return all stores
 %% - /api/1.0/stores/new (POST) : add a new store, returns a store object
 %% - /api/1.0/accounts : return all user accounts
+%% - /api/1.0/mappings/new (POST) : add a new mapping, returns a mapping object
 %%
 %% API returns 400 in case of invalid parameters.
 %% API returns 404 for unknown endpoints.
@@ -77,6 +78,10 @@ handle('POST',[<<"api">>, <<"1.0">>, <<"stores">>, <<"new">>], Req) ->
 handle('GET',[<<"api">>, <<"1.0">>, <<"accounts">>], _Req) ->
   handle_accounts();
 
+handle('POST',[<<"api">>, <<"1.0">>, <<"mappings">>, <<"new">>], Req) ->
+  Body = elli_request:body(Req),
+  handle_mappings_new(Body);
+
 handle(Method, URL, _Req) ->
   error_logger:info_msg("Method=~p, URL=~p, _Req=~p", [Method, URL, _Req]),
   {404, [], <<"Not Found">>}.
@@ -136,37 +141,6 @@ handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVa
       {400, [{<<"Content-Type">>, <<"text/plain">>}], list_to_binary([<<"Invalid parameters: ">>, join_strings(InvalidFields, <<", ">>)]) }
   end.
 
-verify_types(List) ->
-  Filtered = lists:filter(fun({_Name, Value, Type}) -> not verify_type(Value, Type) end, List),
-  [ Name || {Name, _, _} <- Filtered ].
-
-verify_type(V, string) -> is_binary(V);
-verify_type(V, float) -> is_float(V);
-verify_type(V, integer) -> is_integer(V);
-verify_type(undefined, {optional, _T}) -> true;
-verify_type(null, {optional, _T}) -> true;
-verify_type(V, {optional, T}) -> verify_type(V, T);
-verify_type(V, {array, T}) ->
-  case is_list(V) of
-    true -> lists:all(fun(SV) -> verify_type(SV, T) end, V);
-    false -> false
-  end;
-verify_type({_,_,_} = D, date) -> calendar:valid_date(D);
-verify_type(_, date) -> false;
-verify_type(<<"month">>, period) -> true;
-verify_type(<<"bimester">>, period) -> true;
-verify_type(<<"quarter">>, period) -> true;
-verify_type(<<"semester">>, period) -> true;
-verify_type(<<"annual">>, period) -> true;
-verify_type(_, period) -> false.
-
--spec join_strings([unicode:unicode_binary()], unicode:unicode_binary()) -> unicode:unicode_binary().
-join_strings([E], _Sep) -> E;
-join_strings([E|L], Sep) ->
-  L1 = [ [Sep, Item] || Item <- L ],
-  list_to_binary([ E | L1 ]).
-
-
 -spec handle_banks() -> elli_handler:result().
 handle_banks() ->
   {value, Banks} = banks_fetch_storage:get_banks(),
@@ -208,6 +182,32 @@ handle_stores_new(StoreName) ->
       {400, [{<<"Content-Type">>, <<"application/json">>}], <<"Store already inserted">>}
   end.
 
+-spec handle_mappings_new(unicode:unicode_binary()) -> elli_handler:result().
+handle_mappings_new(Body) ->
+  JSON = jsx:decode(Body),
+  {_, Pattern} = lists:keyfind(<<"pattern">>, 1, JSON),
+  {_, StoreId} = lists:keyfind(<<"store_id">>, 1, JSON),
+  {_, BudgetId} = lists:keyfind(<<"budget_id">>, 1, JSON),
+  {_, CategoriesId} = lists:keyfind(<<"categories_id">>, 1, JSON),
+  {_, FixDateStr} = lists:keyfind(<<"fix_date">>, 1, JSON),
+  {_, PeriodStr} = lists:keyfind(<<"period">>, 1, JSON),
+  case verify_types([{<<"pattern">>, Pattern, string}, {<<"store_id">>, StoreId, {optional, integer}}, {<<"budget_id">>, BudgetId, {optional, integer}},
+                     {<<"categories_id">>, CategoriesId, {optional, {array, integer}}}, {<<"period">>, PeriodStr, period}, {<<"fix_date">>, FixDateStr, fix_date}]) of
+    [] ->
+      Period = binary_to_atom(PeriodStr, 'utf8'),
+      FixDate = binary_to_atom(FixDateStr,  'utf8'),
+      case banks_fetch_storage:insert_mapping(Pattern, null_to_none(BudgetId), null_to_none(CategoriesId), null_to_none(StoreId), FixDate, Period) of
+        {ok, Mapping} ->
+          Result = jiffy:encode(to_json_mapping(Mapping)),
+          {200, [{<<"Content-Type">>, <<"application/json">>}], Result};
+        {error, already_inserted} ->
+          {400, [{<<"Content-Type">>, <<"application/json">>}], <<"Mapping already inserted">>}
+      end;
+    InvalidFields ->
+      ok = lager:warning("Invalid parameters: ~p", [InvalidFields]),
+      {400, [{<<"Content-Type">>, <<"text/plain">>}], list_to_binary([<<"Invalid parameters: ">>, join_strings(InvalidFields, <<", ">>)]) }
+  end.
+
 
 %% @doc Transform an internal transaction data to a json compatible transaction data (transform dates and protected ids)
 -spec to_json_transaction(banks_fetch_bank:transaction()) -> map().
@@ -225,12 +225,25 @@ to_json_transaction(#{ bank_id := {bank_id, BankIdVal}, client_id := {client_id,
                 ext_date => fix_date(ExtDate), ext_period => undefined_to_null(ExtPeriod), ext_budget_id => undefined_to_null(ExtBudgetId), ext_categories_id => undefined_to_null(ExtCategoriesId),
                 ext_split_of_id => ExtSplitOfId, ext_store_id => undefined_to_null(ExtStoreId) }.
 
+%% @doc Transform an internal mapping data to a json compatible mapping data (none to null)
+to_json_mapping(Mapping) ->
+  BudgetId  = maps:get(budget_id, Mapping),
+  StoreId  = maps:get(store_id, Mapping),
+  CategoriesId  = maps:get(categories_id, Mapping),
+  Mapping#{ budget_id => none_to_null(BudgetId), store_id => none_to_null(StoreId), categories_id => none_to_null(CategoriesId) }.
+
 
 undefined_to_null(undefined) -> null;
 undefined_to_null(V) -> V.
 
 null_to_undefined(null) -> undefined;
 null_to_undefined(V) -> V.
+
+null_to_none(null) -> none;
+null_to_none(V) -> V.
+
+none_to_null(none) -> null;
+none_to_null(V) -> V.
 
 %% @doc Transform an internal category data to a json compatible category data
 -spec to_json_category(banks_fetch_bank:category()) -> map().
@@ -255,3 +268,43 @@ date_to_iso8601(DateStr) ->
     {match, [YearStr, MonthStr, DayStr]} ->
       {list_to_integer(YearStr), list_to_integer(MonthStr), list_to_integer(DayStr)}
   end.
+
+%% @doc Verify types of a list of parameters and returned list of invalid ones
+verify_types(List) ->
+  Filtered = lists:filter(fun({_Name, Value, Type}) -> not verify_type(Value, Type) end, List),
+  [ Name || {Name, _, _} <- Filtered ].
+
+verify_type(V, string) -> is_binary(V);
+verify_type(V, float) -> is_float(V);
+verify_type(V, integer) -> is_integer(V);
+verify_type(undefined, {optional, _T}) -> true;
+verify_type(null, {optional, _T}) -> true;
+verify_type(V, {optional, T}) -> verify_type(V, T);
+verify_type(V, {array, T}) ->
+  case is_list(V) of
+    true -> lists:all(fun(SV) -> verify_type(SV, T) end, V);
+    false -> false
+  end;
+verify_type({_,_,_} = D, date) -> calendar:valid_date(D);
+verify_type(_, date) -> false;
+
+verify_type(<<"month">>, period) -> true;
+verify_type(<<"bimester">>, period) -> true;
+verify_type(<<"quarter">>, period) -> true;
+verify_type(<<"semester">>, period) -> true;
+verify_type(<<"annual">>, period) -> true;
+verify_type(_, period) -> false;
+
+verify_type(<<"previous2">>, fix_date) -> true;
+verify_type(<<"previous">>, fix_date) -> true;
+verify_type(<<"previous_if_begin">>, fix_date) -> true;
+verify_type(<<"none">>, fix_date) -> true;
+verify_type(<<"next">>, fix_date) -> true;
+verify_type(<<"next_if_end">>, fix_date) -> true;
+verify_type(_, fix_date) -> false.
+
+-spec join_strings([unicode:unicode_binary()], unicode:unicode_binary()) -> unicode:unicode_binary().
+join_strings([E], _Sep) -> E;
+join_strings([E|L], Sep) ->
+  L1 = [ [Sep, Item] || Item <- L ],
+  list_to_binary([ E | L1 ]).

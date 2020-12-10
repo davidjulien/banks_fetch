@@ -16,11 +16,16 @@
          should_return_last_transactions/1,
          should_return_last_transactions_cursor/1,
          should_return_last_transactions_invalid_cursor/1,
+
          should_update_transaction_if_exist/1,
          should_update_transaction_if_exist_all_nulls/1,
          should_update_transaction_failed_if_not_exist/1,
          should_update_transaction_failed_if_parameters_are_invalid/1,
          should_update_transaction_with_amount/1,
+
+         should_insert_mapping/1,
+         should_not_insert_mapping_already_existing/1,
+         should_not_insert_mapping_if_parameters_are_invalid/1,
 
          should_return_banks/1,
 
@@ -47,11 +52,16 @@ all() ->
    should_return_last_transactions,
    should_return_last_transactions_cursor,
    should_return_last_transactions_invalid_cursor,
+
    should_update_transaction_if_exist,
    should_update_transaction_if_exist_all_nulls,
    should_update_transaction_failed_if_not_exist,
    should_update_transaction_failed_if_parameters_are_invalid,
    should_update_transaction_with_amount,
+
+   should_insert_mapping,
+   should_not_insert_mapping_already_existing,
+   should_not_insert_mapping_if_parameters_are_invalid,
 
    should_return_banks,
 
@@ -151,6 +161,18 @@ init_per_testcase(should_update_transaction_with_amount, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
 
+init_per_testcase(should_insert_mapping, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_not_insert_mapping_already_existing, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_not_insert_mapping_if_parameters_are_invalid, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
 init_per_testcase(should_return_banks, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
@@ -233,6 +255,21 @@ end_per_testcase(should_update_transaction_failed_if_parameters_are_invalid, Con
   ok;
 
 end_per_testcase(should_update_transaction_with_amount, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_insert_mapping, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_not_insert_mapping_already_existing, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_not_insert_mapping_if_parameters_are_invalid, Config) ->
   meck:unload(banks_fetch_storage),
   teardown_elli(Config),
   ok;
@@ -396,7 +433,6 @@ should_update_transaction_if_exist(_Config) ->
                                                           end),
 
   Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"2020-01-10\", \"ext_period\": \"month\", \"ext_store_id\": 1011, \"ext_budget_id\": 2, \"ext_categories_ids\": [700000, 100900]}">>),
-  error_logger:info_msg("Response=~p", [Response]),
   200 = status(Response),
   <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":2,\"ext_categories_id\":[700000,100900],\"ext_date\":\"2020-01-10\",\"ext_period\":\"month\",\"ext_split_of_id\":null,\"ext_splitted\":true,\"ext_store_id\":1011,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
 
@@ -496,6 +532,61 @@ should_update_transaction_failed_if_parameters_are_invalid(_Config) ->
   true = meck:validate(banks_fetch_storage),
 
   ok.
+
+
+%% Test API related to mapping
+
+should_insert_mapping(_Config) ->
+  meck:expect(banks_fetch_storage, insert_mapping, fun(MockPattern, MockBudgetId, MockCategoriesId, MockStoreId, MockFixDate, MockPeriod) ->
+                                                       <<"PATTERN">> = MockPattern,
+                                                       none = MockBudgetId,
+                                                       [3,4] = MockCategoriesId,
+                                                       5 = MockStoreId,
+                                                       previous = MockFixDate,
+                                                       month = MockPeriod,
+                                                       {ok, #{ id => 8, pattern => MockPattern, fix_date => MockFixDate, period => MockPeriod, budget_id => MockBudgetId, 
+                                                               categories_id => MockCategoriesId, store_id => MockStoreId }}
+                                                   end),
+  Body = <<"{\"pattern\":\"PATTERN\",\"store_id\":5,\"budget_id\":null,\"categories_id\":[3,4],\"fix_date\":\"previous\",\"period\":\"month\"}">>,
+  Response = hackney:post("http://localhost:3003/api/1.0/mappings/new", [], Body),
+  200 = status(Response),
+  <<"{\"store_id\":5,\"period\":\"month\",\"pattern\":\"PATTERN\",\"id\":8,\"fix_date\":\"previous\",\"categories_id\":[3,4],\"budget_id\":null}">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+should_not_insert_mapping_already_existing(_Config) ->
+  meck:expect(banks_fetch_storage, insert_mapping, fun(MockPattern, MockBudgetId, MockCategoriesId, MockStoreId, MockFixDate, MockPeriod) ->
+                                                       <<"PATTERN">> = MockPattern,
+                                                       1 = MockBudgetId,
+                                                       [3,4] = MockCategoriesId,
+                                                       5 = MockStoreId,
+                                                       previous = MockFixDate,
+                                                       month = MockPeriod,
+                                                       {error, already_inserted}
+                                                   end),
+  Body = <<"{\"pattern\":\"PATTERN\",\"store_id\":5,\"budget_id\":1,\"categories_id\":[3,4],\"fix_date\":\"previous\",\"period\":\"month\"}">>,
+  Response = hackney:post("http://localhost:3003/api/1.0/mappings/new", [], Body),
+  400 = status(Response),
+  <<"Mapping already inserted">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+should_not_insert_mapping_if_parameters_are_invalid(_Config) ->
+  Body = <<"{\"pattern\":null,\"store_id\":null,\"budget_id\":null,\"categories_id\":null,\"fix_date\":null,\"period\":null}">>,
+  Response = hackney:post("http://localhost:3003/api/1.0/mappings/new", [], Body),
+  400 = status(Response),
+  <<"Invalid parameters: pattern, period, fix_date">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+%% Test API related to banks
 
 -define(BANKS, [#{ id => <<"ing">>, name => <<"ING">>} ]).
 -define(BANKS_JSON, <<"[{\"name\":\"ING\",\"id\":\"ing\"}]">>).
@@ -641,6 +732,14 @@ should_verify_types(_Config) ->
   true  = banks_fetch_api:verify_type(<<"semester">>, period),
   true  = banks_fetch_api:verify_type(<<"annual">>, period),
   false = banks_fetch_api:verify_type(<<"other">>, period),
+
+  true  = banks_fetch_api:verify_type(<<"previous2">>, fix_date),
+  true  = banks_fetch_api:verify_type(<<"previous">>, fix_date),
+  true  = banks_fetch_api:verify_type(<<"previous_if_begin">>, fix_date),
+  true  = banks_fetch_api:verify_type(<<"none">>, fix_date),
+  true  = banks_fetch_api:verify_type(<<"next">>, fix_date),
+  true  = banks_fetch_api:verify_type(<<"next_if_end">>, fix_date),
+  false = banks_fetch_api:verify_type(<<"other">>, fix_date),
 
   ok.
 
