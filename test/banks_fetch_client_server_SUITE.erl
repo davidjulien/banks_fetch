@@ -31,6 +31,8 @@ init_per_testcase(should_handle_cast_do_nothing, Config) ->
 init_per_testcase(should_fetch_data_without_bank_storage, Config) ->
   meck:new(banks_fetch_bank_ing),
   meck:new(banks_fetch_storage),
+  meck:new(calendar, [unstick, passthrough]), % unstick because calendar resides in sticky dir, passthrough because ct needs it
+
   meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
   Config;
 init_per_testcase(should_not_fetch_data_if_connection_failed_without_bank_storage, Config) ->
@@ -48,6 +50,7 @@ end_per_testcase(should_handle_cast_do_nothing, _Config) ->
   ok;
 end_per_testcase(should_fetch_data_without_bank_storage, _Config) ->
   meck:unload(timer),
+  meck:unload(calendar),
   meck:unload(banks_fetch_storage),
   meck:unload(banks_fetch_bank_ing);
 end_per_testcase(should_not_fetch_data_if_connection_failed_without_bank_storage, _Config) ->
@@ -75,13 +78,13 @@ should_fetch_data_without_bank_storage(_Config) ->
                                                         FakeAuth = MockAuth,
                                                         {ok, FakeAccounts}
                                                     end),
-  BeforeFetchingDateTime = calendar:universal_time(),
+  FetchingDateTime = calendar:universal_time(),
+  meck:expect(calendar, universal_time, fun() -> FetchingDateTime end),
+
   meck:expect(banks_fetch_storage, store_accounts, fun(MockBankId, MockClientId, MockFetchingAt, MockAccounts) ->
                                                        ?BANK_ID = MockBankId,
                                                        ?CLIENT_ID = MockClientId,
-                                                       AfterFetchingDatetime = calendar:universal_time(),
-                                                       true = BeforeFetchingDateTime =< MockFetchingAt,
-                                                       true = MockFetchingAt =< AfterFetchingDatetime,
+                                                       FetchingDateTime = MockFetchingAt,
                                                        FakeAccounts = MockAccounts,
                                                        ok
                                                    end),
@@ -102,8 +105,8 @@ should_fetch_data_without_bank_storage(_Config) ->
   meck:expect(banks_fetch_bank_ing, fetch_transactions, ExpectedFetchTransactionsCalls),
 
   ExpectedStoreTransactionsCalls = [
-                                    {[?BANK_ID, ?CLIENT_ID, {account_id, <<"ACCOUNT_1">>}, BeforeFetchingDateTime, TransactionsAccount1], ok},
-                                    {[?BANK_ID, ?CLIENT_ID, {account_id, <<"ACCOUNT_2">>}, BeforeFetchingDateTime, TransactionsAccount2], ok}
+                                    {[?BANK_ID, ?CLIENT_ID, {account_id, <<"ACCOUNT_1">>}, FetchingDateTime, TransactionsAccount1], ok},
+                                    {[?BANK_ID, ?CLIENT_ID, {account_id, <<"ACCOUNT_2">>}, FetchingDateTime, TransactionsAccount2], ok}
                                    ],
   meck:expect(banks_fetch_storage, store_transactions, ExpectedStoreTransactionsCalls),
 
@@ -112,6 +115,8 @@ should_fetch_data_without_bank_storage(_Config) ->
                                      fetch_data = MockCall,
                                      {ok, tref}
                                  end),
+
+  ct:comment("Start client server"),
   {ok, BanksPID} = banks_fetch_client_server:start_link(?BANK_ID, ?CLIENT_ID, ?CLIENT_CREDENTIAL),
 
   ct:comment("Wait storage is done"),
@@ -126,6 +131,7 @@ should_fetch_data_without_bank_storage(_Config) ->
   true = meck:validate(banks_fetch_bank_ing),
   true = meck:validate(banks_fetch_storage),
   true = meck:validate(timer),
+  true = meck:validate(calendar),
   NbrAccounts = length(FakeAccounts),
   NbrAccounts = meck:num_calls(banks_fetch_bank_ing, fetch_transactions, '_'),
   NbrAccounts = meck:num_calls(banks_fetch_storage, store_transactions, '_'),
