@@ -52,11 +52,13 @@
          should_db_update_transaction_with_amount_fails_because_remaining/1,
          should_db_split_transaction/1,
          should_db_split_transaction_fails_because_not_found/1,
+
          should_db_upgrade_mappings_empty/1,
          should_db_upgrade_mappings_do_not_update_manual_updates/1,
          should_db_upgrade_mappings_identical/1,
          should_db_upgrade_mappings_updates/1,
-         should_db_upgrade_mappings_invalid_updates/1
+         should_db_upgrade_mappings_invalid_updates/1,
+         should_db_insert_mapping/1
         ]).
 
 -define(DB_NAME, "banks_fetch_test").
@@ -124,7 +126,8 @@ groups() ->
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_empty, should_db_get_last_transactions_invalid_cursor,
                          should_db_get_last_transactions_id, should_db_update_transaction, should_db_split_transaction, should_db_split_transaction_fails_because_not_found,
                          should_db_update_transaction_with_amount, should_db_update_transaction_with_amount_fails_because_not_subtransaction, should_db_update_transaction_with_amount_fails_because_remaining,
-                         should_db_upgrade_mappings_empty, should_db_upgrade_mappings_do_not_update_manual_updates, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates, should_db_upgrade_mappings_invalid_updates ]}
+                         should_db_upgrade_mappings_empty, should_db_upgrade_mappings_do_not_update_manual_updates, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates,
+                         should_db_upgrade_mappings_invalid_updates, should_db_insert_mapping ]}
   ].
 
 %%
@@ -279,6 +282,8 @@ init_per_testcase(should_db_upgrade_mappings_updates, Config) ->
   setup_database(Config);
 init_per_testcase(should_db_upgrade_mappings_invalid_updates, Config) ->
   setup_database(Config);
+init_per_testcase(should_db_insert_mapping, Config) ->
+  setup_database(Config);
 
 % Other cases are without db
 init_per_testcase(_, Config) ->
@@ -342,6 +347,8 @@ end_per_testcase(should_db_upgrade_mappings_identical, _Config) ->
 end_per_testcase(should_db_upgrade_mappings_updates, _Config) ->
   teardown_database();
 end_per_testcase(should_db_upgrade_mappings_invalid_updates, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_insert_mapping, _Config) ->
   teardown_database();
 
 % Other cases are without db
@@ -1246,3 +1253,13 @@ verify_mappings(ExpectedBudgets, ExpectedCategories, ExpectedStores, ExpectedMap
 
 sort_by_id(MapsList) ->
   lists:sort(fun(#{ id := Id1 }, #{ id := Id2 }) -> Id1 < Id2 end, MapsList).
+
+should_db_insert_mapping(_Config) ->
+  ct:comment("Insert mapping"),
+  {ok, Mapping} = banks_fetch_storage:insert_mapping(<<"SUPERMARCHE">>, 1, [3,4], 2, none, 'month'),
+  #{} = Mapping,
+
+  ct:comment("Insert mapping with same pattern"),
+  {error, already_inserted} = banks_fetch_storage:insert_mapping(<<"SUPERMARCHE">>, none, none, none, none, month),
+
+  ok.

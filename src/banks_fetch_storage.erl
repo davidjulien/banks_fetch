@@ -37,6 +37,7 @@
 
          get_mappings/0,
          upgrade_mappings/4,
+         insert_mapping/6,
 
          store_transactions/5,
          get_last_transactions_id/2,
@@ -128,6 +129,10 @@ get_mappings() ->
 upgrade_mappings(Budgets, Categories, Stores, Mappings) ->
   gen_server:call(?MODULE, {upgrade_mappings, Budgets, Categories, Stores, Mappings}, ?LONG_TIMEOUT).
 
+-spec insert_mapping(unicode:unicode_binary(), none | non_neg_integer(), none | [non_neg_integer()], none | non_neg_integer(),
+                     banks_fetch_bank:mapping_fix_date(), banks_fetch_bank:mapping_period()) -> {ok, banks_fetch_bank:mapping()} | {error, already_inserted}.
+insert_mapping(Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period) ->
+  gen_server:call(?MODULE, {insert_mapping, Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period}, ?LONG_TIMEOUT).
 
 
 % Functions related to transactions
@@ -233,6 +238,9 @@ handle_call(get_mappings, _From, #state{ } = State0) ->
   {reply, R, State0};
 handle_call({upgrade_mappings, Budgets, Categories, Stores, Mappings}, _From, #state{ } = State0) ->
   R = do_upgrade_mappings(Budgets, Categories, Stores, Mappings, State0),
+  {reply, R, State0};
+handle_call({insert_mapping, Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period}, _From, #state{ } = State0) ->
+  R = do_insert_mapping_with_values(Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period, State0),
   {reply, R, State0};
 handle_call(stop, _From, State0) ->
   {stop, normal, stopped, State0}.
@@ -376,12 +384,26 @@ do_delete_stores(IdList, #state{ connection = Connection }) ->
 %%
 %% @doc Insert new mapping
 %%
+-spec do_insert_mapping(banks_fetch_bank:mapping(), #state{}) -> ok.
 do_insert_mapping(#{ id := Id, pattern := Pattern, fix_date := FixDate, period := Period, budget_id := BudgetId, categories_id := CategoriesId, store_id := StoreId }, #state{ connection = Connection }) ->
   case pgsql_connection:extended_query(<<"INSERT INTO mappings(id, pattern, fix_date, period, budget_id, categories_id, store_id) VALUES($1,$2,$3,$4,$5,$6,$7);">>,
                                        [Id, Pattern, convert_to_sql_fix_date(FixDate), convert_to_sql_period(Period), none_to_null(BudgetId), convert_to_sql_categories_id(CategoriesId), none_to_null(StoreId)], Connection) of
     {{insert,_,1},[]} ->
       ok
   end.
+
+-spec do_insert_mapping_with_values(unicode:unicode_binary(), none | non_neg_integer(), none | [non_neg_integer()], none | non_neg_integer(),
+                                    banks_fetch_bank:mapping_fix_date(), banks_fetch_bank:mapping_period(), #state{}) -> {ok, banks_fetch_bank:mapping()} | {error, already_inserted}.
+do_insert_mapping_with_values(Pattern, BudgetId, CategoriesId, StoreId, FixDate, Period, #state{ connection = Connection }) ->
+  case pgsql_connection:extended_query(<<"INSERT INTO mappings(pattern, fix_date, period, budget_id, categories_id, store_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING id;">>,
+                                       [Pattern, convert_to_sql_fix_date(FixDate), convert_to_sql_period(Period), none_to_null(BudgetId), convert_to_sql_categories_id(CategoriesId), none_to_null(StoreId)], Connection) of
+    {{insert,_,1},[{Id}]} ->
+      {ok, #{ id => Id, pattern => Pattern, budget_id => BudgetId, categories_id => CategoriesId, store_id => StoreId, fix_date => FixDate, period => Period }};
+    {error, Error} ->
+      true = pgsql_error:is_integrity_constraint_violation(Error),
+      {error, already_inserted}
+  end.
+
 
 %%
 %% @doc Delete mappings from id list
