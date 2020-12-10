@@ -30,7 +30,7 @@
     {"id": 200400, "name": "Assurance prêt immobilier", "up_category_id": 200000},
     {"id": 200500, "name": "Assurance habitation", "up_category_id": 200000},
     {"id": 200600, "name": "Taxe foncière", "up_category_id": 200000},
-    {"id": 200700, "name": "Taxe d''habitation", "up_category_id": 200000},
+    {"id": 200700, "name": "Taxe d'habitation", "up_category_id": 200000},
     {"id": 200800, "name": "Électricité", "up_category_id": 200000},
     {"id": 200900, "name": "Gaz", "up_category_id": 200000},
     {"id": 201000, "name": "Eau", "up_category_id": 200000},
@@ -120,7 +120,7 @@
     {"id": 701200, "name": "Abonnement magazine", "up_category_id": 700000},
 
     {"id": 800000, "name": "Ressource", "up_category_id": null},
-    {"id": 800100, "name": "Revenu d''activité", "up_category_id": 800000},
+    {"id": 800100, "name": "Revenu d'activité", "up_category_id": 800000},
     {"id": 800200, "name": "Revenu locatif", "up_category_id": 800000},
     {"id": 800300, "name": "Revenu complémentaire", "up_category_id": 800000},
     {"id": 800400, "name": "Revenu de remplacement", "up_category_id": 800000},
@@ -218,7 +218,7 @@
     {"id": 2002, "name": "Boulangerie La fromentine"},
     {"id": 2003, "name": "Boulangerie Maison Hilaire"},
     {"id": 2004, "name": "Boulangerie Paradis gourmand"},
-    {"id": 2005, "name": "Boulangerie La gerbe d''or"},
+    {"id": 2005, "name": "Boulangerie La gerbe d'or"},
     {"id": 2006, "name": "Boulangerie du château"},
     {"id": 2007, "name": "Boulangerie Coquemas"},
     {"id": 2008, "name": "Boulangerie Au pain du bois"},
@@ -245,10 +245,10 @@
     {"id": 7001, "name": "Fromagerie du marché de Marly"},
     {"id": 7002, "name": "Fromagerie Devaux Maryse"},
 
-    {"id": 8000, "name": "Saveurs d''antan"},
+    {"id": 8000, "name": "Saveurs d'antan"},
     {"id": 8001, "name": "Terre y fruit (Chinon)"},
 
-    {"id": 9000, "name": "Rameau d''olivier"},
+    {"id": 9000, "name": "Rameau d'olivier"},
     {"id": 9001, "name": "Miel Famille Mary"},
     {"id": 9002, "name": "La trinitaine"},
     {"id": 9003, "name": "Relay Poissy"},
@@ -327,6 +327,7 @@
     {"id": 25006, "name": "Restaurant Le Comptoir Breton"},
     {"id": 25007, "name": "Restaurant L'écho de Rabelais (Chinon)"},
     {"id": 25008, "name": "Cafeteria d'Uzurat (Limoges)"},
+    {"id": 25009, "name": "Pizzeria L'Etna (Lauzerte)"},
 
     {"id": 26000, "name": "Bricolex"},
     {"id": 26001, "name": "Capuline"},
@@ -425,7 +426,9 @@
 
     {"id": 55000, "name": "Fleuriste La main verte (Chinon)"},
 
-    {"id": 56000, "name": "Cagnotte Leetchi"}
+    {"id": 56000, "name": "Cagnotte Leetchi"},
+
+    {"id": 57000, "name": "Conversatoire des métiers d'autrefois (Donzac)"}
   ],
   "mappings": [
     {"id": 1, "pattern": "(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN|LIDL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100100], "store_id": 1000},
@@ -450,7 +453,7 @@
     {"id": 20, "pattern": "(BAST 11 ST ANTO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2003},
     {"id": 21, "pattern": "(PARADIS GOURM)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2004},
     {"id": 22, "pattern": "(SEDIXEL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2005},
-    {"id": 23, "pattern": "(ELO SAINT GER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2006},
+    {"id": 23, "pattern": "(ELO SAINT GER|LA PETITE TRADI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2006},
     {"id": 24, "pattern": "(SARL COQUEMAS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2007},
     {"id": 25, "pattern": "(AU PAIN DU BOIS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2008},
     {"id": 26, "pattern": "(AU PAIN DU PETI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2009},
@@ -466,7 +469,7 @@
     {"id": 36, "pattern": "(FROMAGERIE FOUC|SC-FROM\\.FOUCHER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7000},
     {"id": 37, "pattern": "(EURL FROMAGERIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7001},
     {"id": 38, "pattern": "(DEVEAUX MARYSE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100700], "store_id": 7002},
-    {"id": 39, "pattern": "(SAVEURS D''ANTAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100800], "store_id": 8000},
+    {"id": 39, "pattern": "(SAVEURS D'ANTAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100800], "store_id": 8000},
     {"id": 40, "pattern": "(RAMEAU D'OLIVIER)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9000},
     {"id": 41, "pattern": "(MILLE UNE FLEUR|LE MOULIN A MIEL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9001},
     {"id": 42, "pattern": "(LA TRINITAINE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,102000], "store_id": 9002},
@@ -495,6 +498,7 @@
     {"id": 65, "pattern": "(PHIE DES OISEAUX)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19002},
     {"id": 66, "pattern": "(PHARMACIE DU MARCHE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [300000,302000], "store_id": 19001},
     {"id": 67, "pattern": "(LA POSTE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000,400800], "store_id": 17001},
+    {"id": 68, "pattern": "(RENOUVELLEMENT ANTICIPE CARTE BANCAIRE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [400000,400700], "store_id": 27000},
     {"id": 69, "pattern": "(DIAC LOCATION DEPARTEMENT SIGMA SERVICES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601010], "store_id": 27001},
     {"id": 70, "pattern": "(DIAC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [600000,601000,601120], "store_id": 28001},
     {"id": 71, "pattern": "(DROITS DE PLACE)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12001},
@@ -608,13 +612,16 @@
     {"id": 179, "pattern": "(COMMUNE DE TOURTOIRAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50002},
     {"id": 180, "pattern": "(LA ROQUE ST CHR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50003},
     {"id": 181, "pattern": "(NOCIBE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [500000,500300], "store_id": 52000},
-    {"id": 182, "pattern": "(TRUFFAUT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201500], "store_id": 53000},
+    {"id": 182, "pattern": "(TRUFFAUT)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [200000,201500], "store_id": 53000},
     {"id": 183, "pattern": "(MONTAIGU PLAGE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,908000,908040], "store_id": 54000},
     {"id": 184, "pattern": "(COMMUNE DE CASTELNAUD)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [600000,601000,601030], "store_id": 12005},
     {"id": 185, "pattern": "(CAFETERIA D'UZURAT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25008},
     {"id": 186, "pattern": "(CHAUSSEA LA HALLE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24006},
     {"id": 187, "pattern": "(LA MAIN VERTE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700300], "store_id": 55000},
     {"id": 188, "pattern": "(COURGEON BOULANG)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [100000,100200], "store_id": 2014},
-    {"id": 189, "pattern": "(MGP\\*LEETCHI\\.COM)", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700800], "store_id": 56000}
+    {"id": 189, "pattern": "(MGP\\*LEETCHI\\.COM)", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700800], "store_id": 56000},
+    {"id": 190, "pattern": "(COMMUNAUTE DE COMMUNES)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907020], "store_id": 57000},
+    {"id": 191, "pattern": "(SEBASTIEN GARDE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25009},
+    {"id": 192, "pattern": "(INTÉRÊTS PAYÉS)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [800000,801000], "store_id": null}
   ]
 }
