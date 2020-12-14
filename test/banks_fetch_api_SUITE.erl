@@ -354,9 +354,9 @@ should_handle_internal_error(_Config) ->
             accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit, ext_split_of_id => none, ext_splitted => true },
          #{ id => <<"TRANSACTION_1">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client2">>}, account_id => {account_id, <<"account2">>},
             accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit,
-            ext_period => 'month', ext_store_id => 3, ext_split_of_id => {transaction_id, <<"transaction">>}, ext_splitted => false }
+            ext_mapping_id => 5, ext_period => 'month', ext_store_id => 3, ext_split_of_id => {transaction_id, <<"transaction">>}, ext_splitted => false }
         ]).
--define(TRANSACTIONS_JSON, <<"{\"transactions\":[{\"type\":\"sepa_debit\",\"id\":\"TRANSACTION_2\",\"ext_store_id\":null,\"ext_splitted\":true,\"ext_split_of_id\":null,\"ext_period\":null,\"ext_date\":null,\"ext_categories_id\":null,\"ext_budget_id\":null,\"effective_date\":\"2020-07-22\",\"description\":\"PRLV SEPA XXX\",\"client_id\":\"client1\",\"bank_id\":\"ing\",\"amount\":-14.32,\"accounting_date\":\"2020-07-22\",\"account_id\":\"account1\"},{\"type\":\"card_debit\",\"id\":\"TRANSACTION_1\",\"ext_store_id\":3,\"ext_splitted\":false,\"ext_split_of_id\":\"transaction\",\"ext_period\":\"month\",\"ext_date\":null,\"ext_categories_id\":null,\"ext_budget_id\":null,\"effective_date\":\"2020-07-21\",\"description\":\"PAIEMENT PAR CARTE 20/07/2020 XXX\",\"client_id\":\"client2\",\"bank_id\":\"ing\",\"amount\":-34.32,\"accounting_date\":\"2020-07-21\",\"account_id\":\"account2\"}],\"total\":8,\"next_cursor\":\"fakecursor\"}">>).
+-define(TRANSACTIONS_JSON, <<"{\"transactions\":[{\"type\":\"sepa_debit\",\"id\":\"TRANSACTION_2\",\"ext_store_id\":null,\"ext_splitted\":true,\"ext_split_of_id\":null,\"ext_period\":null,\"ext_mapping_id\":null,\"ext_date\":null,\"ext_categories_id\":null,\"ext_budget_id\":null,\"effective_date\":\"2020-07-22\",\"description\":\"PRLV SEPA XXX\",\"client_id\":\"client1\",\"bank_id\":\"ing\",\"amount\":-14.32,\"accounting_date\":\"2020-07-22\",\"account_id\":\"account1\"},{\"type\":\"card_debit\",\"id\":\"TRANSACTION_1\",\"ext_store_id\":3,\"ext_splitted\":false,\"ext_split_of_id\":\"transaction\",\"ext_period\":\"month\",\"ext_mapping_id\":5,\"ext_date\":null,\"ext_categories_id\":null,\"ext_budget_id\":null,\"effective_date\":\"2020-07-21\",\"description\":\"PAIEMENT PAR CARTE 20/07/2020 XXX\",\"client_id\":\"client2\",\"bank_id\":\"ing\",\"amount\":-34.32,\"accounting_date\":\"2020-07-21\",\"account_id\":\"account2\"}],\"total\":8,\"next_cursor\":\"fakecursor\"}">>).
 
 should_return_last_transactions(_Config) ->
   FakeCursor = <<"fakecursor">>,
@@ -428,13 +428,13 @@ should_update_transaction_if_exist(_Config) ->
                                                               bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>},
                                                               accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit,
                                                               ext_budget_id => MockBudgetId, ext_period => MockPeriod, ext_store_id => MockStoreId, ext_categories_id => MockCategoriesId,
-                                                              ext_split_of_id => none, ext_splitted => true, ext_date => MockDate}
+                                                              ext_split_of_id => none, ext_splitted => true, ext_date => MockDate, ext_mapping_id => -1}
                                                            }
                                                           end),
 
   Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"2020-01-10\", \"ext_period\": \"month\", \"ext_store_id\": 1011, \"ext_budget_id\": 2, \"ext_categories_ids\": [700000, 100900]}">>),
   200 = status(Response),
-  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":2,\"ext_categories_id\":[700000,100900],\"ext_date\":\"2020-01-10\",\"ext_period\":\"month\",\"ext_split_of_id\":null,\"ext_splitted\":true,\"ext_store_id\":1011,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
+  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":2,\"ext_categories_id\":[700000,100900],\"ext_date\":\"2020-01-10\",\"ext_mapping_id\":-1,\"ext_period\":\"month\",\"ext_split_of_id\":null,\"ext_splitted\":true,\"ext_store_id\":1011,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 
@@ -458,13 +458,13 @@ should_update_transaction_if_exist_all_nulls(_Config) ->
                                                               bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>},
                                                               accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => -14.32, description => <<"PRLV SEPA XXX">>, type => sepa_debit,
                                                               ext_budget_id => MockBudgetId, ext_period => MockPeriod, ext_store_id => MockStoreId, ext_categories_id => MockCategoriesId,
-                                                              ext_split_of_id => none, ext_splitted => false, ext_date => MockDate}
+                                                              ext_split_of_id => none, ext_splitted => false, ext_date => MockDate, ext_mapping_id => -1}
                                                            }
                                                           end),
 
   Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": null, \"ext_period\": null, \"ext_store_id\": null, \"ext_budget_id\": null, \"ext_categories_ids\": null}">>),
   200 = status(Response),
-  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":null,\"ext_categories_id\":null,\"ext_date\":null,\"ext_period\":null,\"ext_split_of_id\":null,\"ext_splitted\":false,\"ext_store_id\":null,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
+  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-14.32,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":null,\"ext_categories_id\":null,\"ext_date\":null,\"ext_mapping_id\":-1,\"ext_period\":null,\"ext_split_of_id\":null,\"ext_splitted\":false,\"ext_store_id\":null,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 
@@ -487,14 +487,13 @@ should_update_transaction_with_amount(_Config) ->
                                                               bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>},
                                                               accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => MockAmount, description => <<"PRLV SEPA XXX">>, type => sepa_debit,
                                                               ext_budget_id => MockBudgetId, ext_period => MockPeriod, ext_store_id => MockStoreId, ext_categories_id => MockCategoriesId,
-                                                              ext_split_of_id => {transaction_id, <<"main_transaction">>}, ext_splitted => false,
-                                                              ext_date => MockDate}
+                                                              ext_split_of_id => {transaction_id, <<"main_transaction">>}, ext_splitted => false, ext_mapping_id => -1, ext_date => MockDate}
                                                            }
                                                           end),
 
   Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"2020-01-10\", \"ext_period\": \"annual\", \"ext_store_id\": 1011, \"ext_budget_id\": 2, \"ext_categories_ids\": [700000, 100900], \"amount\": -124.0}">>),
   200 = status(Response),
-  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-124.0,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":2,\"ext_categories_id\":[700000,100900],\"ext_date\":\"2020-01-10\",\"ext_period\":\"annual\",\"ext_split_of_id\":\"main_transaction\",\"ext_splitted\":false,\"ext_store_id\":1011,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
+  <<"{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":-124.0,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":2,\"ext_categories_id\":[700000,100900],\"ext_date\":\"2020-01-10\",\"ext_mapping_id\":-1,\"ext_period\":\"annual\",\"ext_split_of_id\":\"main_transaction\",\"ext_splitted\":false,\"ext_store_id\":1011,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 

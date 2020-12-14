@@ -212,6 +212,7 @@ handle_mappings_new(Body) ->
 %% @doc Transform an internal transaction data to a json compatible transaction data (transform dates and protected ids)
 -spec to_json_transaction(banks_fetch_bank:transaction()) -> map().
 to_json_transaction(#{ bank_id := {bank_id, BankIdVal}, client_id := {client_id, ClientIdVal}, account_id := {account_id, AccountIdVal}, accounting_date := AccountingDate, effective_date := EffectiveDate } = Transaction) ->
+  ExtMappingId = maps:get('ext_mapping_id', Transaction, undefined),
   ExtDate = maps:get('ext_date', Transaction, undefined),
   ExtPeriod = maps:get('ext_period', Transaction, undefined),
   ExtBudgetId = maps:get('ext_budget_id', Transaction, undefined),
@@ -223,7 +224,7 @@ to_json_transaction(#{ bank_id := {bank_id, BankIdVal}, client_id := {client_id,
                  end,
   Transaction#{ bank_id := BankIdVal, client_id := ClientIdVal, account_id := AccountIdVal, accounting_date := fix_date(AccountingDate), effective_date := fix_date(EffectiveDate),
                 ext_date => fix_date(ExtDate), ext_period => undefined_to_null(ExtPeriod), ext_budget_id => undefined_to_null(ExtBudgetId), ext_categories_id => undefined_to_null(ExtCategoriesId),
-                ext_split_of_id => ExtSplitOfId, ext_store_id => undefined_to_null(ExtStoreId) }.
+                ext_mapping_id => undefined_to_null(ExtMappingId), ext_split_of_id => ExtSplitOfId, ext_store_id => undefined_to_null(ExtStoreId) }.
 
 %% @doc Transform an internal mapping data to a json compatible mapping data (none to null)
 to_json_mapping(Mapping) ->
