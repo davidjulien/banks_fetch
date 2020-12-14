@@ -317,6 +317,7 @@
     {"id": 24004, "name": "Sergent Major"},
     {"id": 24005, "name": "Intersport"},
     {"id": 24006, "name": "La Halle aux chaussures"},
+    {"id": 24007, "name": "Kiabi"},
 
     {"id": 25000, "name": "Restaurant Gourmet Royal"},
     {"id": 25001, "name": "Restaurant Mac Donald's"},
@@ -328,6 +329,7 @@
     {"id": 25007, "name": "Restaurant L'écho de Rabelais (Chinon)"},
     {"id": 25008, "name": "Cafeteria d'Uzurat (Limoges)"},
     {"id": 25009, "name": "Pizzeria L'Etna (Lauzerte)"},
+    {"id": 25010, "name": "Glacier Ferme de la métairie"},
 
     {"id": 26000, "name": "Bricolex"},
     {"id": 26001, "name": "Capuline"},
@@ -368,6 +370,7 @@
     {"id": 33001, "name": "Photo club L.I.S"},
     {"id": 33002, "name": "Photomaton"},
     {"id": 33003, "name": "Photographe Charlotte Sabah"},
+    {"id": 33004, "name": "Photobox"},
 
     {"id": 34000, "name": "Régie centralisée Saint-Germain-en-Laye"},
 
@@ -393,6 +396,7 @@
     {"id": 40000, "name": "Kalidea"},
 
     {"id": 41000, "name": "Coiffeur Natif"},
+    {"id": 41001, "name": "Coiffeur Air (Chinon)"},
 
     {"id": 42000, "name": "Fnac"},
 
@@ -415,6 +419,7 @@
     {"id": 50001, "name": "Grotte de Roufignac"},
     {"id": 50002, "name": "Grotte de Tourtoirac"},
     {"id": 50003, "name": "La Roque Saint Christophe"},
+    {"id": 50004, "name": "Abbaye de Moissac"},
 
     {"id": 51000, "name": "Wanimo"},
 
@@ -622,6 +627,11 @@
     {"id": 189, "pattern": "(MGP\\*LEETCHI\\.COM)", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,700800], "store_id": 56000},
     {"id": 190, "pattern": "(COMMUNAUTE DE COMMUNES)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907020], "store_id": 57000},
     {"id": 191, "pattern": "(SEBASTIEN GARDE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [100000,100900], "store_id": 25009},
-    {"id": 192, "pattern": "(INTÉRÊTS PAYÉS)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [800000,801000], "store_id": null}
+    {"id": 192, "pattern": "(INTÉRÊTS PAYÉS)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [800000,801000], "store_id": null},
+    {"id": 193, "pattern": "(KIABI)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500200], "store_id": 24007},
+    {"id": 194, "pattern": "(PHOTOBOXFR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [700000,701100], "store_id": 33004},
+    {"id": 195, "pattern": "(FERME METAIRIE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,902000], "store_id": 25010},
+    {"id": 196, "pattern": "(AIR)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_id": [500000,500100], "store_id": 41001},
+    {"id": 197, "pattern": "(COMMUNE DE MOISSAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_id": [900000,907000,907050], "store_id": 50004}
   ]
 }
