@@ -76,7 +76,7 @@
         fix_date := mapping_fix_date(),
         period := mapping_period(),
         budget_id := none | non_neg_integer(),
-        categories_id := none | [non_neg_integer()],
+        categories_ids := none | [non_neg_integer()],
         store_id := none | non_neg_integer()
        }.
 
@@ -112,7 +112,7 @@
         ext_date => undefined | calendar:date(),
         ext_period => undefined | transaction_period(),
         ext_budget_id => undefined | non_neg_integer(),
-        ext_categories_id => undefined | [non_neg_integer()],
+        ext_categories_ids => undefined | [non_neg_integer()],
         ext_store_id => undefined | non_neg_integer(),
         ext_split_of_id => undefined | none | transaction_id(),
         ext_splitted => undefined | boolean()

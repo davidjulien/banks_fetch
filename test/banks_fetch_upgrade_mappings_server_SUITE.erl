@@ -9,12 +9,12 @@
          should_fetch_mappings_network_error_without_http_storage/1
         ]).
 
--define(FAKE_DATA_JSON, binary_to_list(<<"{\"budgets\": [{\"id\": 1, \"name\": \"Courant\"}], \"categories\": [{\"id\": 1, \"name\": \"Alimentation\", \"up_category_id\": null},{\"id\": 2, \"name\": \"Supermarché\", \"up_category_id\": 1}], \"stores\": [{\"id\": 1, \"name\": \"LIDL\"}], \"mappings\": [{\"id\": 1, \"pattern\": \"(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )\", \"fix_date\": \"none\", \"period\": \"month\", \"budget_id\": 1, \"categories_id\": [1,2], \"store_id\": 1}]}"/utf8>>)).
+-define(FAKE_DATA_JSON, binary_to_list(<<"{\"budgets\": [{\"id\": 1, \"name\": \"Courant\"}], \"categories\": [{\"id\": 1, \"name\": \"Alimentation\", \"up_category_id\": null},{\"id\": 2, \"name\": \"Supermarché\", \"up_category_id\": 1}], \"stores\": [{\"id\": 1, \"name\": \"LIDL\"}], \"mappings\": [{\"id\": 1, \"pattern\": \"(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )\", \"fix_date\": \"none\", \"period\": \"month\", \"budget_id\": 1, \"categories_ids\": [1,2], \"store_id\": 1}]}"/utf8>>)).
 -define(FAKE_DATA_BUDGETS, [#{ id => 1, name => <<"Courant">>} ]).
 -define(FAKE_DATA_CATEGORIES, [#{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }]).
 -define(FAKE_DATA_STORES, [#{ id => 1, name => <<"LIDL">> }]).
 -define(FAKE_DATA_MAPPINGS, [#{ id => 1, pattern => <<"(LIDL ST GERMAIN|LIDL CHAMBOURCY|2635 ST GERMAIN)($| )">>, fix_date => none, period => month,
-                                budget_id => 1, categories_id => [1,2], store_id => 1}]).
+                                budget_id => 1, categories_ids => [1,2], store_id => 1}]).
 
 all() -> [
           should_handle_cast_do_nothing,

@@ -112,7 +112,7 @@ handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVa
   {_, DateStr} = lists:keyfind(<<"ext_date">>, 1, JSON),
   {_, StoreId} = lists:keyfind(<<"ext_store_id">>, 1, JSON),
   {_, BudgetId} = lists:keyfind(<<"ext_budget_id">>, 1, JSON),
-  {_, CategoriesId} = lists:keyfind(<<"ext_categories_ids">>, 1, JSON),
+  {_, CategoriesIds} = lists:keyfind(<<"ext_categories_ids">>, 1, JSON),
   {_, PeriodStr} = lists:keyfind(<<"ext_period">>, 1, JSON),
   Amount = case lists:keyfind(<<"amount">>, 1, JSON) of
              false -> null;
@@ -120,14 +120,14 @@ handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVa
            end,
   Date = date_to_iso8601(DateStr),
   case verify_types([{<<"ext_date">>, Date, {optional, date}}, {<<"ext_store_id">>, StoreId, {optional, integer}}, {<<"ext_budget_id">>, BudgetId, {optional, integer}},
-                     {<<"ext_categories_ids">>, CategoriesId, {optional, {array, integer}}}, {<<"ext_period">>, PeriodStr, {optional, period}}, {<<"amount">>, Amount, {optional, float}}]) of
+                     {<<"ext_categories_ids">>, CategoriesIds, {optional, {array, integer}}}, {<<"ext_period">>, PeriodStr, {optional, period}}, {<<"amount">>, Amount, {optional, float}}]) of
     [] ->
       Period = case PeriodStr of
                  null -> undefined;
                  _ -> binary_to_atom(PeriodStr, 'utf8')
                end,
       case banks_fetch_storage:update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal},
-                                                  null_to_undefined(Date), null_to_undefined(Period), null_to_undefined(StoreId), null_to_undefined(BudgetId), null_to_undefined(CategoriesId),
+                                                  null_to_undefined(Date), null_to_undefined(Period), null_to_undefined(StoreId), null_to_undefined(BudgetId), null_to_undefined(CategoriesIds),
                                                   null_to_undefined(Amount)) of
         {ok, Transaction} ->
           ResultJSON = jsx:encode(to_json_transaction(Transaction)),
@@ -188,15 +188,15 @@ handle_mappings_new(Body) ->
   {_, Pattern} = lists:keyfind(<<"pattern">>, 1, JSON),
   {_, StoreId} = lists:keyfind(<<"store_id">>, 1, JSON),
   {_, BudgetId} = lists:keyfind(<<"budget_id">>, 1, JSON),
-  {_, CategoriesId} = lists:keyfind(<<"categories_id">>, 1, JSON),
+  {_, CategoriesIds} = lists:keyfind(<<"categories_ids">>, 1, JSON),
   {_, FixDateStr} = lists:keyfind(<<"fix_date">>, 1, JSON),
   {_, PeriodStr} = lists:keyfind(<<"period">>, 1, JSON),
   case verify_types([{<<"pattern">>, Pattern, string}, {<<"store_id">>, StoreId, {optional, integer}}, {<<"budget_id">>, BudgetId, {optional, integer}},
-                     {<<"categories_id">>, CategoriesId, {optional, {array, integer}}}, {<<"period">>, PeriodStr, period}, {<<"fix_date">>, FixDateStr, fix_date}]) of
+                     {<<"categories_ids">>, CategoriesIds, {optional, {array, integer}}}, {<<"period">>, PeriodStr, period}, {<<"fix_date">>, FixDateStr, fix_date}]) of
     [] ->
       Period = binary_to_atom(PeriodStr, 'utf8'),
       FixDate = binary_to_atom(FixDateStr,  'utf8'),
-      case banks_fetch_storage:insert_mapping(Pattern, null_to_none(BudgetId), null_to_none(CategoriesId), null_to_none(StoreId), FixDate, Period) of
+      case banks_fetch_storage:insert_mapping(Pattern, null_to_none(BudgetId), null_to_none(CategoriesIds), null_to_none(StoreId), FixDate, Period) of
         {ok, Mapping} ->
           Result = jiffy:encode(to_json_mapping(Mapping)),
           {200, [{<<"Content-Type">>, <<"application/json">>}], Result};
@@ -216,22 +216,22 @@ to_json_transaction(#{ bank_id := {bank_id, BankIdVal}, client_id := {client_id,
   ExtDate = maps:get('ext_date', Transaction, undefined),
   ExtPeriod = maps:get('ext_period', Transaction, undefined),
   ExtBudgetId = maps:get('ext_budget_id', Transaction, undefined),
-  ExtCategoriesId = maps:get('ext_categories_id', Transaction, undefined),
+  ExtCategoriesIds = maps:get('ext_categories_ids', Transaction, undefined),
   ExtStoreId = maps:get('ext_store_id', Transaction, undefined),
   ExtSplitOfId = case maps:get('ext_split_of_id', Transaction) of
                    {transaction_id, MainTransactionId} -> MainTransactionId;
                    _ -> null
                  end,
   Transaction#{ bank_id := BankIdVal, client_id := ClientIdVal, account_id := AccountIdVal, accounting_date := fix_date(AccountingDate), effective_date := fix_date(EffectiveDate),
-                ext_date => fix_date(ExtDate), ext_period => undefined_to_null(ExtPeriod), ext_budget_id => undefined_to_null(ExtBudgetId), ext_categories_id => undefined_to_null(ExtCategoriesId),
+                ext_date => fix_date(ExtDate), ext_period => undefined_to_null(ExtPeriod), ext_budget_id => undefined_to_null(ExtBudgetId), ext_categories_ids => undefined_to_null(ExtCategoriesIds),
                 ext_mapping_id => undefined_to_null(ExtMappingId), ext_split_of_id => ExtSplitOfId, ext_store_id => undefined_to_null(ExtStoreId) }.
 
 %% @doc Transform an internal mapping data to a json compatible mapping data (none to null)
 to_json_mapping(Mapping) ->
   BudgetId  = maps:get(budget_id, Mapping),
   StoreId  = maps:get(store_id, Mapping),
-  CategoriesId  = maps:get(categories_id, Mapping),
-  Mapping#{ budget_id => none_to_null(BudgetId), store_id => none_to_null(StoreId), categories_id => none_to_null(CategoriesId) }.
+  CategoriesIds  = maps:get(categories_ids, Mapping),
+  Mapping#{ budget_id => none_to_null(BudgetId), store_id => none_to_null(StoreId), categories_ids => none_to_null(CategoriesIds) }.
 
 
 undefined_to_null(undefined) -> null;
