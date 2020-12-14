@@ -56,6 +56,7 @@
          }).
 
 -define(LONG_TIMEOUT, 60000).
+-define(VERY_LONG_TIMEOUT, 5*60000).
 
 % Functions related to banks
 
@@ -127,7 +128,7 @@ get_mappings() ->
 
 -spec upgrade_mappings([banks_fetch_bank:budget()], [banks_fetch_bank:category()],  [banks_fetch_bank:store()], [banks_fetch_bank:mapping()]) -> ok | {error, unable_to_upgrade_mappings}.
 upgrade_mappings(Budgets, Categories, Stores, Mappings) ->
-  gen_server:call(?MODULE, {upgrade_mappings, Budgets, Categories, Stores, Mappings}, ?LONG_TIMEOUT).
+  gen_server:call(?MODULE, {upgrade_mappings, Budgets, Categories, Stores, Mappings}, ?VERY_LONG_TIMEOUT).
 
 -spec insert_mapping(unicode:unicode_binary(), none | non_neg_integer(), none | [non_neg_integer()], none | non_neg_integer(),
                      banks_fetch_bank:mapping_fix_date(), banks_fetch_bank:mapping_period()) -> {ok, banks_fetch_bank:mapping()} | {error, already_inserted}.
