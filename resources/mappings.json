@@ -562,7 +562,7 @@
     {"id": 124, "pattern": "(REL\\.DES AMAZONES)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35006},
     {"id": 125, "pattern": "(DAC MEDEA)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35007},
     {"id": 126, "pattern": "(DAC CHRISFANIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35008},
-    {"id": 127, "pattern": "(CARREFOUR DAC|CARREFOUR STATIO)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35009},
+    {"id": 127, "pattern": "(CARREFOUR DAC|CARREFOUR STATIO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35009},
     {"id": 128, "pattern": "(TOTALDALTYSA)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903000], "store_id": 36000},
     {"id": 129, "pattern": "(KRYS JAMES OPT)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [300000,308000], "store_id": 37000},
     {"id": 130, "pattern": "(LE GRAND BAZAR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": null, "store_id": 38000},
