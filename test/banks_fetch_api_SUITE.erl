@@ -546,6 +546,8 @@ should_insert_mapping(_Config) ->
                                                        {ok, #{ id => 8, pattern => MockPattern, fix_date => MockFixDate, period => MockPeriod, budget_id => MockBudgetId, 
                                                                categories_ids => MockCategoriesIds, store_id => MockStoreId }}
                                                    end),
+  meck:expect(banks_fetch_storage, apply_mappings, fun() -> ok end),
+
   Body = <<"{\"pattern\":\"PATTERN\",\"store_id\":5,\"budget_id\":null,\"categories_ids\":[3,4],\"fix_date\":\"previous\",\"period\":\"month\"}">>,
   Response = hackney:post("http://localhost:3003/api/1.0/mappings/new", [], Body),
   200 = status(Response),

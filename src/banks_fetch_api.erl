@@ -198,6 +198,7 @@ handle_mappings_new(Body) ->
       FixDate = binary_to_atom(FixDateStr,  'utf8'),
       case banks_fetch_storage:insert_mapping(Pattern, null_to_none(BudgetId), null_to_none(CategoriesIds), null_to_none(StoreId), FixDate, Period) of
         {ok, Mapping} ->
+          ok = banks_fetch_storage:apply_mappings(),
           Result = jiffy:encode(to_json_mapping(Mapping)),
           {200, [{<<"Content-Type">>, <<"application/json">>}], Result};
         {error, already_inserted} ->
