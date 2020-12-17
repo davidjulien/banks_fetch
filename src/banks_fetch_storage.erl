@@ -716,6 +716,7 @@ do_get_mappings(#state{ connection = Connection }) ->
 
 do_apply_mappings(#state{ connection = Connection }) ->
   % It will trigger postgres function which analyses transactions
+  ok = lager:info("Apply mappings"),
   {{'update', N}, []} = pgsql_connection:extended_query(<<"UPDATE transactions SET description = description">>, [], Connection),
   ok = lager:info("Number of transactions updated: ~p", [N]),
   ok.
