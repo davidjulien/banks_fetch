@@ -58,7 +58,8 @@
          should_db_upgrade_mappings_identical/1,
          should_db_upgrade_mappings_updates/1,
          should_db_upgrade_mappings_invalid_updates/1,
-         should_db_insert_mapping/1
+         should_db_insert_mapping/1,
+         should_db_apply_mappings/1
         ]).
 
 -define(DB_NAME, "banks_fetch_test").
@@ -127,7 +128,7 @@ groups() ->
                          should_db_get_last_transactions_id, should_db_update_transaction, should_db_split_transaction, should_db_split_transaction_fails_because_not_found,
                          should_db_update_transaction_with_amount, should_db_update_transaction_with_amount_fails_because_not_subtransaction, should_db_update_transaction_with_amount_fails_because_remaining,
                          should_db_upgrade_mappings_empty, should_db_upgrade_mappings_do_not_update_manual_updates, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates,
-                         should_db_upgrade_mappings_invalid_updates, should_db_insert_mapping ]}
+                         should_db_upgrade_mappings_invalid_updates, should_db_insert_mapping, should_db_apply_mappings ]}
   ].
 
 %%
@@ -284,6 +285,8 @@ init_per_testcase(should_db_upgrade_mappings_invalid_updates, Config) ->
   setup_database(Config);
 init_per_testcase(should_db_insert_mapping, Config) ->
   setup_database(Config);
+init_per_testcase(should_db_apply_mappings, Config) ->
+  setup_database(Config, <<"setup_db_for_apply_mappings.sql">>);
 
 % Other cases are without db
 init_per_testcase(_, Config) ->
@@ -349,6 +352,8 @@ end_per_testcase(should_db_upgrade_mappings_updates, _Config) ->
 end_per_testcase(should_db_upgrade_mappings_invalid_updates, _Config) ->
   teardown_database();
 end_per_testcase(should_db_insert_mapping, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_apply_mappings, _Config) ->
   teardown_database();
 
 % Other cases are without db
@@ -1264,5 +1269,32 @@ should_db_insert_mapping(_Config) ->
 
   ct:comment("Insert mapping with same pattern"),
   {error, already_inserted} = banks_fetch_storage:insert_mapping(<<"SUPERMARCHE">>, none, none, none, none, month),
+
+  ok.
+
+should_db_apply_mappings(_Config) ->
+  ct:comment("Get transactions"),
+  {value, {none, 5, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
+  5 = length(Transactions1),
+  [
+   #{ id := <<"transaction1">>, ext_mapping_id := undefined, ext_date := {2020,10,10}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
+   #{ id := <<"transaction3">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
+   #{ id := <<"transaction4">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
+   #{ id := <<"transaction5">>, ext_mapping_id := undefined, ext_date := {2020,7,7}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_date := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined }
+  ] = Transactions1,
+
+  ok = banks_fetch_storage:apply_mappings(),
+
+  ct:comment("Get transactions"),
+  {value, {none, 5, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 10),
+  5 = length(Transactions2),
+  [
+   #{ id := <<"transaction1">>, ext_mapping_id := 1, ext_date := {2020,10,10}, ext_store_id := 1, ext_budget_id := 1, ext_categories_ids := [1,2], ext_period := 'month' },
+   #{ id := <<"transaction3">>, ext_mapping_id := 2, ext_date := {2020,5,31}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_ids := undefined, ext_period := 'month' },
+   #{ id := <<"transaction4">>, ext_mapping_id := 3, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_ids := undefined, ext_period := 'quarter' },
+   #{ id := <<"transaction5">>, ext_mapping_id := 3, ext_date := {2020,7,7}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_ids := undefined, ext_period := 'quarter' },
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined }
+  ] = Transactions2,
 
   ok.

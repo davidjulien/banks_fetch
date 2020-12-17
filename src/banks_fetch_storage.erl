@@ -36,6 +36,7 @@
          insert_store/1,
 
          get_mappings/0,
+         apply_mappings/0,
          upgrade_mappings/4,
          insert_mapping/6,
 
@@ -125,6 +126,10 @@ get_accounts(BankId, ClientId) ->
 -spec get_mappings() -> {value, [any()]}.
 get_mappings() ->
   gen_server:call(?MODULE, get_mappings, ?LONG_TIMEOUT).
+
+-spec apply_mappings() -> ok.
+apply_mappings() ->
+  gen_server:call(?MODULE, apply_mappings, ?VERY_LONG_TIMEOUT).
 
 -spec upgrade_mappings([banks_fetch_bank:budget()], [banks_fetch_bank:category()],  [banks_fetch_bank:store()], [banks_fetch_bank:mapping()]) -> ok | {error, unable_to_upgrade_mappings}.
 upgrade_mappings(Budgets, Categories, Stores, Mappings) ->
@@ -236,6 +241,9 @@ handle_call({split_transaction, BankId, AccountId, ClientId, TransactionId}, _Fr
   {reply, R, State0};
 handle_call(get_mappings, _From, #state{ } = State0) ->
   R = do_get_mappings(State0),
+  {reply, R, State0};
+handle_call(apply_mappings, _From, #state{ } = State0) ->
+  R = do_apply_mappings(State0),
   {reply, R, State0};
 handle_call({upgrade_mappings, Budgets, Categories, Stores, Mappings}, _From, #state{ } = State0) ->
   R = do_upgrade_mappings(Budgets, Categories, Stores, Mappings, State0),
@@ -706,6 +714,11 @@ do_get_mappings(#state{ connection = Connection }) ->
                 {Id, Pattern, FixDate, Period, BudgetId, CategoriesIds, StoreId} <- MappingsSQL ]}
   end.
 
+do_apply_mappings(#state{ connection = Connection }) ->
+  % It will trigger postgres function which analyses transactions
+  {{'update', N}, []} = pgsql_connection:extended_query(<<"UPDATE transactions SET description = description">>, [], Connection),
+  ok = lager:info("Number of transactions updated: ~p", [N]),
+  ok.
 
 do_upgrade_mappings(Budgets, Categories, Stores, Mappings, #state{ connection = Connection } = State) ->
   try
@@ -715,10 +728,7 @@ do_upgrade_mappings(Budgets, Categories, Stores, Mappings, #state{ connection = 
     upgrade_entries(Stores, fun do_get_stores/1, fun do_insert_store/2, fun do_delete_stores/2, State),
     upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
     {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
-    % It will trigger postgres function which analyses transactions
-    {{'update', N}, []} = pgsql_connection:extended_query(<<"UPDATE transactions SET description = description">>, [], Connection),
-    ok = lager:info("Number of transactions updated: ~p", [N]),
-    ok
+    do_apply_mappings(State)
   catch
     E:V:S ->
       ok = lager:warning("Unable to upgrade mappings : ~p\n~p", [{E,V}, S]),
