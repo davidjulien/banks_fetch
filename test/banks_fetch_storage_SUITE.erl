@@ -444,6 +444,9 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.9';">>, [], fake_connection],
                 {'comment', []}
                },
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.10';">>, [], fake_connection],
+                {'comment', []}
+               },
                {[meck_matcher:new(fun(<<"COMMENT ON DATABASE banks_fetch_test IS ", _/binary>>) -> true; (_) -> false end), [], fake_connection],
                 {error, unexpected_comment}},
                {[<<"COMMIT">>, [], fake_connection],
@@ -454,10 +457,10 @@ should_nodb_start_with_db_upgrade(_Config) ->
 
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   % One COMMIT for each upgrade
-  meck:wait(11, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
+  meck:wait(12, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
   % 3 queries + number of queries to upgrade
-  89 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  93 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 
@@ -1274,27 +1277,29 @@ should_db_insert_mapping(_Config) ->
 
 should_db_apply_mappings(_Config) ->
   ct:comment("Get transactions"),
-  {value, {none, 5, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
-  5 = length(Transactions1),
+  {value, {none, 6, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
+  6 = length(Transactions1),
   [
    #{ id := <<"transaction1">>, ext_mapping_id := undefined, ext_date := {2020,10,10}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
    #{ id := <<"transaction3">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
    #{ id := <<"transaction4">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
    #{ id := <<"transaction5">>, ext_mapping_id := undefined, ext_date := {2020,7,7}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
-   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_date := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined }
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_date := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
+   #{ id := <<"transaction6">>, ext_mapping_id := undefined, ext_date := {2020,7,6}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined }
   ] = Transactions1,
 
   ok = banks_fetch_storage:apply_mappings(),
 
   ct:comment("Get transactions"),
-  {value, {none, 5, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 10),
-  5 = length(Transactions2),
+  {value, {none, 6, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 10),
+  6 = length(Transactions2),
   [
    #{ id := <<"transaction1">>, ext_mapping_id := 1, ext_date := {2020,10,10}, ext_store_id := 1, ext_budget_id := 1, ext_categories_ids := [1,2], ext_period := 'month' },
    #{ id := <<"transaction3">>, ext_mapping_id := 2, ext_date := {2020,5,31}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_ids := undefined, ext_period := 'month' },
    #{ id := <<"transaction4">>, ext_mapping_id := 3, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_ids := undefined, ext_period := 'quarter' },
    #{ id := <<"transaction5">>, ext_mapping_id := 3, ext_date := {2020,7,7}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_ids := undefined, ext_period := 'quarter' },
-   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined }
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
+   #{ id := <<"transaction6">>, ext_mapping_id := 4, ext_date := {2020,7,6}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_ids := undefined, ext_period := 'month' } % verify longuest matching
   ] = Transactions2,
 
   ok.
