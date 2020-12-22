@@ -4,7 +4,9 @@
 %%
 %% API endpoints:
 %% - /api/1.0/transactions : return last 10 transactions stored, provides a cursor to fetch next transactions
-%% - /api/1.0/transactions/{CURSOR} : return last 10 transactions stored after {CURSOR}
+%% - /api/1.0/transactions/cursor={CURSOR} : return last 10 transactions stored after {CURSOR}
+%% - /api/1.0/transactions/{BANKID}/{CLIENTID}/{ACCOUNTID}/{TRANSACTIONID} (PATCH) : patch a transaction
+%% - /api/1.0/transactions/{BANKID}/{CLIENTID}/{ACCOUNTID}/{TRANSACTIONID}/split (POST) : split a transaction
 %% - /api/1.0/banks : return all banks
 %% - /api/1.0/budgets : return all budgets
 %% - /api/1.0/categories : return all categories
@@ -58,6 +60,9 @@ handle('GET',[<<"api">>, <<"1.0">>, <<"transactions">>], Req) ->
 handle(<<"PATCH">>, [<<"api">>, <<"1.0">>, <<"transactions">>, BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr], Req) ->
   Body = elli_request:body(Req),
   handle_transactions_update(BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr, Body);
+
+handle('POST', [<<"api">>, <<"1.0">>, <<"transactions">>, BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr, <<"split">>], _Req) ->
+  handle_transactions_split(BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr);
 
 handle('GET',[<<"api">>, <<"1.0">>, <<"banks">>], _Req) ->
   handle_banks();
@@ -139,6 +144,17 @@ handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVa
     InvalidFields ->
       ok = lager:warning("Invalid parameters: ~p", [InvalidFields]),
       {400, [{<<"Content-Type">>, <<"text/plain">>}], list_to_binary([<<"Invalid parameters: ">>, join_strings(InvalidFields, <<", ">>)]) }
+  end.
+
+-spec handle_transactions_split(unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary()) -> elli_handler:result().
+handle_transactions_split(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal) ->
+  case banks_fetch_storage:split_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal}) of
+    {ok, Transactions} ->
+      ResultJSON = jsx:encode([ to_json_transaction(Transaction) || Transaction <- Transactions ]),
+      {200, [{<<"Content-Type">>, <<"application/json">>}], ResultJSON};
+    {error, _R} ->
+      ok = lager:warning("Unable to split transaction ~s/~s/~s/~s", [BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal]),
+      {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Unable to split">>}
   end.
 
 -spec handle_banks() -> elli_handler:result().

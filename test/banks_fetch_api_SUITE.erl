@@ -23,6 +23,9 @@
          should_update_transaction_failed_if_parameters_are_invalid/1,
          should_update_transaction_with_amount/1,
 
+         should_split_transaction/1,
+         should_split_transaction_fails_if_not_exists/1,
+
          should_insert_mapping/1,
          should_not_insert_mapping_already_existing/1,
          should_not_insert_mapping_if_parameters_are_invalid/1,
@@ -58,6 +61,9 @@ all() ->
    should_update_transaction_failed_if_not_exist,
    should_update_transaction_failed_if_parameters_are_invalid,
    should_update_transaction_with_amount,
+
+   should_split_transaction,
+   should_split_transaction_fails_if_not_exists,
 
    should_insert_mapping,
    should_not_insert_mapping_already_existing,
@@ -161,6 +167,14 @@ init_per_testcase(should_update_transaction_with_amount, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
 
+init_per_testcase(should_split_transaction, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_split_transaction_fails_if_not_exists, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
 init_per_testcase(should_insert_mapping, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
@@ -255,6 +269,16 @@ end_per_testcase(should_update_transaction_failed_if_parameters_are_invalid, Con
   ok;
 
 end_per_testcase(should_update_transaction_with_amount, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_split_transaction, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_split_transaction_fails_if_not_exists, Config) ->
   meck:unload(banks_fetch_storage),
   teardown_elli(Config),
   ok;
@@ -527,6 +551,48 @@ should_update_transaction_failed_if_parameters_are_invalid(_Config) ->
   Response = hackney:request('PATCH', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123", [], <<"{\"ext_date\": \"FAIL020-01-10\", \"ext_period\": 22, \"ext_store_id\": \"1011\", \"ext_budget_id\": 2, \"ext_categories_ids\": 700000}">>),
   400 = status(Response),
   <<"Invalid parameters: ext_date, ext_store_id, ext_categories_ids, ext_period">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_split_transaction(_Config) ->
+  meck:expect(banks_fetch_storage, split_transaction, fun(MockBankId, MockClientId, MockAccountId, MockTransactionId) ->
+                                                           {bank_id, <<"ing">>} = MockBankId,
+                                                           {client_id, <<"client1">>} = MockClientId,
+                                                           {account_id, <<"account1">>} = MockAccountId,
+                                                           {transaction_id, <<"123">>} = MockTransactionId,
+                                                           {ok, [#{
+                                                              id => <<"TRANSACTION_2">>,
+                                                              bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>},
+                                                              accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => 0.0, description => <<"PRLV SEPA XXX">>, type => sepa_debit,
+                                                              ext_budget_id => undefined, ext_period => undefined, ext_store_id => undefined, ext_categories_ids => undefined,
+                                                              ext_split_of_id => none, ext_splitted => true, ext_date => undefined, ext_mapping_id => -1}]
+                                                           }
+                                                          end),
+
+  Response = hackney:request('POST', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123/split", [], <<"">>),
+  200 = status(Response),
+  <<"[{\"account_id\":\"account1\",\"accounting_date\":\"2020-07-22\",\"amount\":0.0,\"bank_id\":\"ing\",\"client_id\":\"client1\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":null,\"ext_categories_ids\":null,\"ext_date\":null,\"ext_mapping_id\":-1,\"ext_period\":null,\"ext_split_of_id\":null,\"ext_splitted\":true,\"ext_store_id\":null,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}]">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_split_transaction_fails_if_not_exists(_Config) ->
+  meck:expect(banks_fetch_storage, split_transaction, fun(MockBankId, MockClientId, MockAccountId, MockTransactionId) ->
+                                                           {bank_id, <<"ing">>} = MockBankId,
+                                                           {client_id, <<"client1">>} = MockClientId,
+                                                           {account_id, <<"account1">>} = MockAccountId,
+                                                           {transaction_id, <<"123">>} = MockTransactionId,
+                                                           {error, not_found}
+                                                       end),
+
+  Response = hackney:request('POST', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123/split", [], <<"">>),
+  400 = status(Response),
+  <<"Unable to split">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 
