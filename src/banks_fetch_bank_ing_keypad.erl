@@ -1,6 +1,5 @@
 %%%-------------------------------------------------------------------
 %% @doc banks_fetch_bank_ing_keypad is an external module for banks_fetch_bank_ing dedicated to keypad resolutions.
-%% This module is not yet implemented. It allows to ensure full coverage.
 %% @end
 %%%-------------------------------------------------------------------
 -module(banks_fetch_bank_ing_keypad).

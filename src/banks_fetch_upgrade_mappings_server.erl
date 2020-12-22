@@ -1,6 +1,7 @@
 %%
-%% This module upgrades budgets, categories, stores and mappings.
-%% It fetches a resource file every 24h to update these tables.
+%% @doc This module upgrades budgets, categories, stores and mappings.
+%% It fetches a resource file from main github account every 24h to update these tables.
+%% @end
 %%
 -module(banks_fetch_upgrade_mappings_server).
 -behaviour(gen_server).

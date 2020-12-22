@@ -1,3 +1,9 @@
+%%
+%% @doc This gen_server manages access to a bank account. It is started with a bank id, a client id and a client credential.
+%% Every 4 hours, gen_server tries to connect to the bank with given credential to fetch accounts and to fetch new transactions for each account since last fetched transaction.
+%% Accounts and transactions are the stored in database.
+%% In case of error, it tries again to connect one hour later.
+%% @end
 -module(banks_fetch_client_server).
 -behaviour(gen_server).
 
