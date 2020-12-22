@@ -172,7 +172,7 @@ update_transaction(BankId, AccountId, ClientId, TransactionId, Date, Period, Sto
   gen_server:call(?MODULE, {update_transaction, BankId, AccountId, ClientId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesIds, Amount}, ?LONG_TIMEOUT).
 
 %% @doc Split a transaction. Useful when a transaction merged different kind of payment
--spec split_transaction(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()) -> {ok, banks_fetch_bank:transaction_id()} | {error, not_found}.
+-spec split_transaction(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()) -> {ok, [banks_fetch_bank:transaction()]} | {error, not_found}.
 split_transaction(BankId, AccountId, ClientId, TransactionId) ->
   gen_server:call(?MODULE, {split_transaction, BankId, AccountId, ClientId, TransactionId}, ?LONG_TIMEOUT).
 
@@ -634,6 +634,9 @@ do_split_transaction({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue}
         {{update, 1}, _} ->
           First = <<"-001">>,
           SubTransaction1 = #{ id => <<TransactionIdValue/binary, First/binary>>,
+                               bank_id => BankId,
+                               account_id => AccountId,
+                               client_id => ClientId,
                                accounting_date => AccountingDate,
                                effective_date => EffectiveDate,
                                amount => 0.0,
@@ -650,6 +653,9 @@ do_split_transaction({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue}
                              },
           Rem = <<"-REM">>,
           SubTransactionRem  = #{ id => <<TransactionIdValue/binary, Rem/binary>>,
+                                  bank_id => BankId,
+                                  account_id => AccountId,
+                                  client_id => ClientId,
                                   accounting_date => AccountingDate,
                                   effective_date => EffectiveDate,
                                   amount => Amount,
@@ -680,6 +686,9 @@ do_split_transaction({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue}
                                       end,
       NewSubTransactionId = iolist_to_binary(io_lib:format("~s-~3.10.0B", [TransactionIdValue, PreviousSubTransactionIdCount+1])),
       NewSubTransaction = #{ id => NewSubTransactionId,
+                             bank_id => BankId,
+                             account_id => AccountId,
+                             client_id => ClientId,
                              accounting_date => AccountingDate,
                              effective_date => EffectiveDate,
                              amount => 0.0,

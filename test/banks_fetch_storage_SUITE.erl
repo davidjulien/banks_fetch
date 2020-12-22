@@ -992,10 +992,10 @@ should_db_split_transaction(_Config) ->
 
   ct:comment("Split transaction1"),
   {ok, [SubTransaction1, SubTransaction2]} = banks_fetch_storage:split_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1">>}),
-  ExpectedSubTransaction1 = #{id => <<"transaction1-001">>,
+  ExpectedSubTransaction1 = #{id => <<"transaction1-001">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>},
                                accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit, ext_mapping_id => undefined,
                                ext_categories_ids => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
-  ExpectedSubTransaction2 = #{id => <<"transaction1-REM">>, % bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
+  ExpectedSubTransaction2 = #{id => <<"transaction1-REM">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
                                accounting_date => {2020,7,8}, amount => -44.44, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit, ext_mapping_id => undefined,
                                ext_categories_ids => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
   ExpectedSubTransaction1 = SubTransaction1,
@@ -1016,7 +1016,7 @@ should_db_split_transaction(_Config) ->
 
   ct:comment("Split again transaction1"),
   {ok, [SubTransaction2_2]} = banks_fetch_storage:split_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1">>}),
-  ExpectedSubTransaction2_2 = #{id => <<"transaction1-002">>, % bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
+  ExpectedSubTransaction2_2 = #{id => <<"transaction1-002">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
                                accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit, ext_mapping_id => undefined,
                                ext_categories_ids => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
   ExpectedSubTransaction2_2 = SubTransaction2_2,
