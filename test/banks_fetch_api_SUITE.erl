@@ -775,7 +775,7 @@ should_verify_types(_Config) ->
   false = banks_fetch_api:verify_type("a", string),
 
   true  = banks_fetch_api:verify_type(1.0, float),
-  false = banks_fetch_api:verify_type(1, float),
+  true  = banks_fetch_api:verify_type(1, float),
 
   true  = banks_fetch_api:verify_type(1, integer),
   false = banks_fetch_api:verify_type(1.0, integer),

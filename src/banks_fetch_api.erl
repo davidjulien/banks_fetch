@@ -119,17 +119,21 @@ handle_transactions_update(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVa
   {_, BudgetId} = lists:keyfind(<<"ext_budget_id">>, 1, JSON),
   {_, CategoriesIds} = lists:keyfind(<<"ext_categories_ids">>, 1, JSON),
   {_, PeriodStr} = lists:keyfind(<<"ext_period">>, 1, JSON),
-  Amount = case lists:keyfind(<<"amount">>, 1, JSON) of
+  Amount1 = case lists:keyfind(<<"amount">>, 1, JSON) of
              false -> null;
              {_, Amount0} -> Amount0
            end,
   Date = date_to_iso8601(DateStr),
   case verify_types([{<<"ext_date">>, Date, {optional, date}}, {<<"ext_store_id">>, StoreId, {optional, integer}}, {<<"ext_budget_id">>, BudgetId, {optional, integer}},
-                     {<<"ext_categories_ids">>, CategoriesIds, {optional, {array, integer}}}, {<<"ext_period">>, PeriodStr, {optional, period}}, {<<"amount">>, Amount, {optional, float}}]) of
+                     {<<"ext_categories_ids">>, CategoriesIds, {optional, {array, integer}}}, {<<"ext_period">>, PeriodStr, {optional, period}}, {<<"amount">>, Amount1, {optional, float}}]) of
     [] ->
       Period = case PeriodStr of
                  null -> undefined;
                  _ -> binary_to_atom(PeriodStr, 'utf8')
+               end,
+      Amount = case Amount1 of
+                 null -> undefined;
+                 _ -> Amount1 * 1.0 %% Ensure float
                end,
       case banks_fetch_storage:update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal},
                                                   null_to_undefined(Date), null_to_undefined(Period), null_to_undefined(StoreId), null_to_undefined(BudgetId), null_to_undefined(CategoriesIds),
@@ -293,7 +297,7 @@ verify_types(List) ->
   [ Name || {Name, _, _} <- Filtered ].
 
 verify_type(V, string) -> is_binary(V);
-verify_type(V, float) -> is_float(V);
+verify_type(V, float) -> is_float(V) orelse is_integer(V);
 verify_type(V, integer) -> is_integer(V);
 verify_type(undefined, {optional, _T}) -> true;
 verify_type(null, {optional, _T}) -> true;
