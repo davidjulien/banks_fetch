@@ -80,7 +80,7 @@
         store_id := none | non_neg_integer()
        }.
 
--type account_type() :: current | savings | home_loan.
+-type account_type() :: current | savings | home_loan | purse.
 -type account_ownership() :: single | joint.
 -type account() :: #{ id => unicode:unicode_binary(),
                       balance => float(),

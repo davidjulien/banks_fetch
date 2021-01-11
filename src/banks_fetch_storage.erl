@@ -28,6 +28,7 @@
          get_all_accounts/0,
          store_accounts/4,
          get_accounts/2,
+         get_account_balance_history/4,
 
          get_budgets/0,
          get_categories/0,
@@ -46,6 +47,10 @@
          get_last_transactions/2,
          update_transaction/10,
          split_transaction/4,
+
+         aggregate_amounts_for_purse/4,
+         get_new_transactions_for_purse/4,
+         copy_withdrawal_transaction_to_purse/5,
 
          stop/0
         ]).
@@ -121,6 +126,11 @@ store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
 get_accounts(BankId, ClientId) ->
   gen_server:call(?MODULE, {get_accounts, BankId, ClientId}, ?LONG_TIMEOUT).
 
+% Get last N balances history in reverse order
+-spec get_account_balance_history(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), non_neg_integer()) -> {value, [{calendar:datetime(), float()}]}.
+get_account_balance_history(BankId, ClientId, AccountId, Nbr) ->
+  gen_server:call(?MODULE, {get_account_balance_history, BankId, ClientId, AccountId, Nbr}, ?LONG_TIMEOUT).
+
 % Functions related to mappings
 
 -spec get_mappings() -> {value, [any()]}.
@@ -164,6 +174,7 @@ get_transactions(BankId, ClientId, AccountId) ->
 get_last_transactions(CursorOpt, N) ->
   gen_server:call(?MODULE, {get_last_transactions, CursorOpt, N}, ?LONG_TIMEOUT).
 
+%% @doc Update transaction
 -spec update_transaction(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id(),
                          undefined | calendar:date(), undefined | banks_fetch_bank:mapping_period(), undefined | non_neg_integer(), undefined | non_neg_integer(), undefined | [non_neg_integer()],
                          undefined | float()
@@ -176,6 +187,22 @@ update_transaction(BankId, AccountId, ClientId, TransactionId, Date, Period, Sto
 split_transaction(BankId, AccountId, ClientId, TransactionId) ->
   gen_server:call(?MODULE, {split_transaction, BankId, AccountId, ClientId, TransactionId}, ?LONG_TIMEOUT).
 
+
+%% @doc Compute total amounts in purse from transactions.
+-spec aggregate_amounts_for_purse(calendar:date(), calendar:datetime(), banks_fetch_bank:client_id(), [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id()}]) -> {value, float()}.
+aggregate_amounts_for_purse(StartDate, UntilDate, PurseId, SourcesList) ->
+  gen_server:call(?MODULE, {aggregate_amounts_for_purse, StartDate, UntilDate, PurseId, SourcesList}, ?LONG_TIMEOUT).
+
+%% @doc Get new transactions (withdrawals) from sources. They will be included into purse.
+-spec get_new_transactions_for_purse(calendar:date(), calendar:datetime(), banks_fetch_bank:client_id(), [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id()}]) -> {value, [banks_fetch_bank:transaction()]}.
+get_new_transactions_for_purse(StartDate, UntilDate, PurseId, SourcesList) ->
+  gen_server:call(?MODULE, {get_new_transactions_for_purse, StartDate, UntilDate, PurseId, SourcesList}, ?LONG_TIMEOUT).
+
+%% @doc Copy an existing withdrawal transaction to purse account, and recompute purse account values
+-spec copy_withdrawal_transaction_to_purse(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id(), 
+                                          banks_fetch_bank:client_id()) -> ok.
+copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, PurseId) ->
+  gen_server:call(?MODULE, {copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId, PurseId}, ?LONG_TIMEOUT).
 
 
 -spec stop() -> ok.
@@ -221,6 +248,9 @@ handle_call(get_all_accounts, _From, #state{ } = State0) ->
 handle_call({get_accounts, BankId, ClientId}, _From, #state{ } = State0) ->
   R = do_get_accounts(BankId, ClientId, State0),
   {reply, R, State0};
+handle_call({get_account_balance_history, BankId, ClientId, AccountId, Nbr}, _From, #state{ } = State0) ->
+  R = do_get_account_balance_history(BankId, ClientId, AccountId, Nbr, State0),
+  {reply, R, State0};
 handle_call({store_transactions, BankId, ClientId, AccountId, FetchingAt, TransactionsList}, _From, #state{ } = State0) ->
   R = do_store_transactions(BankId, ClientId, AccountId, FetchingAt, TransactionsList, State0),
   {reply, R, State0};
@@ -239,6 +269,16 @@ handle_call({update_transaction, BankId, ClientId, AccountId, TransactionId, Dat
 handle_call({split_transaction, BankId, AccountId, ClientId, TransactionId}, _From, #state{ } = State0) ->
   R = do_split_transaction(BankId, AccountId, ClientId, TransactionId, State0),
   {reply, R, State0};
+handle_call({aggregate_amounts_for_purse, StartDate, UntilDate, PurseId, SourcesList}, _From, #state{ } = State0) ->
+  R = do_aggregate_amounts_for_purse(StartDate, UntilDate, PurseId, SourcesList, State0),
+  {reply, R, State0};
+handle_call({get_new_transactions_for_purse, StartDate, UntilDate, PurseId, SourcesList}, _From, #state{ } = State0) ->
+  R = do_get_new_transactions_for_purse(StartDate, UntilDate, PurseId, SourcesList, State0),
+  {reply, R, State0};
+handle_call({copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId, PurseId}, _From, #state{ } = State0) ->
+  R = do_copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, PurseId, State0),
+  {reply, R, State0};
+
 handle_call(get_mappings, _From, #state{ } = State0) ->
   R = do_get_mappings(State0),
   {reply, R, State0};
@@ -494,6 +534,15 @@ account_sql_to_map({BankId, ClientId, AccountId, Balance, Number, Owner, {e_acco
   #{ id => AccountId, bank_id => BankId, client_id => ClientId, balance => Balance, number => Number, owner => Owner, ownership => binary_to_atom(Ownership), type => binary_to_atom(Type), name => Name }.
 
 %%
+%% @doc Get account balances history (in reverse order)
+%%
+-spec do_get_account_balance_history(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), non_neg_integer(), #state{}) -> {value, [{calendar:datetime(), float()}]}.
+do_get_account_balance_history(BankId, ClientId, AccountId, Nbr, #state{ connection = Connection }) ->
+  {{select, _Nbr}, History} = pgsql_connection:extended_query(<<"SELECT fetching_at, balance FROM accounts WHERE bank_id = $1 AND client_id = $2 AND account_id = $3 ORDER BY bank_id, client_id, fetching_at DESC LIMIT $4">>, [BankId, ClientId, AccountId, Nbr], Connection),
+  {value, History}.
+
+
+%%
 %% @doc Store transactions
 %%
 -spec do_store_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), calendar:datetime(), [banks_fetch_bank:transaction()], #state{}) -> ok.
@@ -709,7 +758,56 @@ do_split_transaction({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue}
       end
   end.
 
+do_get_new_transactions_for_purse(StartDate, UntilDate, PurseId, SourcesList, #state{ connection = Connection }) ->
+  List0 = do_get_new_transactions_for_purse_aux(StartDate, UntilDate, PurseId, SourcesList, Connection, []),
+  List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8'),
+               bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal} } ||
+            {TransactionId, BankIdVal, ClientIdVal, AccountIdVal, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}} <- List0 ],
+  {value, List1}.
 
+do_get_new_transactions_for_purse_aux(_, _, _, [], _, Acc) ->
+  Acc;
+do_get_new_transactions_for_purse_aux(StartDate, UntilDate, {client_id, TargetClientId} = PurseId, [{{bank_id, SourceBankId}, {client_id, SourceClientId}, {account_id, SourceAccountId}}|Next], Connection, Acc) ->
+  case pgsql_connection:extended_query(<<"SELECT 'purse-' || source.bank_id || '-' || source.client_id || '-' || source.account_id || '-' || source.transaction_id, 'purse', $4, 'purse', accounting_date, effective_date, - amount, description, type FROM transactions source where bank_id = $1 AND client_id = $2 AND account_id = $3 AND description ~ '^RETRAIT DAB' AND effective_date >= $6 AND NOT exists(SELECT 1 from transactions target WHERE target.bank_id = 'purse' AND target.client_id = $4 AND target.account_id = 'purse' AND target.transaction_id = 'purse-' || source.bank_id || '-' || source.client_id || '-' || source.account_id || '-' || source.transaction_id LIMIT 1) AND fetching_at < $5">>, [SourceBankId, SourceClientId, SourceAccountId, TargetClientId, UntilDate, StartDate], Connection) of
+    {{select, _N}, List0} ->
+      do_get_new_transactions_for_purse_aux(StartDate, UntilDate, PurseId, Next, Connection, List0++Acc)
+  end.
+
+do_aggregate_amounts_for_purse(StartDate, UntilDate, {client_id, TargetClientId} = PurseId, SourcesList, #state{ connection = Connection }) ->
+  % Sum all amounts in purse
+  case pgsql_connection:extended_query(<<"SELECT coalesce(sum(amount), 0.0) FROM transactions source where bank_id = 'purse' AND client_id = $1 AND account_id = 'purse' AND effective_date >= $2 AND fetching_at < $3">>, [TargetClientId, StartDate, UntilDate], Connection) of
+    {{select, 1}, [{SumAmounts}]} ->
+      Amount = do_aggregate_amounts_for_purse_aux(StartDate, UntilDate, PurseId, SourcesList, Connection, SumAmounts),
+      {value, Amount}
+  end.
+
+do_aggregate_amounts_for_purse_aux(_, _, _, [], _, Acc) ->
+  Acc;
+do_aggregate_amounts_for_purse_aux(StartDate, UntilDate, {client_id, TargetClientId} = PurseId, [{{bank_id, SourceBankId}, {client_id, SourceClientId}, {account_id, SourceAccountId}}|Next], Connection, Acc) ->
+  % Sum all amounts of transactions which will be inserted in purse
+  case pgsql_connection:extended_query(<<"SELECT - coalesce(sum(amount), 0.0) FROM transactions source where bank_id = $1 AND client_id = $2 AND account_id = $3 AND description ~ '^RETRAIT DAB' AND effective_date >= $6 AND NOT exists(SELECT 1 from transactions target WHERE target.bank_id = 'purse' AND target.client_id = $4 AND target.account_id = 'purse' AND target.transaction_id = 'purse-' || source.bank_id || '-' || source.client_id || '-' || source.account_id || '-' || source.transaction_id LIMIT 1) AND fetching_at < $5">>, [SourceBankId, SourceClientId, SourceAccountId, TargetClientId, UntilDate, StartDate], Connection) of
+    {{select, 1}, [{SumAmounts}]} ->
+      do_aggregate_amounts_for_purse_aux(StartDate, UntilDate, PurseId, Next, Connection, Acc+SumAmounts)
+  end.
+
+
+do_copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, PurseId, #state{ connection = Connection } = State) ->
+  case pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type, fetching_position, ext_date) SELECT 'purse', $1, 'purse', NOW(), 'purse-' || bank_id || '-' || client_id || '-' || account_id || '-' || transaction_id, accounting_date, effective_date, -amount, description, type, fetching_position, ext_date FROM transactions WHERE bank_id = $2 AND client_id = $3 AND account_id = $4 AND transaction_id = $5 RETURNING amount, ext_date">>, [PurseId, BankId, ClientId, AccountId, TransactionId], Connection) of
+    {{insert, 0, 1}, [{Amount, ExtDate}]} ->
+      do_recompute_purse_account_values(PurseId, Amount, ExtDate, State);
+    {error, Error} ->
+      true = pgsql_error:is_integrity_constraint_violation(Error),
+      {error, already_copied}
+  end.
+
+do_recompute_purse_account_values(PurseId, TransactionAmount, TransactionDate, #state{ connection = Connection }) ->
+  error_logger:info_msg("Amount = ~p, Date = ~p", [TransactionAmount, TransactionDate]),
+
+  case pgsql_connection:extended_query(<<"UPDATE accounts SET balance = balance + $1 WHERE bank_id = 'purse' AND client_id = $2 AND account_id = 'purse' AND fetching_at >= $3">>,
+                                       [TransactionAmount, PurseId, TransactionDate], Connection) of
+    {{update, _}, []} ->
+      ok
+  end.
 
 %%
 %% @doc Get all mappings

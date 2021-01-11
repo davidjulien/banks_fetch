@@ -39,6 +39,7 @@
 
          should_db_store_accounts/1,
          should_db_get_accounts/1,
+         should_db_get_account_balance_history/1,
          should_db_get_all_accounts/1,
          should_db_store_transactions/1,
          should_db_get_transactions/1,
@@ -52,6 +53,10 @@
          should_db_update_transaction_with_amount_fails_because_remaining/1,
          should_db_split_transaction/1,
          should_db_split_transaction_fails_because_not_found/1,
+         should_db_get_new_transactions_for_purse/1,
+         should_db_aggregage_amounts_for_purse/1,
+         should_db_copy_withdrawal_transaction_to_purse/1,
+         should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied/1,
 
          should_db_upgrade_mappings_empty/1,
          should_db_upgrade_mappings_do_not_update_manual_updates/1,
@@ -123,9 +128,11 @@ groups() ->
    {tests_with_db, [], [ should_db_get_banks, should_db_get_budgets, should_db_get_categories,
                          should_db_get_stores, should_db_insert_store, should_db_not_insert_store_already_existing,
                          should_db_get_clients, should_db_insert_client, should_db_not_insert_client_already_existing,
-                         should_db_store_accounts, should_db_get_accounts, should_db_get_all_accounts,
+                         should_db_store_accounts, should_db_get_accounts, should_db_get_account_balance_history, should_db_get_all_accounts,
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_empty, should_db_get_last_transactions_invalid_cursor,
                          should_db_get_last_transactions_id, should_db_update_transaction, should_db_split_transaction, should_db_split_transaction_fails_because_not_found,
+                         should_db_get_new_transactions_for_purse, should_db_aggregage_amounts_for_purse,
+                         should_db_copy_withdrawal_transaction_to_purse, should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied,
                          should_db_update_transaction_with_amount, should_db_update_transaction_with_amount_fails_because_not_subtransaction, should_db_update_transaction_with_amount_fails_because_remaining,
                          should_db_upgrade_mappings_empty, should_db_upgrade_mappings_do_not_update_manual_updates, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates,
                          should_db_upgrade_mappings_invalid_updates, should_db_insert_mapping, should_db_apply_mappings ]}
@@ -234,6 +241,9 @@ init_per_testcase(should_db_store_accounts, Config) ->
 init_per_testcase(should_db_get_accounts, Config) ->
   setup_database(Config, <<"setup_db_for_get_accounts.sql">>);
 
+init_per_testcase(should_db_get_account_balance_history, Config) ->
+  setup_database(Config, <<"setup_db_for_get_account_balance_history.sql">>);
+
 init_per_testcase(should_db_get_all_accounts, Config) ->
   setup_database(Config, <<"setup_db_for_get_accounts.sql">>);
 
@@ -272,6 +282,17 @@ init_per_testcase(should_db_split_transaction_fails_because_not_found, Config) -
 
 init_per_testcase(should_db_get_last_transactions_id, Config) ->
   setup_database(Config, <<"setup_db_for_get_last_transactions_id.sql">>);
+
+init_per_testcase(should_db_aggregage_amounts_for_purse, Config) ->
+  setup_database(Config, <<"setup_db_for_get_new_transactions_for_purse.sql">>);
+
+init_per_testcase(should_db_get_new_transactions_for_purse, Config) ->
+  setup_database(Config, <<"setup_db_for_get_new_transactions_for_purse.sql">>);
+
+init_per_testcase(should_db_copy_withdrawal_transaction_to_purse, Config) ->
+  setup_database(Config, <<"setup_db_for_copy_withdrawal_transaction_to_purse.sql">>);
+init_per_testcase(should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied, Config) ->
+  setup_database(Config, <<"setup_db_for_copy_withdrawal_transaction_to_purse.sql">>);
 
 init_per_testcase(should_db_upgrade_mappings_empty, Config) ->
   setup_database(Config, <<"setup_db_for_upgrade_mappings.sql">>);
@@ -315,6 +336,8 @@ end_per_testcase(should_db_store_accounts, _Config) ->
   teardown_database();
 end_per_testcase(should_db_get_accounts, _Config) ->
   teardown_database();
+end_per_testcase(should_db_get_account_balance_history, _Config) ->
+  teardown_database();
 end_per_testcase(should_db_get_all_accounts, _Config) ->
   teardown_database();
 end_per_testcase(should_db_store_transactions, _Config) ->
@@ -340,6 +363,14 @@ end_per_testcase(should_db_update_transaction_with_amount_fails_because_remainin
 end_per_testcase(should_db_split_transaction, _Config) ->
   teardown_database();
 end_per_testcase(should_db_split_transaction_fails_because_not_found, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_get_new_transactions_for_purse, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_aggregage_amounts_for_purse, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_copy_withdrawal_transaction_to_purse, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied, _Config) ->
   teardown_database();
 end_per_testcase(should_db_upgrade_mappings_empty, _Config) ->
   teardown_database();
@@ -447,6 +478,9 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.10';">>, [], fake_connection],
                 {'comment', []}
                },
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.11';">>, [], fake_connection],
+                {'comment', []}
+               },
                {[meck_matcher:new(fun(<<"COMMENT ON DATABASE banks_fetch_test IS ", _/binary>>) -> true; (_) -> false end), [], fake_connection],
                 {error, unexpected_comment}},
                {[<<"COMMIT">>, [], fake_connection],
@@ -457,10 +491,10 @@ should_nodb_start_with_db_upgrade(_Config) ->
 
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   % One COMMIT for each upgrade
-  meck:wait(12, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
+  meck:wait(13, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
   % 3 queries + number of queries to upgrade
-  93 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  101 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 
@@ -647,7 +681,7 @@ should_db_get_banks(_Config) ->
   Banks = banks_fetch_storage:get_banks(),
 
   ct:comment("Verify returned banks"),
-  {value, [#{ id := <<"ing">>, name := <<"ING">> }]} = Banks,
+  {value, [#{ id := <<"ing">>, name := <<"ING">> }, #{ id := <<"purse">>, name := <<"Purse">> }]} = Banks,
   ok.
 
 should_db_get_budgets(_Config) ->
@@ -777,6 +811,26 @@ should_db_get_accounts(_Config) ->
   ct:comment("Verify returned accounts"),
   NbrExpectedAccounts = length(Accounts),
   ExpectedAccounts = Accounts,
+
+  ok.
+
+should_db_get_account_balance_history(_Config) ->
+  ct:comment("Get account balance history (2)"),
+  {value, History1} = banks_fetch_storage:get_account_balance_history(?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, 2),
+
+  ct:comment("Verify returned history (2)"),
+  [{{{2020,7,10},{12,0,0}},503.05},
+   {{{2020,7,9},{12,0,0}},526.14}] = History1,
+
+  ct:comment("Get account balance history (10)"),
+  {value, History2} = banks_fetch_storage:get_account_balance_history(?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, 10),
+
+  ct:comment("Verify returned history (10)"),
+  [{{{2020,7,10},{12,0,0}},503.05},
+   {{{2020,7,9},{12,0,0}},526.14},
+   {{{2020,7,8},{12,0,0}},426.13},
+   {{{2020,7,7},{12,0,0}},234.12}] = History2,
+
 
   ok.
 
@@ -1055,6 +1109,138 @@ should_db_split_transaction_fails_because_not_found(_Config) ->
 
   ok.
 
+should_db_aggregage_amounts_for_purse(_Config) ->
+  ct:comment("Aggregate amounts for purse before 2020/07/10"),
+  {value, 420.0} = banks_fetch_storage:aggregate_amounts_for_purse({2020,1,1},{{2020,7,10},{0,0,0}}, {client_id, <<"David">>}, [{{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}}]),
+
+  ct:comment("Aggregate amounts for purse before 2020/07/09"),
+  {value, 120.0} = banks_fetch_storage:aggregate_amounts_for_purse({2020,1,1},{{2020,7,9},{0,0,0}}, {client_id, <<"David">>}, [{{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}}]),
+
+  ct:comment("Aggregate amounts for purse before 2020/07/09 with 2 sources"),
+  {value, 200.0} = banks_fetch_storage:aggregate_amounts_for_purse({2020,1,1}, {{2020,7,9},{0,0,0}}, {client_id, <<"David">>}, 
+                                                                   [{{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}},
+                                                                    {{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account2">>}}
+                                                                   ]),
+
+  ct:comment("Aggegate amounts for purse before 2020/07/09 with 2 sources since 2020/7/7"),
+  {value, 80.0} = banks_fetch_storage:aggregate_amounts_for_purse({2020,7,7}, {{2020,7,9},{0,0,0}}, {client_id, <<"David">>}, 
+                                                                  [{{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}},
+                                                                   {{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account2">>}}
+                                                                  ]),
+
+  ok.
+
+should_db_copy_withdrawal_transaction_to_purse(_Config) ->
+  ct:comment("Get purse account last info"),
+  {value, Accounts0} = banks_fetch_storage:get_accounts(<<"purse">>, <<"David">>),
+  [#{balance := 100.0,bank_id := <<"purse">>,
+     client_id := <<"David">>,id := <<"purse">>,name := <<"PURSE">>,
+     number := <<"number4">>,owner := <<"owner4">>,
+     ownership := single,type := current}] = Accounts0,
+
+  ct:comment("Get balance history"),
+  {value, History0} = banks_fetch_storage:get_account_balance_history(<<"purse">>, <<"David">>, <<"purse">>, 10),
+  [{{{2020,7,5},{12,0,0}},100.0},
+   {{{2020,7,4},{12,0,0}},100.0},
+   {{{2020,7,3},{12,0,0}},0.0},
+   {{{2020,7,2},{12,0,0}},0.0},
+   {{{2020,7,1},{12,0,0}},0.0}] = History0,
+
+  ct:comment("Copy to purse"),
+  ok = banks_fetch_storage:copy_withdrawal_transaction_to_purse(<<"ing">>, <<"client1">>, <<"account1">>, <<"transaction2">>, <<"David">>),
+
+  ct:comment("Get purse account last info again"),
+  {value, Accounts1} = banks_fetch_storage:get_accounts(<<"purse">>, <<"David">>),
+  [#{balance := 120.0,bank_id := <<"purse">>,
+     client_id := <<"David">>,id := <<"purse">>,name := <<"PURSE">>,
+     number := <<"number4">>,owner := <<"owner4">>,
+     ownership := single,type := current}] = Accounts1,
+
+  ct:comment("Get balance history"),
+  {value, History1} = banks_fetch_storage:get_account_balance_history(<<"purse">>, <<"David">>, <<"purse">>, 10),
+  [{{{2020,7,5},{12,0,0}},120.0},
+   {{{2020,7,4},{12,0,0}},120.0},
+   {{{2020,7,3},{12,0,0}},20.0},
+   {{{2020,7,2},{12,0,0}},0.0},
+   {{{2020,7,1},{12,0,0}},0.0}] = History1,
+
+  ok.
+
+
+should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied(_Config) ->
+  ct:comment("Get purse account"),
+  {value, Accounts0} = banks_fetch_storage:get_accounts(<<"purse">>, <<"David">>),
+  [#{balance := 100.0,bank_id := <<"purse">>,
+     client_id := <<"David">>,id := <<"purse">>,name := <<"PURSE">>,
+     number := <<"number4">>,owner := <<"owner4">>,
+     ownership := single,type := current}] = Accounts0,
+
+  ct:comment("Copy to purse fails"),
+  {error, already_copied} = banks_fetch_storage:copy_withdrawal_transaction_to_purse(<<"ing">>, <<"client1">>, <<"account1">>, <<"transaction3">>, <<"David">>),
+
+  ct:comment("Get purse account (no update)"),
+  {value, Accounts0} = banks_fetch_storage:get_accounts(<<"purse">>, <<"David">>),
+  [#{balance := 100.0,bank_id := <<"purse">>,
+     client_id := <<"David">>,id := <<"purse">>,name := <<"PURSE">>,
+     number := <<"number4">>,owner := <<"owner4">>,
+     ownership := single,type := current}] = Accounts0,
+
+  ok.
+
+
+should_db_get_new_transactions_for_purse(_Config) ->
+  ct:comment("Get new transactions for purse before 2020/07/10"),
+  {value, Transactions} = banks_fetch_storage:get_new_transactions_for_purse({2020,1,1},{{2020,7,10},{0,0,0}}, {client_id, <<"David">>}, [{{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}}]),
+
+  [#{account_id := {account_id,<<"purse">>}, accounting_date := {2020,7,6},
+     amount := 20.0, bank_id := {bank_id,<<"purse">>}, client_id := {client_id,<<"David">>},
+     description := <<"RETRAIT DAB">>, effective_date := {2020,7,6}, id := <<"purse-ing-client1-account1-transaction2">>, type := card_withdrawal},
+   % ing/client1/account1/transaction3 is already in purse
+   #{account_id := {account_id,<<"purse">>}, accounting_date := {2020,7,8},
+     amount := 300.0, bank_id := {bank_id,<<"purse">>}, client_id := {client_id,<<"David">>},
+     description := <<"RETRAIT DAB EN ZONE EURO">>, effective_date := {2020,7,8}, id := <<"purse-ing-client1-account1-transaction6">>, type := card_withdrawal}
+  ] = Transactions,
+
+
+  ct:comment("Get new transactions for purse before 2020/07/09"),
+  {value, Transactions2} = banks_fetch_storage:get_new_transactions_for_purse({2020,1,1},{{2020,7,9},{0,0,0}}, {client_id, <<"David">>}, [{{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}}]),
+
+  [
+   #{account_id := {account_id,<<"purse">>}, accounting_date := {2020,7,6},
+     amount := 20.0, bank_id := {bank_id,<<"purse">>}, client_id := {client_id,<<"David">>},
+     description := <<"RETRAIT DAB">>, effective_date := {2020,7,6}, id := <<"purse-ing-client1-account1-transaction2">>, type := card_withdrawal}
+   % ing/client1/account1/transaction3 is already in purse
+  ] = Transactions2,
+
+  ct:comment("Get new transactions for purse before 2020/07/09 with 2 sources"),
+  {value, Transactions3} = banks_fetch_storage:get_new_transactions_for_purse({2020,1,1}, {{2020,7,9},{0,0,0}}, {client_id, <<"David">>}, 
+                                                                              [{{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}},
+                                                                               {{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account2">>}}
+                                                                              ]),
+
+  [
+   #{account_id := {account_id,<<"purse">>}, accounting_date := {2020,7,8},
+     amount := 80.0, bank_id := {bank_id,<<"purse">>}, client_id := {client_id,<<"David">>},
+     description := <<"RETRAIT DAB">>, effective_date := {2020,7,8}, id := <<"purse-ing-client1-account2-transaction5">>, type := card_withdrawal},
+   #{account_id := {account_id,<<"purse">>}, accounting_date := {2020,7,6},
+     amount := 20.0, bank_id := {bank_id,<<"purse">>}, client_id := {client_id,<<"David">>},
+     description := <<"RETRAIT DAB">>, effective_date := {2020,7,6}, id := <<"purse-ing-client1-account1-transaction2">>, type := card_withdrawal}
+   % ing/client1/account1/transaction3 is already in purse
+  ] = Transactions3,
+
+  ct:comment("Get new transactions for purse before 2020/07/09 with 2 sources since 2020/7/7"),
+  {value, Transactions4} = banks_fetch_storage:get_new_transactions_for_purse({2020,7,7}, {{2020,7,9},{0,0,0}}, {client_id, <<"David">>}, 
+                                                                              [{{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}},
+                                                                               {{bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account2">>}}
+                                                                              ]),
+
+  [
+   #{account_id := {account_id,<<"purse">>}, accounting_date := {2020,7,8},
+     amount := 80.0, bank_id := {bank_id,<<"purse">>}, client_id := {client_id,<<"David">>},
+     description := <<"RETRAIT DAB">>, effective_date := {2020,7,8}, id := <<"purse-ing-client1-account2-transaction5">>, type := card_withdrawal}
+  ] = Transactions4,
+
+  ok.
 
 
 %% Functions related to mappings
