@@ -145,6 +145,7 @@
     {"id": 901000, "name": "Hébergement", "up_category_id": 900000},
     {"id": 902000, "name": "Restaurant", "up_category_id": 900000},
     {"id": 903000, "name": "Café/Bar", "up_category_id": 900000},
+    {"id": 903500, "name": "Distributeur", "up_category_id": 900000},
     {"id": 904000, "name": "Boîte de nuit", "up_category_id": 900000},
     {"id": 905000, "name": "Voyage", "up_category_id": 900000},
     {"id": 906000, "name": "Activités", "up_category_id": 900000},
@@ -386,6 +387,8 @@
     {"id": 35009, "name": "Station-service Carrefour"},
 
     {"id": 36000, "name": "Total Daltys (autoroute)"},
+    {"id": 36001, "name": "Distributeur Aire de Plaines Beauce (autoroute)"},
+    {"id": 36002, "name": "Distributeur piscine St-Germain-en-Laye"},
 
     {"id": 37000, "name": "Opticien Krys"},
 
@@ -563,7 +566,7 @@
     {"id": 125, "pattern": "(DAC MEDEA)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35007},
     {"id": 126, "pattern": "(DAC CHRISFANIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35008},
     {"id": 127, "pattern": "(CARREFOUR DAC|CARREFOUR STATIO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35009},
-    {"id": 128, "pattern": "(TOTALDALTYSA)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903000], "store_id": 36000},
+    {"id": 128, "pattern": "(TOTALDALTYSA)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36000},
     {"id": 129, "pattern": "(KRYS JAMES OPT)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [300000,308000], "store_id": 37000},
     {"id": 130, "pattern": "(LE GRAND BAZAR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": null, "store_id": 38000},
     {"id": 131, "pattern": "(MOD AUTO|NORAUTO 09)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [600000,601000,601110], "store_id": 39000},
@@ -632,6 +635,8 @@
     {"id": 194, "pattern": "(PHOTOBOXFR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [700000,701100], "store_id": 33004},
     {"id": 195, "pattern": "(FERME METAIRIE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,902000], "store_id": 25010},
     {"id": 196, "pattern": "(AIR)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [500000,500100], "store_id": 41001},
-    {"id": 197, "pattern": "(COMMUNE DE MOISSAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,907000,907050], "store_id": 50004}
+    {"id": 197, "pattern": "(COMMUNE DE MOISSAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,907000,907050], "store_id": 50004},
+    {"id": 198, "pattern": "(ROUX PLAINES BEAUCE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36001},
+    {"id": 199, "pattern": "(SC-AROMATIK\\.AUT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36002}
   ]
 }
