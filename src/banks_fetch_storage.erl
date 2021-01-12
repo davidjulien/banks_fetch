@@ -73,10 +73,12 @@ get_banks() ->
 
 % Functions related to clients
 
+%% @doc Return all stored clients
 -spec get_clients() -> {value, [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())}]}.
 get_clients() ->
   gen_server:call(?MODULE, get_clients, ?LONG_TIMEOUT).
 
+%% @doc Insert new client
 -spec insert_client(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:client_credential(any())) -> ok | {error, already_inserted}.
 insert_client(BankId, ClientId, ClientCredential) ->
   gen_server:call(?MODULE, {insert_client, BankId, ClientId, ClientCredential}, ?LONG_TIMEOUT).
@@ -118,33 +120,40 @@ insert_store(StoreName) ->
 get_all_accounts() ->
   gen_server:call(?MODULE, get_all_accounts, ?LONG_TIMEOUT).
 
+%% @doc Store accounts related to a bank/client
 -spec store_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), calendar:datetime(), [banks_fetch_bank:account()]) -> ok.
 store_accounts(BankId, ClientId, FetchingAt, AccountsList) ->
   gen_server:call(?MODULE, {store_accounts, BankId, ClientId, FetchingAt, AccountsList}, ?LONG_TIMEOUT).
 
+%% @doc Return all stored accounts related to a bank/client
 -spec get_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id()) -> {value, [banks_fetch_bank:account()]}.
 get_accounts(BankId, ClientId) ->
   gen_server:call(?MODULE, {get_accounts, BankId, ClientId}, ?LONG_TIMEOUT).
 
-% Get last N balances history in reverse order
+%% @doc Get last N balances history in reverse order
 -spec get_account_balance_history(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), non_neg_integer()) -> {value, [{calendar:datetime(), float()}]}.
 get_account_balance_history(BankId, ClientId, AccountId, Nbr) ->
   gen_server:call(?MODULE, {get_account_balance_history, BankId, ClientId, AccountId, Nbr}, ?LONG_TIMEOUT).
 
+
 % Functions related to mappings
 
+%% @doc Get all mappings
 -spec get_mappings() -> {value, [any()]}.
 get_mappings() ->
   gen_server:call(?MODULE, get_mappings, ?LONG_TIMEOUT).
 
+%% @doc Apply mappings to all transactions
 -spec apply_mappings() -> ok.
 apply_mappings() ->
   gen_server:call(?MODULE, apply_mappings, ?VERY_LONG_TIMEOUT).
 
+%% @doc Upgrade mappings data (from json file)
 -spec upgrade_mappings([banks_fetch_bank:budget()], [banks_fetch_bank:category()],  [banks_fetch_bank:store()], [banks_fetch_bank:mapping()]) -> ok | {error, unable_to_upgrade_mappings}.
 upgrade_mappings(Budgets, Categories, Stores, Mappings) ->
   gen_server:call(?MODULE, {upgrade_mappings, Budgets, Categories, Stores, Mappings}, ?VERY_LONG_TIMEOUT).
 
+%% @doc Insert custom mapping
 -spec insert_mapping(unicode:unicode_binary(), none | non_neg_integer(), none | [non_neg_integer()], none | non_neg_integer(),
                      banks_fetch_bank:mapping_fix_date(), banks_fetch_bank:mapping_period()) -> {ok, banks_fetch_bank:mapping()} | {error, already_inserted}.
 insert_mapping(Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period) ->
@@ -152,7 +161,6 @@ insert_mapping(Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period) ->
 
 
 % Functions related to transactions
-
 
 %% @doc Store transactions
 -spec store_transactions(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), calendar:datetime(), [banks_fetch_bank:transaction()]) -> ok.
@@ -188,6 +196,8 @@ split_transaction(BankId, AccountId, ClientId, TransactionId) ->
   gen_server:call(?MODULE, {split_transaction, BankId, AccountId, ClientId, TransactionId}, ?LONG_TIMEOUT).
 
 
+% Functions related to purse
+
 %% @doc Compute total amounts in purse from transactions.
 -spec aggregate_amounts_for_purse(calendar:date(), calendar:datetime(), banks_fetch_bank:client_id(), [{banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id()}]) -> {value, float()}.
 aggregate_amounts_for_purse(StartDate, UntilDate, PurseId, SourcesList) ->
@@ -199,46 +209,58 @@ get_new_transactions_for_purse(StartDate, UntilDate, PurseId, SourcesList) ->
   gen_server:call(?MODULE, {get_new_transactions_for_purse, StartDate, UntilDate, PurseId, SourcesList}, ?LONG_TIMEOUT).
 
 %% @doc Copy an existing withdrawal transaction to purse account, and recompute purse account values
--spec copy_withdrawal_transaction_to_purse(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id(), 
+-spec copy_withdrawal_transaction_to_purse(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id(),
                                           banks_fetch_bank:client_id()) -> ok.
 copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, PurseId) ->
   gen_server:call(?MODULE, {copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId, PurseId}, ?LONG_TIMEOUT).
 
 
+
+
+% Functions related to gen_server
+
+%% @doc Stop gen_server
 -spec stop() -> ok.
 stop() ->
   gen_server:call(?MODULE, stop).
 
 
+%% @doc Start gen_server
 start_link({DatabaseName,Username,Password}) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, {DatabaseName,Username,Password}, []).
 
+%% @doc Init with storage credential
 init(Credential) ->
   self() ! init_db,
   {ok, #state{ credential = Credential, connection = undefined }}.
 
-
+%% @doc Synchronous calls
 handle_call(get_banks, _From, #state{ } = State0) ->
   R = do_get_banks(State0),
   {reply, R, State0};
+
 handle_call(get_budgets, _From, #state{ } = State0) ->
   R = do_get_budgets(State0),
   {reply, R, State0};
+
 handle_call(get_categories, _From, #state{ } = State0) ->
   R = do_get_categories(State0),
   {reply, R, State0};
+
 handle_call(get_stores, _From, #state{ } = State0) ->
   R = do_get_stores(State0),
   {reply, R, State0};
 handle_call({insert_store, StoreName}, _From, #state{ } = State0) ->
   R = do_insert_store_with_name(StoreName, State0),
   {reply, R, State0};
+
 handle_call(get_clients, _From, #state{ } = State0) ->
   R = do_get_clients(State0),
   {reply, R, State0};
 handle_call({insert_client, BankId, ClientId, ClientCredential},  _From, #state{ } = State0) ->
   R = do_insert_client(BankId, ClientId, ClientCredential, State0),
   {reply, R, State0};
+
 handle_call({store_accounts, BankId, ClientId, FetchingAt, AccountsList}, _From, #state{ } = State0) ->
   R = do_store_accounts(BankId, ClientId, FetchingAt, AccountsList, State0),
   {reply, R, State0};
@@ -251,6 +273,7 @@ handle_call({get_accounts, BankId, ClientId}, _From, #state{ } = State0) ->
 handle_call({get_account_balance_history, BankId, ClientId, AccountId, Nbr}, _From, #state{ } = State0) ->
   R = do_get_account_balance_history(BankId, ClientId, AccountId, Nbr, State0),
   {reply, R, State0};
+
 handle_call({store_transactions, BankId, ClientId, AccountId, FetchingAt, TransactionsList}, _From, #state{ } = State0) ->
   R = do_store_transactions(BankId, ClientId, AccountId, FetchingAt, TransactionsList, State0),
   {reply, R, State0};
@@ -269,6 +292,7 @@ handle_call({update_transaction, BankId, ClientId, AccountId, TransactionId, Dat
 handle_call({split_transaction, BankId, AccountId, ClientId, TransactionId}, _From, #state{ } = State0) ->
   R = do_split_transaction(BankId, AccountId, ClientId, TransactionId, State0),
   {reply, R, State0};
+
 handle_call({aggregate_amounts_for_purse, StartDate, UntilDate, PurseId, SourcesList}, _From, #state{ } = State0) ->
   R = do_aggregate_amounts_for_purse(StartDate, UntilDate, PurseId, SourcesList, State0),
   {reply, R, State0};
@@ -291,19 +315,22 @@ handle_call({upgrade_mappings, Budgets, Categories, Stores, Mappings}, _From, #s
 handle_call({insert_mapping, Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period}, _From, #state{ } = State0) ->
   R = do_insert_mapping_with_values(Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period, State0),
   {reply, R, State0};
+
 handle_call(stop, _From, State0) ->
   {stop, normal, stopped, State0}.
 
+%% @doc Asynchronous calls
 handle_cast(_, State0) ->
   {noreply, State0}.
 
+%% @doc Handle other messages
 handle_info(init_db, State0) ->
   State1 = do_init_db(State0),
   {noreply, State1}.
 
 
 %%
-%% Database initialisation
+%% @doc Database initialisation
 %%
 -spec do_init_db(#state{}) -> #state{}.
 do_init_db(#state{ credential = {DatabaseName, Username, Password}, connection = undefined } = State0) ->
@@ -624,12 +651,9 @@ decode_cursor(Cursor, _Connection) ->
     error:function_clause -> {error, invalid_cursor}
   end.
 
-null_to_undefined(null) -> undefined;
-null_to_undefined(V) -> V.
-
-undefined_to_null(undefined) -> null;
-undefined_to_null(V) -> V.
-
+%%
+%% @doc Update transaction metadata
+%%
 do_update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal}, Date, Period, StoreId, BudgetId, CategoriesIds, NewAmount, #state{ connection = Connection }) ->
   {'begin', []} = pgsql_connection:simple_query(<<"BEGIN TRANSACTION">>, Connection),
 
@@ -758,6 +782,9 @@ do_split_transaction({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue}
       end
   end.
 
+%%
+%% @doc Get new transactions which will be inserted in purse accounts
+%%
 do_get_new_transactions_for_purse(StartDate, UntilDate, PurseId, SourcesList, #state{ connection = Connection }) ->
   List0 = do_get_new_transactions_for_purse_aux(StartDate, UntilDate, PurseId, SourcesList, Connection, []),
   List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8'),
@@ -773,6 +800,9 @@ do_get_new_transactions_for_purse_aux(StartDate, UntilDate, {client_id, TargetCl
       do_get_new_transactions_for_purse_aux(StartDate, UntilDate, PurseId, Next, Connection, List0++Acc)
   end.
 
+%%
+%% @doc Aggregate all amounts related to purse between two dates.
+%%
 do_aggregate_amounts_for_purse(StartDate, UntilDate, {client_id, TargetClientId} = PurseId, SourcesList, #state{ connection = Connection }) ->
   % Sum all amounts in purse
   case pgsql_connection:extended_query(<<"SELECT coalesce(sum(amount), 0.0) FROM transactions source where bank_id = 'purse' AND client_id = $1 AND account_id = 'purse' AND effective_date >= $2 AND fetching_at < $3">>, [TargetClientId, StartDate, UntilDate], Connection) of
@@ -791,6 +821,9 @@ do_aggregate_amounts_for_purse_aux(StartDate, UntilDate, {client_id, TargetClien
   end.
 
 
+%%
+%% @doc Copy withdrawal transaction to purse. Create a new transaction in purse and recompute purse account balances
+%%
 do_copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, PurseId, #state{ connection = Connection } = State) ->
   case pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type, fetching_position, ext_date) SELECT 'purse', $1, 'purse', NOW(), 'purse-' || bank_id || '-' || client_id || '-' || account_id || '-' || transaction_id, accounting_date, effective_date, -amount, description, type, fetching_position, ext_date FROM transactions WHERE bank_id = $2 AND client_id = $3 AND account_id = $4 AND transaction_id = $5 RETURNING amount, ext_date">>, [PurseId, BankId, ClientId, AccountId, TransactionId], Connection) of
     {{insert, 0, 1}, [{Amount, ExtDate}]} ->
@@ -801,8 +834,6 @@ do_copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, Transaction
   end.
 
 do_recompute_purse_account_values(PurseId, TransactionAmount, TransactionDate, #state{ connection = Connection }) ->
-  error_logger:info_msg("Amount = ~p, Date = ~p", [TransactionAmount, TransactionDate]),
-
   case pgsql_connection:extended_query(<<"UPDATE accounts SET balance = balance + $1 WHERE bank_id = 'purse' AND client_id = $2 AND account_id = 'purse' AND fetching_at >= $3">>,
                                        [TransactionAmount, PurseId, TransactionDate], Connection) of
     {{update, _}, []} ->
@@ -821,6 +852,9 @@ do_get_mappings(#state{ connection = Connection }) ->
                 {Id, Pattern, FixDate, Period, BudgetId, CategoriesIds, StoreId} <- MappingsSQL ]}
   end.
 
+%%
+%% @doc Apply mappings
+%%
 do_apply_mappings(#state{ connection = Connection }) ->
   % It will trigger postgres function which analyses transactions
   ok = lager:info("Apply mappings"),
@@ -828,6 +862,9 @@ do_apply_mappings(#state{ connection = Connection }) ->
   ok = lager:info("Number of transactions updated: ~p", [N]),
   ok.
 
+%%
+%% @doc Upgrade mappings
+%%
 do_upgrade_mappings(Budgets, Categories, Stores, Mappings, #state{ connection = Connection } = State) ->
   try
     {'begin', []} = pgsql_connection:extended_query(<<"BEGIN TRANSACTION">>, [], Connection),
@@ -892,7 +929,7 @@ sort_by_id(MapsList) ->
   lists:sort(fun(#{ id := Id1 }, #{ id := Id2 }) -> Id1 < Id2 end, MapsList).
 
 %%
-%% Upgrade schema
+%% @doc Upgrade schema
 %%
 upgrade_schema(DatabaseName, Connection) ->
   % Current schema version is stored in database description
@@ -933,7 +970,16 @@ upgrade_schema_aux_loop_queries([Query | NextQueries], Connection) ->
       upgrade_schema_aux_loop_queries(NextQueries, Connection)
   end.
 
+
 %% Functions to convert data from sql to erlang (and erlang to sql)
+
+%% @doc Transform null to undefined
+null_to_undefined(null) -> undefined;
+null_to_undefined(V) -> V.
+
+%% @doc Transform undefined to null
+undefined_to_null(undefined) -> null;
+undefined_to_null(V) -> V.
 
 %% @doc Transform none to null
 none_to_null(none) -> null;
