@@ -153,6 +153,7 @@ setup_database(Config) ->
   setup_database(Config, none).
 
 setup_database(Config, FilenameOpt) ->
+  ok = application:start(prometheus),
   ok = application:start(pgsql),
   Connection = pgsql_connection:open("127.0.0.1", "postgres", ?DB_USER, ?DB_PASSWORD),
 
@@ -190,11 +191,13 @@ setup_database(Config, FilenameOpt) ->
 
 teardown_database() ->
   ok = application:stop(pgsql),
+  ok = application:stop(prometheus),
   ok.
 
 % Init per group
 init_per_group(tests_without_db, Config) ->
   meck:new(pgsql_connection),
+  meck:new(prometheus_histogram),
   Config;
 init_per_group(tests_with_db, Config) ->
   Config.
@@ -311,6 +314,7 @@ init_per_testcase(should_db_apply_mappings, Config) ->
 
 % Other cases are without db
 init_per_testcase(_, Config) ->
+  ok = application:start(prometheus),
   Config.
 
 % End per testcase
@@ -389,6 +393,7 @@ end_per_testcase(should_db_apply_mappings, _Config) ->
 
 % Other cases are without db
 end_per_testcase(_, _Config) ->
+  ok = application:stop(prometheus),
   ok.
 
 

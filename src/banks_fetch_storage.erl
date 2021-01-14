@@ -64,6 +64,35 @@
 -define(LONG_TIMEOUT, 60000).
 -define(VERY_LONG_TIMEOUT, 5*60000).
 
+-define(MONITORING_BUCKETS, [50,100,200,400,800,1600,3200,6400]).
+-define(MONITORING_CALLS, [
+                           {get_banks, ?MONITORING_BUCKETS},
+                           {get_budgets, ?MONITORING_BUCKETS},
+                           {get_categories, ?MONITORING_BUCKETS},
+                           {get_stores, ?MONITORING_BUCKETS},
+                           {insert_store, ?MONITORING_BUCKETS},
+                           {get_clients, ?MONITORING_BUCKETS},
+                           {insert_client, ?MONITORING_BUCKETS},
+                           {store_accounts, ?MONITORING_BUCKETS},
+                           {get_all_accounts, ?MONITORING_BUCKETS},
+                           {get_accounts, ?MONITORING_BUCKETS},
+                           {get_account_balance_history, ?MONITORING_BUCKETS},
+                           {store_transactions, ?MONITORING_BUCKETS},
+                           {get_last_transactions_id, ?MONITORING_BUCKETS},
+                           {get_transactions, ?MONITORING_BUCKETS},
+                           {get_last_transactions, ?MONITORING_BUCKETS},
+                           {update_transaction, ?MONITORING_BUCKETS},
+                           {split_transaction, ?MONITORING_BUCKETS},
+                           {aggregate_amounts_for_purse, ?MONITORING_BUCKETS},
+                           {get_new_transactions_for_purse, ?MONITORING_BUCKETS},
+                           {copy_withdrawal_transaction_to_purse, ?MONITORING_BUCKETS},
+                           {get_mappings, ?MONITORING_BUCKETS},
+                           {apply_mappings, ?MONITORING_BUCKETS},
+                           {upgrade_mappings, ?MONITORING_BUCKETS},
+                           {insert_mapping, ?MONITORING_BUCKETS}
+                          ]).
+
+
 % Functions related to banks
 
 -spec get_banks() -> {value, [banks_fetch_bank:bank()]}.
@@ -232,92 +261,105 @@ start_link({DatabaseName,Username,Password}) ->
 %% @doc Init with storage credential
 init(Credential) ->
   self() ! init_db,
+  lists:foreach(fun({Key, Buckets}) -> init_monitoring(Key, Buckets) end, ?MONITORING_CALLS),
   {ok, #state{ credential = Credential, connection = undefined }}.
 
+init_monitoring(Key, Buckets) ->
+  prometheus_histogram:declare([{name, Key},
+                                {buckets, Buckets}, %% in milliseconds
+                                {help, ""},
+                                {duration_unit, milliseconds}]).
+
 %% @doc Synchronous calls
-handle_call(get_banks, _From, #state{ } = State0) ->
+handle_call(stop, _From, State0) ->
+  {stop, normal, stopped, State0};
+
+handle_call(Call, From, #state{ } = State0) ->
+  Key = if is_atom(Call) -> Call;
+           is_tuple(Call) -> element(1, Call)
+        end,
+  prometheus_histogram:observe_duration(Key, fun() -> handle_call_aux(Call, From, State0) end).
+
+handle_call_aux(get_banks, _From, #state{ } = State0) ->
   R = do_get_banks(State0),
   {reply, R, State0};
 
-handle_call(get_budgets, _From, #state{ } = State0) ->
+handle_call_aux(get_budgets, _From, #state{ } = State0) ->
   R = do_get_budgets(State0),
   {reply, R, State0};
 
-handle_call(get_categories, _From, #state{ } = State0) ->
+handle_call_aux(get_categories, _From, #state{ } = State0) ->
   R = do_get_categories(State0),
   {reply, R, State0};
 
-handle_call(get_stores, _From, #state{ } = State0) ->
+handle_call_aux(get_stores, _From, #state{ } = State0) ->
   R = do_get_stores(State0),
   {reply, R, State0};
-handle_call({insert_store, StoreName}, _From, #state{ } = State0) ->
+handle_call_aux({insert_store, StoreName}, _From, #state{ } = State0) ->
   R = do_insert_store_with_name(StoreName, State0),
   {reply, R, State0};
 
-handle_call(get_clients, _From, #state{ } = State0) ->
+handle_call_aux(get_clients, _From, #state{ } = State0) ->
   R = do_get_clients(State0),
   {reply, R, State0};
-handle_call({insert_client, BankId, ClientId, ClientCredential},  _From, #state{ } = State0) ->
+handle_call_aux({insert_client, BankId, ClientId, ClientCredential},  _From, #state{ } = State0) ->
   R = do_insert_client(BankId, ClientId, ClientCredential, State0),
   {reply, R, State0};
 
-handle_call({store_accounts, BankId, ClientId, FetchingAt, AccountsList}, _From, #state{ } = State0) ->
+handle_call_aux({store_accounts, BankId, ClientId, FetchingAt, AccountsList}, _From, #state{ } = State0) ->
   R = do_store_accounts(BankId, ClientId, FetchingAt, AccountsList, State0),
   {reply, R, State0};
-handle_call(get_all_accounts, _From, #state{ } = State0) ->
+handle_call_aux(get_all_accounts, _From, #state{ } = State0) ->
   R = do_get_all_accounts(State0),
   {reply, R, State0};
-handle_call({get_accounts, BankId, ClientId}, _From, #state{ } = State0) ->
+handle_call_aux({get_accounts, BankId, ClientId}, _From, #state{ } = State0) ->
   R = do_get_accounts(BankId, ClientId, State0),
   {reply, R, State0};
-handle_call({get_account_balance_history, BankId, ClientId, AccountId, Nbr}, _From, #state{ } = State0) ->
+handle_call_aux({get_account_balance_history, BankId, ClientId, AccountId, Nbr}, _From, #state{ } = State0) ->
   R = do_get_account_balance_history(BankId, ClientId, AccountId, Nbr, State0),
   {reply, R, State0};
 
-handle_call({store_transactions, BankId, ClientId, AccountId, FetchingAt, TransactionsList}, _From, #state{ } = State0) ->
+handle_call_aux({store_transactions, BankId, ClientId, AccountId, FetchingAt, TransactionsList}, _From, #state{ } = State0) ->
   R = do_store_transactions(BankId, ClientId, AccountId, FetchingAt, TransactionsList, State0),
   {reply, R, State0};
-handle_call({get_last_transactions_id, BankId, ClientId}, _From, #state{ } = State0) ->
+handle_call_aux({get_last_transactions_id, BankId, ClientId}, _From, #state{ } = State0) ->
   R = do_get_last_transactions_id(BankId, ClientId, State0),
   {reply, R, State0};
-handle_call({get_transactions, BankId, ClientId, AccountId}, _From, #state{ } = State0) ->
+handle_call_aux({get_transactions, BankId, ClientId, AccountId}, _From, #state{ } = State0) ->
   R = do_get_transactions(BankId, ClientId, AccountId, State0),
   {reply, R, State0};
-handle_call({get_last_transactions, CursorOpt, N}, _From, #state{ } = State0) ->
+handle_call_aux({get_last_transactions, CursorOpt, N}, _From, #state{ } = State0) ->
   R = do_get_last_transactions(CursorOpt, N, State0),
   {reply, R, State0};
-handle_call({update_transaction, BankId, ClientId, AccountId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesIds, Amount}, _From, #state{ } = State0) ->
+handle_call_aux({update_transaction, BankId, ClientId, AccountId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesIds, Amount}, _From, #state{ } = State0) ->
   R = do_update_transaction(BankId, ClientId, AccountId, TransactionId, Date, Period, StoreId, BudgetId, CategoriesIds, Amount, State0),
   {reply, R, State0};
-handle_call({split_transaction, BankId, AccountId, ClientId, TransactionId}, _From, #state{ } = State0) ->
+handle_call_aux({split_transaction, BankId, AccountId, ClientId, TransactionId}, _From, #state{ } = State0) ->
   R = do_split_transaction(BankId, AccountId, ClientId, TransactionId, State0),
   {reply, R, State0};
 
-handle_call({aggregate_amounts_for_purse, StartDate, UntilDate, PurseId, SourcesList}, _From, #state{ } = State0) ->
+handle_call_aux({aggregate_amounts_for_purse, StartDate, UntilDate, PurseId, SourcesList}, _From, #state{ } = State0) ->
   R = do_aggregate_amounts_for_purse(StartDate, UntilDate, PurseId, SourcesList, State0),
   {reply, R, State0};
-handle_call({get_new_transactions_for_purse, StartDate, UntilDate, PurseId, SourcesList}, _From, #state{ } = State0) ->
+handle_call_aux({get_new_transactions_for_purse, StartDate, UntilDate, PurseId, SourcesList}, _From, #state{ } = State0) ->
   R = do_get_new_transactions_for_purse(StartDate, UntilDate, PurseId, SourcesList, State0),
   {reply, R, State0};
-handle_call({copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId, PurseId}, _From, #state{ } = State0) ->
+handle_call_aux({copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId, PurseId}, _From, #state{ } = State0) ->
   R = do_copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, PurseId, State0),
   {reply, R, State0};
 
-handle_call(get_mappings, _From, #state{ } = State0) ->
+handle_call_aux(get_mappings, _From, #state{ } = State0) ->
   R = do_get_mappings(State0),
   {reply, R, State0};
-handle_call(apply_mappings, _From, #state{ } = State0) ->
+handle_call_aux(apply_mappings, _From, #state{ } = State0) ->
   R = do_apply_mappings(State0),
   {reply, R, State0};
-handle_call({upgrade_mappings, Budgets, Categories, Stores, Mappings}, _From, #state{ } = State0) ->
+handle_call_aux({upgrade_mappings, Budgets, Categories, Stores, Mappings}, _From, #state{ } = State0) ->
   R = do_upgrade_mappings(Budgets, Categories, Stores, Mappings, State0),
   {reply, R, State0};
-handle_call({insert_mapping, Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period}, _From, #state{ } = State0) ->
+handle_call_aux({insert_mapping, Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period}, _From, #state{ } = State0) ->
   R = do_insert_mapping_with_values(Pattern, BudgetId, CategoriesIds, StoreId, FixDate, Period, State0),
-  {reply, R, State0};
-
-handle_call(stop, _From, State0) ->
-  {stop, normal, stopped, State0}.
+  {reply, R, State0}.
 
 %% @doc Asynchronous calls
 handle_cast(_, State0) ->
