@@ -11,6 +11,7 @@
 
 -spec start(normal | {takeover, node()} | {failover, node()}, any()) -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
 start(_StartType, _StartArgs) ->
+  {ok, _} = prometheus_httpd:start(),
   banks_fetch_http:setup(),
   banks_fetch_bank:setup(),
 

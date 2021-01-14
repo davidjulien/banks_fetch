@@ -12,6 +12,7 @@
     jsx,
     pgsql,
     prometheus,
+    'prometheus_httpd',
     elli,
     jiffy
    ]},
