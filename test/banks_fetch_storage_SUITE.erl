@@ -892,14 +892,14 @@ should_db_get_last_transactions(Config) ->
   <<"NToxOjU=">> = Cursor1,
   5 = Total1,
   1 = length(Transactions1),
-  [#{ id := <<"transaction1">>, ext_period := 'bimester', ext_date := {2020,7,1}, ext_store_id := 8, ext_budget_id := 1, ext_categories_ids := [4,5] }] = Transactions1,
+  [#{ id := <<"transaction1">>, ext_period := 'bimester', ext_date := {2020,7,1}, ext_store_id := 8, ext_budget_id := 1, ext_categories_ids := [4,5], ext_to_purse := false }] = Transactions1,
 
   ct:comment("Get last 5 transactions"),
   {value, {Cursor2, Total2, Transactions2}} = banks_fetch_storage:get_last_transactions(none, 5),
   none = Cursor2,
   Total1 = Total2,
   5 = length(Transactions2),
-  [#{ id := <<"transaction1">> }, #{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }, #{ id := <<"transaction5">> }, #{ id := <<"transaction2">> }] = Transactions2,
+  [#{ id := <<"transaction1">> }, #{ id := <<"transaction3">> }, #{ id := <<"transaction4">> }, #{ id := <<"transaction5">> }, #{ id := <<"transaction2">>, ext_to_purse := true }] = Transactions2,
 
   ct:comment("Get last 2 transactions after first one"),
   {value, {Cursor3, Total3, Transactions3}} = banks_fetch_storage:get_last_transactions(Cursor1, 2),
@@ -951,7 +951,8 @@ should_db_update_transaction(_Config) ->
                                                              {2020,11,16}, 'bimester', undefined, 1, [3,4], undefined),
   ExpectedTransaction = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
              accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit, ext_mapping_id => -1,
-             ext_categories_ids => [3,4], ext_date => {2020,11,16}, ext_budget_id => 1, ext_period => bimester, ext_store_id => undefined, ext_split_of_id => none, ext_splitted => false},
+             ext_categories_ids => [3,4], ext_date => {2020,11,16}, ext_budget_id => 1, ext_period => bimester, ext_store_id => undefined, ext_split_of_id => none, ext_splitted => false,
+             ext_to_purse => false},
   ExpectedTransaction = Transaction,
 
   ct:comment("Update again transaction"),
@@ -959,7 +960,8 @@ should_db_update_transaction(_Config) ->
                                                              undefined, undefined, 3, undefined, undefined, undefined),
   ExpectedTransaction2 = #{id => <<"transaction5">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client2">>}, account_id => {account_id,<<"account3">>},
              accounting_date => {2020,7,7}, amount => -55.55, description => <<"VIREMENT SEPA">>, effective_date => {2020,7,7}, type => sepa_debit, ext_mapping_id => -1,
-             ext_categories_ids => undefined, ext_date => undefined, ext_budget_id => undefined, ext_period => undefined, ext_store_id => 3, ext_split_of_id => none, ext_splitted => false},
+             ext_categories_ids => undefined, ext_date => undefined, ext_budget_id => undefined, ext_period => undefined, ext_store_id => 3, ext_split_of_id => none, ext_splitted => false,
+             ext_to_purse => false},
   ExpectedTransaction2 = Transaction2,
 
   ok.
@@ -1053,10 +1055,12 @@ should_db_split_transaction(_Config) ->
   {ok, [SubTransaction1, SubTransaction2]} = banks_fetch_storage:split_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1">>}),
   ExpectedSubTransaction1 = #{id => <<"transaction1-001">>, bank_id => {bank_id, <<"ing">>}, client_id => {client_id, <<"client1">>}, account_id => {account_id, <<"account1">>},
                                accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit, ext_mapping_id => undefined,
-                               ext_categories_ids => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
+                               ext_categories_ids => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false,
+                               ext_to_purse => false},
   ExpectedSubTransaction2 = #{id => <<"transaction1-REM">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
                                accounting_date => {2020,7,8}, amount => -44.44, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit, ext_mapping_id => undefined,
-                               ext_categories_ids => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
+                               ext_categories_ids => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false,
+                               ext_to_purse => false},
   ExpectedSubTransaction1 = SubTransaction1,
   ExpectedSubTransaction2 = SubTransaction2,
 
@@ -1077,7 +1081,8 @@ should_db_split_transaction(_Config) ->
   {ok, [SubTransaction2_2]} = banks_fetch_storage:split_transaction({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction1">>}),
   ExpectedSubTransaction2_2 = #{id => <<"transaction1-002">>, bank_id => {bank_id,<<"ing">>}, client_id => {client_id,<<"client1">>}, account_id => {account_id,<<"account1">>},
                                accounting_date => {2020,7,8}, amount => 0.0, description => <<"no description">>, effective_date => {2020,7,8}, type => card_debit, ext_mapping_id => undefined,
-                               ext_categories_ids => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false},
+                               ext_categories_ids => [4,5], ext_date => {2020,7,1}, ext_budget_id => 1, ext_period => bimester, ext_store_id => 8, ext_split_of_id => {transaction_id, <<"transaction1">>}, ext_splitted => false,
+                               ext_to_purse => false},
   ExpectedSubTransaction2_2 = SubTransaction2_2,
 
   ct:comment("Get last 5 transactions"),
@@ -1151,8 +1156,15 @@ should_db_copy_withdrawal_transaction_to_purse(_Config) ->
    {{{2020,7,2},{12,0,0}},0.0},
    {{{2020,7,1},{12,0,0}},0.0}] = History0,
 
+  ct:comment("Check that ext_to_purse is true for transaction2"),
+  {value, {_,_,Transactions0}} = banks_fetch_storage:get_last_transactions(none, 6),
+  [#{ id := <<"transaction2">>, ext_to_purse := true }|_] = lists:reverse(Transactions0),
+
   ct:comment("Copy to purse"),
   ok = banks_fetch_storage:copy_withdrawal_transaction_to_purse(<<"ing">>, <<"client1">>, <<"account1">>, <<"transaction2">>, <<"David">>),
+
+  {value, {_,_,Transactions1}} = banks_fetch_storage:get_last_transactions(none, 6),
+  [#{ id := <<"transaction2">>, ext_to_purse := false }|_] = lists:reverse(Transactions1),
 
   ct:comment("Get purse account last info again"),
   {value, Accounts1} = banks_fetch_storage:get_accounts(<<"purse">>, <<"David">>),
@@ -1308,11 +1320,11 @@ should_db_upgrade_mappings_do_not_update_manual_updates(_Config) ->
   {value, {none, 5, Transactions1}} = banks_fetch_storage:get_last_transactions(none, 10),
   5 = length(Transactions1),
   [
-   #{ id := <<"transaction1">>, ext_mapping_id := undefined, ext_date := {2020,10,10}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
-   #{ id := <<"transaction3">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
-   #{ id := <<"transaction4">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
-   #{ id := <<"transaction5">>, ext_mapping_id := undefined, ext_date := {2020,7,7}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined },
-   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_date := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined }
+   #{ id := <<"transaction1">>, ext_mapping_id := undefined, ext_date := {2020,10,10}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined, ext_to_purse := false },
+   #{ id := <<"transaction3">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined, ext_to_purse := false },
+   #{ id := <<"transaction4">>, ext_mapping_id := undefined, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined, ext_to_purse := false },
+   #{ id := <<"transaction5">>, ext_mapping_id := undefined, ext_date := {2020,7,7}, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined, ext_to_purse := false },
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_date := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined, ext_to_purse := true }
   ] = Transactions1,
 
   ct:comment("Update transaction5 manually"),
@@ -1339,7 +1351,7 @@ should_db_upgrade_mappings_do_not_update_manual_updates(_Config) ->
    #{ id := <<"transaction3">>, ext_mapping_id := 2, ext_date := {2020,5,31}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_ids := undefined, ext_period := 'month' },
    #{ id := <<"transaction4">>, ext_mapping_id := 3, ext_date := {2020,7,8}, ext_store_id := undefined, ext_budget_id := 1, ext_categories_ids := undefined, ext_period := 'quarter' },
    UpdatedTransaction,
-   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined }
+   #{ id := <<"transaction2">>, ext_mapping_id := undefined, ext_store_id := undefined, ext_budget_id := undefined, ext_categories_ids := undefined, ext_period := undefined, ext_to_purse := true }
   ] = Transactions2,
 
   ok.

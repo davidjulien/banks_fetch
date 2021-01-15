@@ -665,14 +665,14 @@ do_get_last_transactions(Cursor, N, #state{ connection = Connection }) ->
     none ->
       {value, {none, 0, []}};
     {WhereClause, StartId, Offset, Total} ->
-      case pgsql_connection:extended_query(list_to_binary([<<"SELECT transaction_id, bank_id, client_id, account_id, accounting_date, effective_date, amount, description, type, ext_mapping_id, ext_date, ext_period, ext_budget_id, ext_categories_ids, ext_store_id, ext_splitted, ext_split_of_id FROM transactions WHERE ">>, WhereClause, <<" ORDER BY effective_date DESC, bank_id, client_id, account_id, fetching_at DESC, fetching_position ASC, ext_split_of_id NULLS FIRST, transaction_id OFFSET $1 LIMIT $2;">>]), [Offset, N, StartId], Connection) of
+      case pgsql_connection:extended_query(list_to_binary([<<"SELECT transaction_id, bank_id, client_id, account_id, accounting_date, effective_date, amount, description, type, ext_mapping_id, ext_date, ext_period, ext_budget_id, ext_categories_ids, ext_store_id, ext_splitted, ext_split_of_id, exists(SELECT 1 FROM transactions p WHERE p.bank_id = 'purse' and p.transaction_id = 'purse-' || source.bank_id || '-' || source.client_id || '-' || source.account_id || '-' || source.transaction_id LIMIT 1) FROM transactions source WHERE ">>, WhereClause, <<" ORDER BY effective_date DESC, bank_id, client_id, account_id, fetching_at DESC, fetching_position ASC, ext_split_of_id NULLS FIRST, transaction_id OFFSET $1 LIMIT $2;">>]), [Offset, N, StartId], Connection) of
         {{select, Count}, List0} ->
           List1 = [ #{ id => TransactionId, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8'),
                        bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal},
                        ext_mapping_id => null_to_undefined(MappingId), ext_date => null_to_undefined(Date), ext_period => convert_from_sql_period(OptPeriod, undefined), ext_budget_id => null_to_undefined(BudgetId),
                        ext_categories_ids => case CategoriesIds of {array, A} -> A; _ -> undefined end, ext_store_id => null_to_undefined(StoreId),
-                       ext_splitted => Splitted, ext_split_of_id => convert_from_sql_transaction_id(SplitOfId) } ||
-                    {TransactionId, BankIdVal, ClientIdVal, AccountIdVal, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, MappingId, Date, OptPeriod, BudgetId, CategoriesIds, StoreId, Splitted, SplitOfId} <- List0 ],
+                       ext_splitted => Splitted, ext_split_of_id => convert_from_sql_transaction_id(SplitOfId), ext_to_purse => not CopyToPurse andalso binary:match(Description, <<"RETRAIT DAB">>) =/= nomatch } ||
+                    {TransactionId, BankIdVal, ClientIdVal, AccountIdVal, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, MappingId, Date, OptPeriod, BudgetId, CategoriesIds, StoreId, Splitted, SplitOfId, CopyToPurse} <- List0 ],
           NewOffset = Offset+Count,
           NewCursor = if NewOffset >= Total -> none;
                          true -> base64:encode(list_to_binary([integer_to_binary(StartId), <<":">>, integer_to_binary(Offset+Count), <<":">>, integer_to_binary(Total)]))
@@ -699,17 +699,18 @@ decode_cursor(Cursor, _Connection) ->
 do_update_transaction({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal}, Date, Period, StoreId, BudgetId, CategoriesIds, NewAmount, #state{ connection = Connection }) ->
   {'begin', []} = pgsql_connection:simple_query(<<"BEGIN TRANSACTION">>, Connection),
 
-  Query = <<"UPDATE transactions SET ext_mapping_id = -1, ext_date = $5, ext_period = $6, ext_store_id = $7, ext_budget_id = $8, ext_categories_ids = $9 WHERE bank_id = $1 and client_id = $2 and account_id = $3 and transaction_id = $4 RETURNING accounting_date, effective_date, amount, description, type, ext_date, ext_period, ext_budget_id, ext_store_id, ext_categories_ids, ext_splitted, ext_split_of_id, amount;">>,
+  Query = <<"UPDATE transactions source SET ext_mapping_id = -1, ext_date = $5, ext_period = $6, ext_store_id = $7, ext_budget_id = $8, ext_categories_ids = $9 WHERE bank_id = $1 and client_id = $2 and account_id = $3 and transaction_id = $4 RETURNING accounting_date, effective_date, amount, description, type, ext_date, ext_period, ext_budget_id, ext_store_id, ext_categories_ids, ext_splitted, ext_split_of_id, amount, exists(SELECT 1 from transactions target WHERE target.bank_id = 'purse' AND target.client_id = $4 AND target.account_id = 'purse' AND target.transaction_id = 'purse-' || source.bank_id || '-' || source.client_id || '-' || source.account_id || '-' || source.transaction_id LIMIT 1);">>,
   Parameters = [BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal,
                 undefined_to_null(Date), convert_to_sql_period(Period), undefined_to_null(StoreId), undefined_to_null(BudgetId), convert_to_sql_categories_ids(CategoriesIds)
                ],
   case pgsql_connection:extended_query(Query, Parameters, Connection) of
-    {{update, 1}, [{AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, ExtDate, ExtPeriod, ExtBudgetId, ExtStoreId, ExtCategoriesIds, ExtSplitted, ExtSplitOfId0, OldAmount}]} ->
+    {{update, 1}, [{AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, ExtDate, ExtPeriod, ExtBudgetId, ExtStoreId, ExtCategoriesIds, ExtSplitted, ExtSplitOfId0, OldAmount, CopyToPurse}]} ->
       ExtSplitOfId = convert_from_sql_transaction_id(ExtSplitOfId0),
       Transaction = #{ id => TransactionIdVal, accounting_date => AccountingDate, effective_date => EffectiveDate, amount => Amount, description => Description, type => binary_to_atom(Type,'utf8'),
                        bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal}, ext_mapping_id => -1,
                        ext_date => null_to_undefined(ExtDate), ext_period => convert_from_sql_period(ExtPeriod, 'undefined'), ext_budget_id => null_to_undefined(ExtBudgetId), ext_store_id => null_to_undefined(ExtStoreId),
-                       ext_categories_ids => convert_from_sql_categories_ids(ExtCategoriesIds, 'undefined'), ext_splitted => ExtSplitted, ext_split_of_id => ExtSplitOfId },
+                       ext_categories_ids => convert_from_sql_categories_ids(ExtCategoriesIds, 'undefined'), ext_splitted => ExtSplitted, ext_split_of_id => ExtSplitOfId,
+                       ext_to_purse => not CopyToPurse andalso binary:match(Description, <<"RETRAIT DAB">>) =/= nomatch },
       IsRemaining = re:run(TransactionIdVal, <<"-REM$">>, [{capture,none}]) =:= match,
       if NewAmount =:= undefined ->
            {'commit', []} = pgsql_connection:simple_query(<<"COMMIT">>, Connection),
@@ -764,7 +765,8 @@ do_split_transaction({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue}
                                ext_categories_ids => convert_from_sql_categories_ids(ExtCategoriesIds, undefined),
                                ext_store_id => null_to_undefined(ExtStoreId),
                                ext_split_of_id => TransactionId,
-                               ext_splitted => false
+                               ext_splitted => false,
+                               ext_to_purse => false
                              },
           Rem = <<"-REM">>,
           SubTransactionRem  = #{ id => <<TransactionIdValue/binary, Rem/binary>>,
@@ -783,7 +785,8 @@ do_split_transaction({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue}
                                   ext_categories_ids => convert_from_sql_categories_ids(ExtCategoriesIds, undefined),
                                   ext_store_id => null_to_undefined(ExtStoreId),
                                   ext_split_of_id => TransactionId,
-                                  ext_splitted => false
+                                  ext_splitted => false,
+                                  ext_to_purse => false
                                 },
           TransactionsList = [SubTransaction1, SubTransactionRem],
           case do_store_transactions(BankId, ClientId, AccountId, FetchingAt, TransactionsList, State0) of
@@ -816,7 +819,8 @@ do_split_transaction({bank_id, BankIdValue} = BankId, {client_id, ClientIdValue}
                              ext_categories_ids => convert_from_sql_categories_ids(ExtCategoriesIds, undefined),
                              ext_store_id => null_to_undefined(ExtStoreId),
                              ext_split_of_id => TransactionId,
-                             ext_splitted => false
+                             ext_splitted => false,
+                             ext_to_purse => false
                            },
       TransactionsList = [NewSubTransaction],
       case do_store_transactions(BankId, ClientId, AccountId, FetchingAt, TransactionsList, State0) of
