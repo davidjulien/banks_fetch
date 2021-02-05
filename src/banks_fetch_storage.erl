@@ -688,7 +688,7 @@ decode_cursor(none, Connection) ->
   end;
 decode_cursor(Cursor, _Connection) ->
   try binary:split(base64:decode(Cursor),<<":">>, [global]) of
-    [StartIdBin, OffsetBin, CountBin] -> {<<"id < $3">>, binary_to_integer(StartIdBin), binary_to_integer(OffsetBin), binary_to_integer(CountBin)}
+    [StartIdBin, OffsetBin, CountBin] -> {<<"id <= $3">>, binary_to_integer(StartIdBin), binary_to_integer(OffsetBin), binary_to_integer(CountBin)}
   catch
     error:function_clause -> {error, invalid_cursor}
   end.
