@@ -50,7 +50,7 @@
 
          aggregate_amounts_for_purse/4,
          get_new_transactions_for_purse/4,
-         copy_withdrawal_transaction_to_purse/5,
+         copy_withdrawal_transaction_to_purse/4,
 
          stop/0
         ]).
@@ -238,10 +238,9 @@ get_new_transactions_for_purse(StartDate, UntilDate, PurseId, SourcesList) ->
   gen_server:call(?MODULE, {get_new_transactions_for_purse, StartDate, UntilDate, PurseId, SourcesList}, ?LONG_TIMEOUT).
 
 %% @doc Copy an existing withdrawal transaction to purse account, and recompute purse account values
--spec copy_withdrawal_transaction_to_purse(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id(),
-                                          banks_fetch_bank:client_id()) -> ok.
-copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, PurseId) ->
-  gen_server:call(?MODULE, {copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId, PurseId}, ?LONG_TIMEOUT).
+-spec copy_withdrawal_transaction_to_purse(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()) -> ok | {error, purse_not_found} | {error, already_copied}.
+copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId) ->
+  gen_server:call(?MODULE, {copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId}, ?LONG_TIMEOUT).
 
 
 
@@ -344,8 +343,8 @@ handle_call_aux({aggregate_amounts_for_purse, StartDate, UntilDate, PurseId, Sou
 handle_call_aux({get_new_transactions_for_purse, StartDate, UntilDate, PurseId, SourcesList}, _From, #state{ } = State0) ->
   R = do_get_new_transactions_for_purse(StartDate, UntilDate, PurseId, SourcesList, State0),
   {reply, R, State0};
-handle_call_aux({copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId, PurseId}, _From, #state{ } = State0) ->
-  R = do_copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, PurseId, State0),
+handle_call_aux({copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId}, _From, #state{ } = State0) ->
+  R = do_copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, State0),
   {reply, R, State0};
 
 handle_call_aux(get_mappings, _From, #state{ } = State0) ->
@@ -594,7 +593,7 @@ do_get_all_accounts(#state{ connection = Connection }) ->
 %% @doc Get accounts
 %%
 -spec do_get_accounts(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), #state{}) -> {value, [banks_fetch_bank:account()]}.
-do_get_accounts(BankId, ClientId, #state{ connection = Connection }) ->
+do_get_accounts({bank_id, BankId}, {client_id, ClientId}, #state{ connection = Connection }) ->
   {{select, _Nbr}, Accounts} = pgsql_connection:extended_query(<<"SELECT distinct on (bank_id, client_id, account_id) bank_id, client_id, account_id, balance, number, owner, ownership, type, name FROM accounts WHERE bank_id = $1 and client_id = $2 ORDER BY bank_id, client_id, account_id, fetching_at DESC">>, [BankId, ClientId], Connection),
   {value, [ account_sql_to_map(AccountSQL) || AccountSQL <- Accounts ]}.
 
@@ -606,7 +605,7 @@ account_sql_to_map({BankId, ClientId, AccountId, Balance, Number, Owner, {e_acco
 %% @doc Get account balances history (in reverse order)
 %%
 -spec do_get_account_balance_history(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), non_neg_integer(), #state{}) -> {value, [{calendar:datetime(), float()}]}.
-do_get_account_balance_history(BankId, ClientId, AccountId, Nbr, #state{ connection = Connection }) ->
+do_get_account_balance_history({bank_id, BankId}, {client_id, ClientId}, {account_id, AccountId}, Nbr, #state{ connection = Connection }) ->
   {{select, _Nbr}, History} = pgsql_connection:extended_query(<<"SELECT fetching_at, balance FROM accounts WHERE bank_id = $1 AND client_id = $2 AND account_id = $3 ORDER BY bank_id, client_id, fetching_at DESC LIMIT $4">>, [BankId, ClientId, AccountId, Nbr], Connection),
   {value, History}.
 
@@ -671,7 +670,8 @@ do_get_last_transactions(Cursor, N, #state{ connection = Connection }) ->
                        bank_id => {bank_id, BankIdVal}, client_id => {client_id, ClientIdVal}, account_id => {account_id, AccountIdVal},
                        ext_mapping_id => null_to_undefined(MappingId), ext_date => null_to_undefined(Date), ext_period => convert_from_sql_period(OptPeriod, undefined), ext_budget_id => null_to_undefined(BudgetId),
                        ext_categories_ids => case CategoriesIds of {array, A} -> A; _ -> undefined end, ext_store_id => null_to_undefined(StoreId),
-                       ext_splitted => Splitted, ext_split_of_id => convert_from_sql_transaction_id(SplitOfId), ext_to_purse => not CopyToPurse andalso binary:match(Description, <<"RETRAIT DAB">>) =/= nomatch } ||
+                       ext_splitted => Splitted, ext_split_of_id => convert_from_sql_transaction_id(SplitOfId),
+                       ext_to_purse => not CopyToPurse andalso BankIdVal =/= <<"purse">> andalso binary:match(Description, <<"RETRAIT DAB">>) =/= nomatch } ||
                     {TransactionId, BankIdVal, ClientIdVal, AccountIdVal, AccountingDate, EffectiveDate, Amount, Description, {e_transaction_type, Type}, MappingId, Date, OptPeriod, BudgetId, CategoriesIds, StoreId, Splitted, SplitOfId, CopyToPurse} <- List0 ],
           NewOffset = Offset+Count,
           NewCursor = if NewOffset >= Total -> none;
@@ -868,19 +868,43 @@ do_aggregate_amounts_for_purse_aux(StartDate, UntilDate, {client_id, TargetClien
 
 
 %%
-%% @doc Copy withdrawal transaction to purse. Create a new transaction in purse and recompute purse account balances
-%%
-do_copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId, PurseId, #state{ connection = Connection } = State) ->
-  case pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type, fetching_position, ext_date) SELECT 'purse', $1, 'purse', NOW(), 'purse-' || bank_id || '-' || client_id || '-' || account_id || '-' || transaction_id, accounting_date, effective_date, -amount, description, type, fetching_position, ext_date FROM transactions WHERE bank_id = $2 AND client_id = $3 AND account_id = $4 AND transaction_id = $5 RETURNING amount, ext_date">>, [PurseId, BankId, ClientId, AccountId, TransactionId], Connection) of
-    {{insert, 0, 1}, [{Amount, ExtDate}]} ->
-      do_recompute_purse_account_values(PurseId, Amount, ExtDate, State);
-    {error, Error} ->
-      true = pgsql_error:is_integrity_constraint_violation(Error),
-      {error, already_copied}
+%% @doc Copy withdrawal transaction to purse. Purse target is identified automatically thanks to purse sources list stored in credential.
+%% Create a new transaction in purse and recompute purse account balances
+%% @end
+do_copy_withdrawal_transaction_to_purse({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account_id, AccountIdValue}, TransactionId, #state{ connection = Connection } = State) ->
+  case pgsql_connection:simple_query(<<"SELECT client_id, client_credential FROM clients WHERE bank_id = 'purse'">>, Connection) of
+    {{select, 1}, List} ->
+      R = lists:dropwhile(fun({_ClientId, CredentialBin}) ->
+                              {_StartDate, SourcesList} = binary_to_term(CredentialBin),
+                              case lists:dropwhile(fun({{bank_id, SourceBankId}, {client_id, SourceClientId}, {account_id, SourceAccountId}}) ->
+                                                       not (BankIdValue =:= SourceBankId andalso ClientIdValue =:= SourceClientId andalso AccountIdValue =:= SourceAccountId)
+                                                   end, SourcesList) of % Drop if not our transaction source
+                                [] -> true; % drop this client id
+                                _ -> false  % purse found
+                              end
+                          end, List),
+      case R of
+        [] -> {error, purse_not_found};
+        [{PurseId, _}|_] ->
+          {'begin', []} = pgsql_connection:extended_query(<<"BEGIN TRANSACTION">>, [], Connection),
+          case pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type, fetching_position, ext_date) SELECT 'purse', $1, 'purse', NOW(), 'purse-' || bank_id || '-' || client_id || '-' || account_id || '-' || transaction_id, accounting_date, effective_date, -amount, description, type, fetching_position, ext_date FROM transactions WHERE bank_id = $2 AND client_id = $3 AND account_id = $4 AND transaction_id = $5 RETURNING amount, ext_date">>, [PurseId, BankIdValue, ClientIdValue, AccountIdValue, TransactionId], Connection) of
+            {{insert, 0, 1}, [{Amount, ExtDate}]} ->
+              case pgsql_connection:extended_query(<<"UPDATE transactions set ext_budget_id = 0 WHERE bank_id = $1 AND client_id = $2 AND account_id = $3 AND transaction_id = $4">>, [BankIdValue, ClientIdValue, AccountIdValue, TransactionId], Connection) of
+                {{update, 1}, []} ->
+                  Result = do_recompute_purse_account_values(PurseId, Amount, ExtDate, State),
+                  {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
+                  Result
+              end;
+            {error, Error} ->
+              {'rollback', []} = pgsql_connection:extended_query(<<"ROLLBACK">>, [], Connection),
+              true = pgsql_error:is_integrity_constraint_violation(Error),
+              {error, already_copied}
+          end
+      end
   end.
 
 do_recompute_purse_account_values(PurseId, TransactionAmount, TransactionDate, #state{ connection = Connection }) ->
-  case pgsql_connection:extended_query(<<"UPDATE accounts SET balance = balance + $1 WHERE bank_id = 'purse' AND client_id = $2 AND account_id = 'purse' AND fetching_at >= $3">>,
+  case pgsql_connection:extended_query(<<"UPDATE accounts SET balance = balance + $1 WHERE bank_id = 'purse' AND client_id = $2 AND account_id = 'purse-' || $2 AND fetching_at >= $3">>,
                                        [TransactionAmount, PurseId, TransactionDate], Connection) of
     {{update, _}, []} ->
       ok
@@ -914,12 +938,15 @@ do_apply_mappings(#state{ connection = Connection }) ->
 do_upgrade_mappings(Budgets, Categories, Stores, Mappings, #state{ connection = Connection } = State) ->
   try
     {'begin', []} = pgsql_connection:extended_query(<<"BEGIN TRANSACTION">>, [], Connection),
-    upgrade_entries(Budgets, fun do_get_budgets/1, fun do_insert_budget/2, fun do_delete_budgets/2, State),
-    upgrade_entries(Categories, fun do_get_categories/1, fun do_insert_category/2, fun do_delete_categories/2, State),
-    upgrade_entries(Stores, fun do_get_stores/1, fun do_insert_store/2, fun do_delete_stores/2, State),
-    upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
+    _ = upgrade_entries(Budgets, fun do_get_budgets/1, fun do_insert_budget/2, fun do_delete_budgets/2, State),
+    _ = upgrade_entries(Categories, fun do_get_categories/1, fun do_insert_category/2, fun do_delete_categories/2, State),
+    _ = upgrade_entries(Stores, fun do_get_stores/1, fun do_insert_store/2, fun do_delete_stores/2, State),
+    Updated = upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
     {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
-    do_apply_mappings(State)
+    % Apply mappings only if mappings rules have changed
+    if Updated -> do_apply_mappings(State);
+       true -> ok
+    end
   catch
     E:V:S ->
       ok = lager:warning("Unable to upgrade mappings : ~p\n~p", [{E,V}, S]),
@@ -932,7 +959,7 @@ upgrade_entries(EntriesUpgrade, LoadFun, InsertFun, DeleteFun, State) ->
   {NewEntries, RemovedEntriesId} = compare_json_storage(EntriesUpgrade, EntriesStorage),
   ok = DeleteFun(RemovedEntriesId, State),
   lists:foreach(fun(NewEntry) -> ok = InsertFun(NewEntry, State) end, NewEntries),
-  ok.
+  NewEntries =/= [] orelse RemovedEntriesId =/= [].
 
 
 compare_json_storage(DataUpgrade, DataStorage) ->

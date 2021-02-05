@@ -811,7 +811,7 @@ should_db_get_accounts(_Config) ->
   ct:comment("Get accounts"),
   ExpectedAccounts = ?ACCOUNTS_1,
   NbrExpectedAccounts = length(ExpectedAccounts),
-  {value, Accounts} = banks_fetch_storage:get_accounts(?BANK_ID_1, ?CLIENT_ID_1),
+  {value, Accounts} = banks_fetch_storage:get_accounts({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_1}),
 
   ct:comment("Verify returned accounts"),
   NbrExpectedAccounts = length(Accounts),
@@ -821,21 +821,20 @@ should_db_get_accounts(_Config) ->
 
 should_db_get_account_balance_history(_Config) ->
   ct:comment("Get account balance history (2)"),
-  {value, History1} = banks_fetch_storage:get_account_balance_history(?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, 2),
+  {value, History1} = banks_fetch_storage:get_account_balance_history({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_1}, {account_id, ?ACCOUNT_ID_1}, 2),
 
   ct:comment("Verify returned history (2)"),
   [{{{2020,7,10},{12,0,0}},503.05},
    {{{2020,7,9},{12,0,0}},526.14}] = History1,
 
   ct:comment("Get account balance history (10)"),
-  {value, History2} = banks_fetch_storage:get_account_balance_history(?BANK_ID_1, ?CLIENT_ID_1, ?ACCOUNT_ID_1, 10),
+  {value, History2} = banks_fetch_storage:get_account_balance_history({bank_id, ?BANK_ID_1}, {client_id, ?CLIENT_ID_1}, {account_id, ?ACCOUNT_ID_1}, 10),
 
   ct:comment("Verify returned history (10)"),
   [{{{2020,7,10},{12,0,0}},503.05},
    {{{2020,7,9},{12,0,0}},526.14},
    {{{2020,7,8},{12,0,0}},426.13},
    {{{2020,7,7},{12,0,0}},234.12}] = History2,
-
 
   ok.
 
@@ -1142,14 +1141,14 @@ should_db_aggregage_amounts_for_purse(_Config) ->
 
 should_db_copy_withdrawal_transaction_to_purse(_Config) ->
   ct:comment("Get purse account last info"),
-  {value, Accounts0} = banks_fetch_storage:get_accounts(<<"purse">>, <<"David">>),
+  {value, Accounts0} = banks_fetch_storage:get_accounts({bank_id, <<"purse">>}, {client_id, <<"David">>}),
   [#{balance := 100.0,bank_id := <<"purse">>,
-     client_id := <<"David">>,id := <<"purse">>,name := <<"PURSE">>,
+     client_id := <<"David">>,id := <<"purse-David">>,name := <<"PURSE">>,
      number := <<"number4">>,owner := <<"owner4">>,
      ownership := single,type := current}] = Accounts0,
 
   ct:comment("Get balance history"),
-  {value, History0} = banks_fetch_storage:get_account_balance_history(<<"purse">>, <<"David">>, <<"purse">>, 10),
+  {value, History0} = banks_fetch_storage:get_account_balance_history({bank_id, <<"purse">>}, {client_id, <<"David">>}, {account_id, <<"purse-David">>}, 10),
   [{{{2020,7,5},{12,0,0}},100.0},
    {{{2020,7,4},{12,0,0}},100.0},
    {{{2020,7,3},{12,0,0}},0.0},
@@ -1158,23 +1157,23 @@ should_db_copy_withdrawal_transaction_to_purse(_Config) ->
 
   ct:comment("Check that ext_to_purse is true for transaction2"),
   {value, {_,_,Transactions0}} = banks_fetch_storage:get_last_transactions(none, 6),
-  [#{ id := <<"transaction2">>, ext_to_purse := true }|_] = lists:reverse(Transactions0),
+  [#{ id := <<"transaction2">>, ext_to_purse := true, ext_budget_id := undefined }|_] = lists:reverse(Transactions0),
 
   ct:comment("Copy to purse"),
-  ok = banks_fetch_storage:copy_withdrawal_transaction_to_purse(<<"ing">>, <<"client1">>, <<"account1">>, <<"transaction2">>, <<"David">>),
+  ok = banks_fetch_storage:copy_withdrawal_transaction_to_purse({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction2">>}),
 
   {value, {_,_,Transactions1}} = banks_fetch_storage:get_last_transactions(none, 6),
-  [#{ id := <<"transaction2">>, ext_to_purse := false }|_] = lists:reverse(Transactions1),
+  [#{ id := <<"transaction2">>, ext_to_purse := false, ext_budget_id := 0 }|_] = lists:reverse(Transactions1),
 
   ct:comment("Get purse account last info again"),
-  {value, Accounts1} = banks_fetch_storage:get_accounts(<<"purse">>, <<"David">>),
+  {value, Accounts1} = banks_fetch_storage:get_accounts({bank_id, <<"purse">>}, {client_id, <<"David">>}),
   [#{balance := 120.0,bank_id := <<"purse">>,
-     client_id := <<"David">>,id := <<"purse">>,name := <<"PURSE">>,
+     client_id := <<"David">>,id := <<"purse-David">>,name := <<"PURSE">>,
      number := <<"number4">>,owner := <<"owner4">>,
      ownership := single,type := current}] = Accounts1,
 
   ct:comment("Get balance history"),
-  {value, History1} = banks_fetch_storage:get_account_balance_history(<<"purse">>, <<"David">>, <<"purse">>, 10),
+  {value, History1} = banks_fetch_storage:get_account_balance_history({bank_id, <<"purse">>}, {client_id, <<"David">>}, {account_id, <<"purse-David">>}, 10),
   [{{{2020,7,5},{12,0,0}},120.0},
    {{{2020,7,4},{12,0,0}},120.0},
    {{{2020,7,3},{12,0,0}},20.0},
@@ -1186,19 +1185,19 @@ should_db_copy_withdrawal_transaction_to_purse(_Config) ->
 
 should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied(_Config) ->
   ct:comment("Get purse account"),
-  {value, Accounts0} = banks_fetch_storage:get_accounts(<<"purse">>, <<"David">>),
+  {value, Accounts0} = banks_fetch_storage:get_accounts({bank_id, <<"purse">>}, {client_id, <<"David">>}),
   [#{balance := 100.0,bank_id := <<"purse">>,
-     client_id := <<"David">>,id := <<"purse">>,name := <<"PURSE">>,
+     client_id := <<"David">>,id := <<"purse-David">>,name := <<"PURSE">>,
      number := <<"number4">>,owner := <<"owner4">>,
      ownership := single,type := current}] = Accounts0,
 
   ct:comment("Copy to purse fails"),
-  {error, already_copied} = banks_fetch_storage:copy_withdrawal_transaction_to_purse(<<"ing">>, <<"client1">>, <<"account1">>, <<"transaction3">>, <<"David">>),
+  {error, already_copied} = banks_fetch_storage:copy_withdrawal_transaction_to_purse({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account1">>}, {transaction_id, <<"transaction3">>}), %<<"David">>),
 
   ct:comment("Get purse account (no update)"),
-  {value, Accounts0} = banks_fetch_storage:get_accounts(<<"purse">>, <<"David">>),
+  {value, Accounts0} = banks_fetch_storage:get_accounts({bank_id, <<"purse">>}, {client_id, <<"David">>}),
   [#{balance := 100.0,bank_id := <<"purse">>,
-     client_id := <<"David">>,id := <<"purse">>,name := <<"PURSE">>,
+     client_id := <<"David">>,id := <<"purse-David">>,name := <<"PURSE">>,
      number := <<"number4">>,owner := <<"owner4">>,
      ownership := single,type := current}] = Accounts0,
 

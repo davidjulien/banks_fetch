@@ -50,6 +50,9 @@ banks_fetch_client_manager:add_client({bank_id, <<"ing">>}, {client_id, <<"YOUR_
 
 It will connect to your bank and fetch accounts data every 4 hours. Credential (and accounts data) will be stored in postgres database and client will be started again automatically each time `banks_fetch` is started.
 
+It is possible to create a "virtual" purse account
+banks_fetch_client_manager:add_client({bank_id, <<"purse">>}, {client_id, <<"David">>}, {client_credential, {  {2021,1,26}, [{{bank_id,<<"ing">>},{client_id,<<"YOUR_CLIENT_ID">>},{account_id,<<"MAIN_ACCOUNT_ID">>}}]}}).
+
 Tests
 -----
 

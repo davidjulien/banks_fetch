@@ -7,6 +7,7 @@
 %% - /api/1.0/transactions/cursor={CURSOR} : return last 10 transactions stored after {CURSOR}
 %% - /api/1.0/transactions/{BANKID}/{CLIENTID}/{ACCOUNTID}/{TRANSACTIONID} (PATCH) : patch a transaction
 %% - /api/1.0/transactions/{BANKID}/{CLIENTID}/{ACCOUNTID}/{TRANSACTIONID}/split (POST) : split a transaction
+%% - /api/1.0/transactions/{BANKID}/{CLIENTID}/{ACCOUNTID}/{TRANSACTIONID}/copyToPurse (POST) : copy a transaction to purse
 %% - /api/1.0/banks : return all banks
 %% - /api/1.0/budgets : return all budgets
 %% - /api/1.0/categories : return all categories
@@ -63,6 +64,9 @@ handle(<<"PATCH">>, [<<"api">>, <<"1.0">>, <<"transactions">>, BankIdStr, Client
 
 handle('POST', [<<"api">>, <<"1.0">>, <<"transactions">>, BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr, <<"split">>], _Req) ->
   handle_transactions_split(BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr);
+
+handle('POST', [<<"api">>, <<"1.0">>, <<"transactions">>, BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr, <<"copy_to_purse">>], _Req) ->
+  handle_transactions_copy_to_purse(BankIdStr, ClientIdStr, AccountIdStr, TransactionIdStr);
 
 handle('GET',[<<"api">>, <<"1.0">>, <<"banks">>], _Req) ->
   handle_banks();
@@ -161,6 +165,19 @@ handle_transactions_split(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal
       {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Unable to split">>}
   end.
 
+-spec handle_transactions_copy_to_purse(unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary()) -> elli_handler:result().
+handle_transactions_copy_to_purse(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal) ->
+  case banks_fetch_storage:copy_withdrawal_transaction_to_purse({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal}) of
+    ok ->
+      ResultJSON = jsx:encode([]),
+      {200, [{<<"Content-Type">>, <<"application/json">>}], ResultJSON};
+    {error, R} ->
+      ok = lager:warning("Unable to copy transaction ~s/~s/~s/~s: ~1000p", [BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal, R]),
+      {400, [{<<"Content-Type">>, <<"text/plain">>}], <<"Unable to copy transaction to purse">>}
+  end.
+
+
+
 -spec handle_banks() -> elli_handler:result().
 handle_banks() ->
   {value, Banks} = banks_fetch_storage:get_banks(),
@@ -243,9 +260,10 @@ to_json_transaction(#{ bank_id := {bank_id, BankIdVal}, client_id := {client_id,
                    {transaction_id, MainTransactionId} -> MainTransactionId;
                    _ -> null
                  end,
+  ExtToPurse = maps:get('ext_to_purse', Transaction, undefined),
   Transaction#{ bank_id := BankIdVal, client_id := ClientIdVal, account_id := AccountIdVal, accounting_date := fix_date(AccountingDate), effective_date := fix_date(EffectiveDate),
                 ext_date => fix_date(ExtDate), ext_period => undefined_to_null(ExtPeriod), ext_budget_id => undefined_to_null(ExtBudgetId), ext_categories_ids => undefined_to_null(ExtCategoriesIds),
-                ext_mapping_id => undefined_to_null(ExtMappingId), ext_split_of_id => ExtSplitOfId, ext_store_id => undefined_to_null(ExtStoreId) }.
+                ext_mapping_id => undefined_to_null(ExtMappingId), ext_split_of_id => ExtSplitOfId, ext_store_id => undefined_to_null(ExtStoreId), ext_to_purse => undefined_to_null(ExtToPurse) }.
 
 %% @doc Transform an internal mapping data to a json compatible mapping data (none to null)
 to_json_mapping(Mapping) ->
