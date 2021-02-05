@@ -41,6 +41,7 @@
     {"id": 201500, "name": "Jardin", "up_category_id": 200000},
     {"id": 201600, "name": "Achat immobilier", "up_category_id": 200000},
     {"id": 201700, "name": "Aides au logement", "up_category_id": 200000},
+    {"id": 201800, "name": "Travaux", "up_category_id": 200000},
 
     {"id": 300000, "name": "Santé", "up_category_id": null},
     {"id": 301000, "name": "Praticiens", "up_category_id": 300000},
@@ -402,6 +403,7 @@
     {"id": 41001, "name": "Coiffeur Air (Chinon)"},
 
     {"id": 42000, "name": "Fnac"},
+    {"id": 42001, "name": "Paul Beuscher"},
 
     {"id": 43000, "name": "Grandir Nature"},
 
@@ -465,7 +467,7 @@
     {"id": 24, "pattern": "(SARL COQUEMAS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100200], "store_id": 2007},
     {"id": 25, "pattern": "(AU PAIN DU BOIS)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100200], "store_id": 2008},
     {"id": 26, "pattern": "(AU PAIN DU PETI)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100200], "store_id": 2009},
-    {"id": 27, "pattern": "(PAUL|ECGPAUL1017208)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100200], "store_id": 2010},
+    {"id": 27, "pattern": "(PAUL|ECGPAUL1017208)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100200], "store_id": 2010},
     {"id": 28, "pattern": "(LA CROISSANTERIE)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100200], "store_id": 2011},
     {"id": 29, "pattern": "(BOUCHERIE PORTHEAUL)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100300], "store_id": 3000},
     {"id": 30, "pattern": "(GAUDIN TRAITEUR)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100300], "store_id": 3001},
@@ -637,6 +639,7 @@
     {"id": 196, "pattern": "(AIR)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [500000,500100], "store_id": 41001},
     {"id": 197, "pattern": "(COMMUNE DE MOISSAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,907000,907050], "store_id": 50004},
     {"id": 198, "pattern": "(ROUX PLAINES BEAUCE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36001},
-    {"id": 199, "pattern": "(SC-AROMATIK\\.AUT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36002}
+    {"id": 199, "pattern": "(SC-AROMATIK\\.AUT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36002},
+    {"id": 200, "pattern": "(PAUL BEUSCHER)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,906000,906030], "store_id": 42001}
   ]
 }

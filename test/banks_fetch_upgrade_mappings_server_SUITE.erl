@@ -39,7 +39,8 @@ init_per_testcase(should_fetch_mappings_without_http_storage, Config) ->
   meck:new(timer, [unstick,passthrough]), % unstick because timer resides in sticky dir, passthrough because lager needs now_diff
   Config;
 init_per_testcase(should_test_local_mappings, Config) ->
-  case file:read_file(filename:join([?config(data_dir, Config), "../../../../../../resources/mappings.json"])) of
+  Filename = filename:join([?config(data_dir, Config), "../../../../../../resources/mappings.json"]),
+  case file:read_file(Filename) of
     {error, enoent} ->
       {skip, "You may add a link to mappings.json to test it"};
     {ok, Data} ->
@@ -195,9 +196,9 @@ should_test_local_mappings(Config) ->
 
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(MockBudgets, MockCategories, MockStores, MockMappings) ->
                                                          check_data(MockBudgets, 5),
-                                                         check_data(MockCategories, 172),
-                                                         check_data(MockStores, 191),
-                                                         check_data(MockMappings, 199),
+                                                         check_data(MockCategories, 173),
+                                                         check_data(MockStores, 192),
+                                                         check_data(MockMappings, 200),
                                                          ok
                                                      end),
 
