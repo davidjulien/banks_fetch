@@ -40,7 +40,7 @@ connect(ClientId, {client_credential, {StartDate, SourcesList}}) ->
 -spec fetch_accounts(purse_bank_auth()) -> {ok, [banks_fetch_bank:account()]}.
 fetch_accounts({bank_auth, ?MODULE, {purse, CurrentDate, {client_id, ClientIdVal} = PurseId, StartDate, SourcesList}}) ->
   {value, Balance} = banks_fetch_storage:aggregate_amounts_for_purse(StartDate, CurrentDate, PurseId, SourcesList),
-  AccountInfo = #{ id => ClientIdVal, balance => Balance, number => <<>>, owner => ClientIdVal, ownership => single, type => purse, name => <<"Purse">> },
+  AccountInfo = #{ id => list_to_binary([<<"purse-">>, ClientIdVal]), balance => Balance, number => <<>>, owner => ClientIdVal, ownership => single, type => purse, name => <<"Purse">> },
   {ok, [ AccountInfo ]}.
 
 %%

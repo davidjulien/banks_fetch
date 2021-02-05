@@ -48,6 +48,7 @@ end_per_testcase(_, _Config) ->
   ok.
 
 -define(CLIENT_ID_VAL, <<"123456789">>).
+-define(PURSE_ACCOUNT_ID, <<"purse-123456789">>).
 -define(CLIENT_ID, {client_id, ?CLIENT_ID_VAL}).
 -define(START_DATE, {2021,1,5}).
 -define(CURRENT_DATE, {{2021,1,5}, {12,14,15}}).
@@ -86,7 +87,7 @@ should_fetch_accounts(_Config) ->
   {ok, AccountInfoList} = banks_fetch_bank_purse:fetch_accounts({bank_auth, banks_fetch_bank_purse, {purse, ?CURRENT_DATE, ?CLIENT_ID, ?START_DATE, ?SOURCES}}),
 
   1 = length(AccountInfoList),
-  #{balance := -200.0, id := ?CLIENT_ID_VAL, name := <<"Purse">>, number := <<>>, owner := ?CLIENT_ID_VAL, ownership := single, type := purse} = lists:nth(1, AccountInfoList),
+  #{balance := -200.0, id := ?PURSE_ACCOUNT_ID, name := <<"Purse">>, number := <<>>, owner := ?CLIENT_ID_VAL, ownership := single, type := purse} = lists:nth(1, AccountInfoList),
 
   true = meck:validate(banks_fetch_storage),
   true = meck:validate(calendar),
