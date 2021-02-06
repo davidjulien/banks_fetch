@@ -56,6 +56,7 @@
          should_db_get_new_transactions_for_purse/1,
          should_db_aggregage_amounts_for_purse/1,
          should_db_copy_withdrawal_transaction_to_purse/1,
+         should_db_copy_withdrawal_transaction_to_purse_fails_without_purse/1,
          should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied/1,
 
          should_db_upgrade_mappings_empty/1,
@@ -132,7 +133,7 @@ groups() ->
                          should_db_store_transactions, should_db_get_transactions, should_db_get_last_transactions, should_db_get_last_transactions_empty, should_db_get_last_transactions_invalid_cursor,
                          should_db_get_last_transactions_id, should_db_update_transaction, should_db_split_transaction, should_db_split_transaction_fails_because_not_found,
                          should_db_get_new_transactions_for_purse, should_db_aggregage_amounts_for_purse,
-                         should_db_copy_withdrawal_transaction_to_purse, should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied,
+                         should_db_copy_withdrawal_transaction_to_purse, should_db_copy_withdrawal_transaction_to_purse_fails_without_purse, should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied,
                          should_db_update_transaction_with_amount, should_db_update_transaction_with_amount_fails_because_not_subtransaction, should_db_update_transaction_with_amount_fails_because_remaining,
                          should_db_upgrade_mappings_empty, should_db_upgrade_mappings_do_not_update_manual_updates, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates,
                          should_db_upgrade_mappings_invalid_updates, should_db_insert_mapping, should_db_apply_mappings ]}
@@ -294,6 +295,8 @@ init_per_testcase(should_db_get_new_transactions_for_purse, Config) ->
 
 init_per_testcase(should_db_copy_withdrawal_transaction_to_purse, Config) ->
   setup_database(Config, <<"setup_db_for_copy_withdrawal_transaction_to_purse.sql">>);
+init_per_testcase(should_db_copy_withdrawal_transaction_to_purse_fails_without_purse, Config) ->
+  setup_database(Config, <<"setup_db_for_copy_withdrawal_transaction_to_purse.sql">>);
 init_per_testcase(should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied, Config) ->
   setup_database(Config, <<"setup_db_for_copy_withdrawal_transaction_to_purse.sql">>);
 
@@ -373,6 +376,8 @@ end_per_testcase(should_db_get_new_transactions_for_purse, _Config) ->
 end_per_testcase(should_db_aggregage_amounts_for_purse, _Config) ->
   teardown_database();
 end_per_testcase(should_db_copy_withdrawal_transaction_to_purse, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_copy_withdrawal_transaction_to_purse_fails_without_purse, _Config) ->
   teardown_database();
 end_per_testcase(should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied, _Config) ->
   teardown_database();
@@ -1179,6 +1184,27 @@ should_db_copy_withdrawal_transaction_to_purse(_Config) ->
    {{{2020,7,3},{12,0,0}},20.0},
    {{{2020,7,2},{12,0,0}},0.0},
    {{{2020,7,1},{12,0,0}},0.0}] = History1,
+
+  ok.
+
+
+should_db_copy_withdrawal_transaction_to_purse_fails_without_purse(_Config) ->
+  ct:comment("Get purse account"),
+  {value, Accounts0} = banks_fetch_storage:get_accounts({bank_id, <<"purse">>}, {client_id, <<"David">>}),
+  [#{balance := 100.0,bank_id := <<"purse">>,
+     client_id := <<"David">>,id := <<"purse-David">>,name := <<"PURSE">>,
+     number := <<"number4">>,owner := <<"owner4">>,
+     ownership := single,type := current}] = Accounts0,
+
+  ct:comment("Copy to purse fails"),
+  {error, purse_not_found} = banks_fetch_storage:copy_withdrawal_transaction_to_purse({bank_id, <<"ing">>}, {client_id, <<"client1">>}, {account_id, <<"account2">>}, {transaction_id, <<"transaction3">>}),
+
+  ct:comment("Get purse account (no update)"),
+  {value, Accounts0} = banks_fetch_storage:get_accounts({bank_id, <<"purse">>}, {client_id, <<"David">>}),
+  [#{balance := 100.0,bank_id := <<"purse">>,
+     client_id := <<"David">>,id := <<"purse-David">>,name := <<"PURSE">>,
+     number := <<"number4">>,owner := <<"owner4">>,
+     ownership := single,type := current}] = Accounts0,
 
   ok.
 
