@@ -7,6 +7,8 @@
 all() -> [should_launch_app_supervisor].
 
 init_per_testcase(should_launch_app_supervisor, Config) ->
+  % Prometheus may be running on default port (8081), choose next to prevent eaddrinuse
+  ok = application:set_env(prometheus, prometheus_http, [{path, "/metrics"}, {format, auto}, {port, 8082}]),
   application:start(prometheus),
   meck:new(banks_fetch_sup),
   Config.
