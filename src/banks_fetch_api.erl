@@ -7,7 +7,7 @@
 %% - /api/1.0/transactions/cursor={CURSOR} : return last 10 transactions stored after {CURSOR}
 %% - /api/1.0/transactions/{BANKID}/{CLIENTID}/{ACCOUNTID}/{TRANSACTIONID} (PATCH) : patch a transaction
 %% - /api/1.0/transactions/{BANKID}/{CLIENTID}/{ACCOUNTID}/{TRANSACTIONID}/split (POST) : split a transaction
-%% - /api/1.0/transactions/{BANKID}/{CLIENTID}/{ACCOUNTID}/{TRANSACTIONID}/copyToPurse (POST) : copy a transaction to purse
+%% - /api/1.0/transactions/{BANKID}/{CLIENTID}/{ACCOUNTID}/{TRANSACTIONID}/copy_to_purse (POST) : copy a transaction to purse
 %% - /api/1.0/banks : return all banks
 %% - /api/1.0/budgets : return all budgets
 %% - /api/1.0/categories : return all categories
