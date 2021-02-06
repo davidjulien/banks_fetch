@@ -26,6 +26,9 @@
          should_split_transaction/1,
          should_split_transaction_fails_if_not_exists/1,
 
+         should_copy_transaction_to_purse/1,
+         should_copy_transaction_to_purse_fails_if_not_found/1,
+
          should_insert_mapping/1,
          should_not_insert_mapping_already_existing/1,
          should_not_insert_mapping_if_parameters_are_invalid/1,
@@ -64,6 +67,9 @@ all() ->
 
    should_split_transaction,
    should_split_transaction_fails_if_not_exists,
+
+   should_copy_transaction_to_purse,
+   should_copy_transaction_to_purse_fails_if_not_found,
 
    should_insert_mapping,
    should_not_insert_mapping_already_existing,
@@ -175,6 +181,15 @@ init_per_testcase(should_split_transaction_fails_if_not_exists, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
 
+init_per_testcase(should_copy_transaction_to_purse, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+init_per_testcase(should_copy_transaction_to_purse_fails_if_not_found, Config) ->
+  meck:new(banks_fetch_storage),
+  init_elli(Config);
+
+
 init_per_testcase(should_insert_mapping, Config) ->
   meck:new(banks_fetch_storage),
   init_elli(Config);
@@ -219,7 +234,6 @@ init_per_testcase(should_join_strings, Config) ->
   Config;
 init_per_testcase(should_verify_types, Config) ->
   Config.
-
 
 
 end_per_testcase(should_handle_event_do_nothing, _Config) ->
@@ -282,6 +296,17 @@ end_per_testcase(should_split_transaction_fails_if_not_exists, Config) ->
   meck:unload(banks_fetch_storage),
   teardown_elli(Config),
   ok;
+
+end_per_testcase(should_copy_transaction_to_purse, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
+end_per_testcase(should_copy_transaction_to_purse_fails_if_not_found, Config) ->
+  meck:unload(banks_fetch_storage),
+  teardown_elli(Config),
+  ok;
+
 
 end_per_testcase(should_insert_mapping, Config) ->
   meck:unload(banks_fetch_storage),
@@ -595,6 +620,41 @@ should_split_transaction_fails_if_not_exists(_Config) ->
   Response = hackney:request('POST', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123/split", [], <<"">>),
   400 = status(Response),
   <<"Unable to split">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+should_copy_transaction_to_purse(_Config) ->
+  meck:expect(banks_fetch_storage, copy_withdrawal_transaction_to_purse, fun(MockBankId, MockClientId, MockAccountId, MockTransactionId) ->
+                                                           {bank_id, <<"ing">>} = MockBankId,
+                                                           {client_id, <<"client1">>} = MockClientId,
+                                                           {account_id, <<"account1">>} = MockAccountId,
+                                                           {transaction_id, <<"123">>} = MockTransactionId,
+                                                           ok
+                                                          end),
+
+  Response = hackney:request('POST', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123/copy_to_purse", [], <<"">>),
+  200 = status(Response),
+  <<"[]">> = body(Response),
+
+  true = meck:validate(banks_fetch_storage),
+
+  ok.
+
+
+should_copy_transaction_to_purse_fails_if_not_found(_Config) ->
+  meck:expect(banks_fetch_storage, copy_withdrawal_transaction_to_purse, fun(MockBankId, MockClientId, MockAccountId, MockTransactionId) ->
+                                                           {bank_id, <<"ing">>} = MockBankId,
+                                                           {client_id, <<"client1">>} = MockClientId,
+                                                           {account_id, <<"account1">>} = MockAccountId,
+                                                           {transaction_id, <<"123">>} = MockTransactionId,
+                                                           {error, purse_not_found}
+                                                       end),
+
+  Response = hackney:request('POST', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123/copy_to_purse", [], <<"">>),
+  400 = status(Response),
+  <<"Unable to copy transaction to purse">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 
