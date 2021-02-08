@@ -351,7 +351,7 @@ handle_call_aux(get_mappings, _From, #state{ } = State0) ->
   R = do_get_mappings(State0),
   {reply, R, State0};
 handle_call_aux(apply_mappings, _From, #state{ } = State0) ->
-  R = do_apply_mappings(State0),
+  R = do_apply_mappings(all, State0),
   {reply, R, State0};
 handle_call_aux({upgrade_mappings, Budgets, Categories, Stores, Mappings}, _From, #state{ } = State0) ->
   R = do_upgrade_mappings(Budgets, Categories, Stores, Mappings, State0),
@@ -925,10 +925,22 @@ do_get_mappings(#state{ connection = Connection }) ->
 %%
 %% @doc Apply mappings
 %%
-do_apply_mappings(#state{ connection = Connection }) ->
+-spec do_apply_mappings(all | {[non_neg_integer()], boolean()}, #state{}) -> ok.
+do_apply_mappings(Updates, #state{ connection = Connection }) ->
   % It will trigger postgres function which analyses transactions
   ok = lager:info("Apply mappings"),
-  {{'update', N}, []} = pgsql_connection:extended_query(<<"UPDATE transactions SET description = description">>, [], Connection),
+  WherePart = case Updates of
+                all -> <<>>;
+                {[], true} ->
+                  <<" WHERE ext_mapping_id is NULL">>;
+                {MappingIds, HasNewEntries} ->
+                  ExtMappingIdStr = string:join([ integer_to_list(Id) || Id <- MappingIds ], ","),
+                  ExtensionStr = if HasNewEntries -> <<" OR ext_mapping_id is NULL">>;
+                                    true -> <<>>
+                                 end,
+                  list_to_binary([<<" WHERE ext_mapping_id IN (">>, ExtMappingIdStr, <<")">>, ExtensionStr])
+              end,
+  {{'update', N}, []} = pgsql_connection:extended_query(<<"UPDATE transactions SET description = description", WherePart/binary>>, [], Connection),
   ok = lager:info("Number of transactions updated: ~p", [N]),
   ok.
 
@@ -941,11 +953,12 @@ do_upgrade_mappings(Budgets, Categories, Stores, Mappings, #state{ connection = 
     _ = upgrade_entries(Budgets, fun do_get_budgets/1, fun do_insert_budget/2, fun do_delete_budgets/2, State),
     _ = upgrade_entries(Categories, fun do_get_categories/1, fun do_insert_category/2, fun do_delete_categories/2, State),
     _ = upgrade_entries(Stores, fun do_get_stores/1, fun do_insert_store/2, fun do_delete_stores/2, State),
-    Updated = upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
+    UpdatedMappingIds = upgrade_entries(Mappings, fun do_get_mappings/1, fun do_insert_mapping/2, fun do_delete_mappings/2, State),
     {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
     % Apply mappings only if mappings rules have changed
-    if Updated -> do_apply_mappings(State);
-       true -> ok
+    case UpdatedMappingIds of
+      false -> ok;
+      {RemovedEntriesIds, HasNewEntries} -> do_apply_mappings({RemovedEntriesIds, HasNewEntries}, State)
     end
   catch
     E:V:S ->
@@ -959,7 +972,11 @@ upgrade_entries(EntriesUpgrade, LoadFun, InsertFun, DeleteFun, State) ->
   {NewEntries, RemovedEntriesId} = compare_json_storage(EntriesUpgrade, EntriesStorage),
   ok = DeleteFun(RemovedEntriesId, State),
   lists:foreach(fun(NewEntry) -> ok = InsertFun(NewEntry, State) end, NewEntries),
-  NewEntries =/= [] orelse RemovedEntriesId =/= [].
+  case NewEntries =/= [] orelse RemovedEntriesId =/= [] of
+    true -> {RemovedEntriesId, NewEntries =/= []};
+    false -> false
+  end.
+
 
 
 compare_json_storage(DataUpgrade, DataStorage) ->

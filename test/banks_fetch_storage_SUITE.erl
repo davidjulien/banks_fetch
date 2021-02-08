@@ -63,6 +63,7 @@
          should_db_upgrade_mappings_do_not_update_manual_updates/1,
          should_db_upgrade_mappings_identical/1,
          should_db_upgrade_mappings_updates/1,
+         should_db_upgrade_mappings_only_removes/1,
          should_db_upgrade_mappings_invalid_updates/1,
          should_db_insert_mapping/1,
          should_db_apply_mappings/1
@@ -136,7 +137,7 @@ groups() ->
                          should_db_copy_withdrawal_transaction_to_purse, should_db_copy_withdrawal_transaction_to_purse_fails_without_purse, should_db_copy_withdrawal_transaction_to_purse_fails_if_already_copied,
                          should_db_update_transaction_with_amount, should_db_update_transaction_with_amount_fails_because_not_subtransaction, should_db_update_transaction_with_amount_fails_because_remaining,
                          should_db_upgrade_mappings_empty, should_db_upgrade_mappings_do_not_update_manual_updates, should_db_upgrade_mappings_identical, should_db_upgrade_mappings_updates,
-                         should_db_upgrade_mappings_invalid_updates, should_db_insert_mapping, should_db_apply_mappings ]}
+                         should_db_upgrade_mappings_only_removes, should_db_upgrade_mappings_invalid_updates, should_db_insert_mapping, should_db_apply_mappings ]}
   ].
 
 %%
@@ -308,6 +309,8 @@ init_per_testcase(should_db_upgrade_mappings_identical, Config) ->
   setup_database(Config, <<"setup_db_for_upgrade_mappings.sql">>);
 init_per_testcase(should_db_upgrade_mappings_updates, Config) ->
   setup_database(Config);
+init_per_testcase(should_db_upgrade_mappings_only_removes, Config) ->
+  setup_database(Config);
 init_per_testcase(should_db_upgrade_mappings_invalid_updates, Config) ->
   setup_database(Config);
 init_per_testcase(should_db_insert_mapping, Config) ->
@@ -388,6 +391,8 @@ end_per_testcase(should_db_upgrade_mappings_do_not_update_manual_updates, _Confi
 end_per_testcase(should_db_upgrade_mappings_identical, _Config) ->
   teardown_database();
 end_per_testcase(should_db_upgrade_mappings_updates, _Config) ->
+  teardown_database();
+end_per_testcase(should_db_upgrade_mappings_only_removes, _Config) ->
   teardown_database();
 end_per_testcase(should_db_upgrade_mappings_invalid_updates, _Config) ->
   teardown_database();
@@ -1431,6 +1436,37 @@ should_db_upgrade_mappings_updates(_Config) ->
   Stores2 = [#{ id => 4, name => <<"MONOPRIX">> }, #{ id => 5, name => <<"Carrefour Update">> }],
   Mappings2 = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_ids => [1, 2], store_id => 1 },
                #{ id => 2, pattern => <<"URSSAF">>, fix_date => previous, period => month, budget_id => 1, categories_ids => none, store_id => none } ],
+  ok = banks_fetch_storage:upgrade_mappings(Budgets2, Categories2, Stores2, Mappings2),
+
+  ct:comment("Verify mappings in database"),
+  verify_mappings(Budgets2, Categories2, Stores2, Mappings2),
+
+  ok.
+
+
+should_db_upgrade_mappings_only_removes(_Config) ->
+  ct:comment("Verify current mappings is empty"),
+  {value, []} = banks_fetch_storage:get_budgets(),
+  {value, []} = banks_fetch_storage:get_categories(),
+  {value, []} = banks_fetch_storage:get_stores(),
+  {value, []} = banks_fetch_storage:get_mappings(),
+
+  ct:comment("Upgrade mappings"),
+  Budgets = [#{ id => 0, name => <<"Aucun">> }, #{ id => 1, name => <<"Courant">>}, #{ id => 2, name => <<"Extra">> }],
+  Categories = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché"/utf8>>, up_category_id => 1 }, #{ id => 3, name => <<"Logement">>, up_category_id => none }],
+  Stores = [#{ id => 1, name => <<"Auchan">> }, #{ id => 5, name => <<"Carrefour">> }],
+  Mappings = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_ids => [1, 2], store_id => 1 },
+              #{ id => 2, pattern => <<"URSSAF">>, fix_date => previous2, period => month, budget_id => 1, categories_ids => none, store_id => none },
+              #{ id => 3, pattern => <<"CHARGES">>, fix_date => none, period => quarter, budget_id => 1, categories_ids => none, store_id => none } ],
+  ok = banks_fetch_storage:upgrade_mappings(Budgets, Categories, Stores, Mappings),
+  verify_mappings(Budgets, Categories, Stores, Mappings),
+
+  ct:comment("Upgrade again mappings"),
+  Budgets2 = [#{ id => 0, name => <<"Aucun">> }, #{ id => 2, name => <<"Extra (update)">> }, #{ id => 3, name => <<"NewBudget">> }],
+  Categories2 = [ #{ id => 1, name => <<"Alimentation">>, up_category_id => none }, #{ id => 2, name => <<"Supermarché (update)"/utf8>>, up_category_id => 1 }, #{ id => 4, name => <<"NewCat">>, up_category_id => none }],
+  Stores2 = [#{ id => 4, name => <<"MONOPRIX">> }, #{ id => 5, name => <<"Carrefour Update">> }],
+  Mappings2 = [#{ id => 1, pattern => <<"AUCHAN">>, fix_date => none, period => month, budget_id => 1, categories_ids => [1, 2], store_id => 1 },
+              #{ id => 2, pattern => <<"URSSAF">>, fix_date => previous2, period => month, budget_id => 1, categories_ids => none, store_id => none } ],
   ok = banks_fetch_storage:upgrade_mappings(Budgets2, Categories2, Stores2, Mappings2),
 
   ct:comment("Verify mappings in database"),
