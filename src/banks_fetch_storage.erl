@@ -238,7 +238,7 @@ get_new_transactions_for_purse(StartDate, UntilDate, PurseId, SourcesList) ->
   gen_server:call(?MODULE, {get_new_transactions_for_purse, StartDate, UntilDate, PurseId, SourcesList}, ?LONG_TIMEOUT).
 
 %% @doc Copy an existing withdrawal transaction to purse account, and recompute purse account values
--spec copy_withdrawal_transaction_to_purse(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()) -> ok | {error, purse_not_found} | {error, already_copied}.
+-spec copy_withdrawal_transaction_to_purse(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id()) -> {ok, [banks_fetch_bank:transaction()]} | {error, purse_not_found} | {error, already_copied}.
 copy_withdrawal_transaction_to_purse(BankId, ClientId, AccountId, TransactionId) ->
   gen_server:call(?MODULE, {copy_withdrawal_transaction_to_purse, BankId, ClientId, AccountId, TransactionId}, ?LONG_TIMEOUT).
 
@@ -887,13 +887,33 @@ do_copy_withdrawal_transaction_to_purse({bank_id, BankIdValue}, {client_id, Clie
         [] -> {error, purse_not_found};
         [{PurseId, _}|_] ->
           {'begin', []} = pgsql_connection:extended_query(<<"BEGIN TRANSACTION">>, [], Connection),
-          case pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type, fetching_position, ext_date) SELECT 'purse', $1, 'purse', NOW(), 'purse-' || bank_id || '-' || client_id || '-' || account_id || '-' || transaction_id, accounting_date, effective_date, -amount, description, type, fetching_position, ext_date FROM transactions WHERE bank_id = $2 AND client_id = $3 AND account_id = $4 AND transaction_id = $5 RETURNING amount, ext_date">>, [PurseId, BankIdValue, ClientIdValue, AccountIdValue, TransactionId], Connection) of
-            {{insert, 0, 1}, [{Amount, ExtDate}]} ->
+          case pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type, fetching_position, ext_date) SELECT 'purse', $1, 'purse', NOW(), 'purse-' || bank_id || '-' || client_id || '-' || account_id || '-' || transaction_id, accounting_date, effective_date, -amount, description, type, fetching_position, ext_date FROM transactions WHERE bank_id = $2 AND client_id = $3 AND account_id = $4 AND transaction_id = $5 RETURNING bank_id, client_id, account_id, transaction_id, accounting_date, effective_date, amount, description, type, ext_date">>, [PurseId, BankIdValue, ClientIdValue, AccountIdValue, TransactionId], Connection) of
+            {{insert, 0, 1}, [{NewBankId, NewClientId, NewAccountId, NewTransactionId, NewAccountingDate, NewEffectiveDate, NewAmount, NewDescription, {e_transaction_type, NewType}, NewExtDate}]} ->
               case pgsql_connection:extended_query(<<"UPDATE transactions set ext_budget_id = 0 WHERE bank_id = $1 AND client_id = $2 AND account_id = $3 AND transaction_id = $4">>, [BankIdValue, ClientIdValue, AccountIdValue, TransactionId], Connection) of
                 {{update, 1}, []} ->
-                  Result = do_recompute_purse_account_values(PurseId, Amount, ExtDate, State),
+                  ok = do_recompute_purse_account_values(PurseId, NewAmount, NewExtDate, State),
                   {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
-                  Result
+                  NewTransaction = #{
+                    id => NewTransactionId,
+                    bank_id => NewBankId,
+                    account_id => NewAccountId,
+                    client_id => NewClientId,
+                    accounting_date => NewAccountingDate,
+                    effective_date => NewEffectiveDate,
+                    amount => NewAmount,
+                    description => NewDescription,
+                    type => binary_to_atom(NewType,'utf8'),
+                    ext_mapping_id => undefined,
+                    ext_date => null_to_undefined(NewExtDate),
+                    ext_period => undefined,
+                    ext_budget_id => undefined,
+                    ext_categories_ids => [],
+                    ext_store_id => undefined,
+                    ext_split_of_id => none,
+                    ext_splitted => false,
+                    ext_to_purse => false
+                   },
+                  {ok, [NewTransaction]}
               end;
             {error, Error} ->
               {'rollback', []} = pgsql_connection:extended_query(<<"ROLLBACK">>, [], Connection),

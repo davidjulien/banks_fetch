@@ -168,8 +168,8 @@ handle_transactions_split(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal
 -spec handle_transactions_copy_to_purse(unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary(), unicode:unicode_binary()) -> elli_handler:result().
 handle_transactions_copy_to_purse(BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal) ->
   case banks_fetch_storage:copy_withdrawal_transaction_to_purse({bank_id, BankIdVal}, {client_id, ClientIdVal}, {account_id, AccountIdVal}, {transaction_id, TransactionIdVal}) of
-    ok ->
-      ResultJSON = jsx:encode([]),
+    {ok, Transactions} ->
+      ResultJSON = jsx:encode([ to_json_transaction(Transaction) || Transaction <- Transactions ]),
       {200, [{<<"Content-Type">>, <<"application/json">>}], ResultJSON};
     {error, R} ->
       ok = lager:warning("Unable to copy transaction ~s/~s/~s/~s: ~1000p", [BankIdVal, ClientIdVal, AccountIdVal, TransactionIdVal, R]),

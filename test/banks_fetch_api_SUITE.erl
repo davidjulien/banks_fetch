@@ -405,6 +405,7 @@ should_handle_internal_error(_Config) ->
             accounting_date => {2020,7,21}, effective_date => {2020,7,21}, amount => -34.32, description => <<"PAIEMENT PAR CARTE 20/07/2020 XXX">>, type => card_debit,
             ext_mapping_id => 5, ext_period => 'month', ext_store_id => 3, ext_split_of_id => {transaction_id, <<"transaction">>}, ext_splitted => false, ext_to_purse => false }
         ]).
+-define(TRANSACTIONS_JSON_STR, <<"">>).
 -define(TRANSACTIONS_JSON, <<"{\"transactions\":[{\"type\":\"sepa_debit\",\"id\":\"TRANSACTION_2\",\"ext_to_purse\":false,\"ext_store_id\":null,\"ext_splitted\":true,\"ext_split_of_id\":null,\"ext_period\":null,\"ext_mapping_id\":null,\"ext_date\":null,\"ext_categories_ids\":null,\"ext_budget_id\":null,\"effective_date\":\"2020-07-22\",\"description\":\"PRLV SEPA XXX\",\"client_id\":\"client1\",\"bank_id\":\"ing\",\"amount\":-14.32,\"accounting_date\":\"2020-07-22\",\"account_id\":\"account1\"},{\"type\":\"card_debit\",\"id\":\"TRANSACTION_1\",\"ext_to_purse\":false,\"ext_store_id\":3,\"ext_splitted\":false,\"ext_split_of_id\":\"transaction\",\"ext_period\":\"month\",\"ext_mapping_id\":5,\"ext_date\":null,\"ext_categories_ids\":null,\"ext_budget_id\":null,\"effective_date\":\"2020-07-21\",\"description\":\"PAIEMENT PAR CARTE 20/07/2020 XXX\",\"client_id\":\"client2\",\"bank_id\":\"ing\",\"amount\":-34.32,\"accounting_date\":\"2020-07-21\",\"account_id\":\"account2\"}],\"total\":8,\"next_cursor\":\"fakecursor\"}">>).
 
 should_return_last_transactions(_Config) ->
@@ -631,12 +632,18 @@ should_copy_transaction_to_purse(_Config) ->
                                                            {client_id, <<"client1">>} = MockClientId,
                                                            {account_id, <<"account1">>} = MockAccountId,
                                                            {transaction_id, <<"123">>} = MockTransactionId,
-                                                           ok
+                                                           {ok, [#{
+                                                              id => <<"TRANSACTION_2">>,
+                                                              bank_id => {bank_id, <<"purse">>}, client_id => {client_id, <<"client">>}, account_id => {account_id, <<"purse-client">>},
+                                                              accounting_date => {2020,7,22}, effective_date => {2020,7,22}, amount => 0.0, description => <<"PRLV SEPA XXX">>, type => sepa_debit,
+                                                              ext_budget_id => undefined, ext_period => undefined, ext_store_id => undefined, ext_categories_ids => undefined,
+                                                              ext_split_of_id => none, ext_splitted => true, ext_date => undefined, ext_mapping_id => -1,
+                                                              ext_to_purse => false}]}
                                                           end),
 
   Response = hackney:request('POST', "http://localhost:3003/api/1.0/transactions/ing/client1/account1/123/copy_to_purse", [], <<"">>),
   200 = status(Response),
-  <<"[]">> = body(Response),
+  <<"[{\"account_id\":\"purse-client\",\"accounting_date\":\"2020-07-22\",\"amount\":0.0,\"bank_id\":\"purse\",\"client_id\":\"client\",\"description\":\"PRLV SEPA XXX\",\"effective_date\":\"2020-07-22\",\"ext_budget_id\":null,\"ext_categories_ids\":null,\"ext_date\":null,\"ext_mapping_id\":-1,\"ext_period\":null,\"ext_split_of_id\":null,\"ext_splitted\":true,\"ext_store_id\":null,\"ext_to_purse\":false,\"id\":\"TRANSACTION_2\",\"type\":\"sepa_debit\"}]">> = body(Response),
 
   true = meck:validate(banks_fetch_storage),
 
