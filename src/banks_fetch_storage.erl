@@ -871,7 +871,8 @@ do_aggregate_amounts_for_purse_aux(StartDate, UntilDate, {client_id, TargetClien
 %% @doc Copy withdrawal transaction to purse. Purse target is identified automatically thanks to purse sources list stored in credential.
 %% Create a new transaction in purse and recompute purse account balances
 %% @end
-do_copy_withdrawal_transaction_to_purse({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account_id, AccountIdValue}, TransactionId, #state{ connection = Connection } = State) ->
+-spec do_copy_withdrawal_transaction_to_purse(banks_fetch_bank:bank_id(), banks_fetch_bank:client_id(), banks_fetch_bank:account_id(), banks_fetch_bank:transaction_id(), #state{}) -> {ok, [banks_fetch_bank:transaction()]} | {error, purse_not_found} | {error, already_copied}.
+do_copy_withdrawal_transaction_to_purse({bank_id, BankIdValue}, {client_id, ClientIdValue}, {account_id, AccountIdValue}, {transaction_id, TransactionIdValue}, #state{ connection = Connection } = State) ->
   case pgsql_connection:simple_query(<<"SELECT client_id, client_credential FROM clients WHERE bank_id = 'purse'">>, Connection) of
     {{select, 1}, List} ->
       R = lists:dropwhile(fun({_ClientId, CredentialBin}) ->
@@ -887,17 +888,17 @@ do_copy_withdrawal_transaction_to_purse({bank_id, BankIdValue}, {client_id, Clie
         [] -> {error, purse_not_found};
         [{PurseId, _}|_] ->
           {'begin', []} = pgsql_connection:extended_query(<<"BEGIN TRANSACTION">>, [], Connection),
-          case pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type, fetching_position, ext_date) SELECT 'purse', $1, 'purse', NOW(), 'purse-' || bank_id || '-' || client_id || '-' || account_id || '-' || transaction_id, accounting_date, effective_date, -amount, description, type, fetching_position, ext_date FROM transactions WHERE bank_id = $2 AND client_id = $3 AND account_id = $4 AND transaction_id = $5 RETURNING bank_id, client_id, account_id, transaction_id, accounting_date, effective_date, amount, description, type, ext_date">>, [PurseId, BankIdValue, ClientIdValue, AccountIdValue, TransactionId], Connection) of
+          case pgsql_connection:extended_query(<<"INSERT INTO transactions(bank_id, client_id, account_id, fetching_at, transaction_id, accounting_date, effective_date, amount, description, type, fetching_position, ext_date) SELECT 'purse', $1, 'purse', NOW(), 'purse-' || bank_id || '-' || client_id || '-' || account_id || '-' || transaction_id, accounting_date, effective_date, -amount, description, type, fetching_position, ext_date FROM transactions WHERE bank_id = $2 AND client_id = $3 AND account_id = $4 AND transaction_id = $5 RETURNING bank_id, client_id, account_id, transaction_id, accounting_date, effective_date, amount, description, type, ext_date">>, [PurseId, BankIdValue, ClientIdValue, AccountIdValue, TransactionIdValue], Connection) of
             {{insert, 0, 1}, [{NewBankId, NewClientId, NewAccountId, NewTransactionId, NewAccountingDate, NewEffectiveDate, NewAmount, NewDescription, {e_transaction_type, NewType}, NewExtDate}]} ->
-              case pgsql_connection:extended_query(<<"UPDATE transactions set ext_budget_id = 0 WHERE bank_id = $1 AND client_id = $2 AND account_id = $3 AND transaction_id = $4">>, [BankIdValue, ClientIdValue, AccountIdValue, TransactionId], Connection) of
+              case pgsql_connection:extended_query(<<"UPDATE transactions set ext_budget_id = 0 WHERE bank_id = $1 AND client_id = $2 AND account_id = $3 AND transaction_id = $4">>, [BankIdValue, ClientIdValue, AccountIdValue, TransactionIdValue], Connection) of
                 {{update, 1}, []} ->
                   ok = do_recompute_purse_account_values(PurseId, NewAmount, NewExtDate, State),
                   {'commit', []} = pgsql_connection:extended_query(<<"COMMIT">>, [], Connection),
                   NewTransaction = #{
                     id => NewTransactionId,
-                    bank_id => NewBankId,
-                    account_id => NewAccountId,
-                    client_id => NewClientId,
+                    bank_id => {bank_id, NewBankId},
+                    account_id => {account_id, NewAccountId},
+                    client_id => {client_id, NewClientId},
                     accounting_date => NewAccountingDate,
                     effective_date => NewEffectiveDate,
                     amount => NewAmount,
