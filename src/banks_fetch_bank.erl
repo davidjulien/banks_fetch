@@ -120,7 +120,7 @@
         ext_to_purse => undefined | boolean()
        }.
 
--type connection_error() :: invalid_credential | account_locked | internal_error | network_error.
+-type connection_error() :: invalid_credential | account_locked | internal_error | network_error | {sms_verification, any()}.
 
 %% Callbacks required by all modules implementing banks_fetch_bank behavior
 

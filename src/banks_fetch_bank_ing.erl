@@ -38,6 +38,7 @@ setup() ->
   prometheus_counter:declare([{name, 'bank_ing_connect_account_locked_count'}, {help, "Bank ING connect error 'account locked' count"}]),
   prometheus_counter:declare([{name, 'bank_ing_connect_internal_error_count'}, {help, "Bank ING connect error 'internal error' count"}]),
   prometheus_counter:declare([{name, 'bank_ing_connect_network_error_count'}, {help, "Bank ING connect error 'network error' count"}]),
+  prometheus_counter:declare([{name, 'bank_ing_connect_sms_verification_count'}, {help, "Bank ING connect error 'sms verification' count"}]),
   prometheus_counter:declare([{name, 'bank_ing_accounts_total_count'}, {help, "Bank ING accounts total count"}]),
   prometheus_counter:declare([{name, 'bank_ing_accounts_ok_count'}, {help, "Bank ING accounts ok count"}]),
   prometheus_counter:declare([{name, 'bank_ing_transactions_total_count'}, {help, "Bank ING transactions total count"}]),
@@ -90,10 +91,18 @@ connect_step2({client_id, ClientIdVal}, {client_credential, {ClientPassword, Cli
             {ok,{{"HTTP/1.1",412,"Precondition Failed"}, _Headers4, BodyError}} ->
               ok = lager:warning("~p/~s : pin error : ~", [?MODULE, ClientIdVal, BodyError]),
               decode_body_error(BodyError);
-            {ok, {{_Version4, 200, _ReasonPhrase4}, Headers4, _Body4}} ->
-              prometheus_counter:inc('bank_ing_connect_ok_count'),
-              {_, AuthToken} = lists:keyfind("ingdf-auth-token", 1, Headers4),
-              {ok, {bank_auth, ?MODULE, AuthToken}}
+            {ok, {{_Version4, 200, _ReasonPhrase4}, Headers4, Body4}} ->
+              case lists:keyfind("ingdf-auth-token", 1, Headers4) of
+                {_, AuthToken} ->
+                  prometheus_counter:inc('bank_ing_connect_ok_count'),
+                  {ok, {bank_auth, ?MODULE, AuthToken}};
+                false ->
+                  prometheus_counter:inc('bank_ing_connect_sms_verification_count'),
+                  ok = lager:warning("~p/~s : sms verification: ~", [?MODULE, ClientIdVal, Body4]),
+                  JSON4 = jsx:decode(list_to_binary(Body4)),
+                  {<<"secretCode">>, SecretCode} = lists:keyfind(<<"secretCode">>, 1, JSON4),
+                  {error, {sms_verification, SecretCode}}
+              end
           end
       end
   end.
