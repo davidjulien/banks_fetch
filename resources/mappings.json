@@ -175,6 +175,7 @@
       {"id": 908090, "name": "Transport détente", "up_category_id": 908000},
       {"id": 908100, "name": "Salle de jeux", "up_category_id": 908000},
       {"id": 908110, "name": "Transport", "up_category_id": 908000},
+    {"id": 909000, "name": "Souvenirs", "up_category_id": 900000},
 
     {"id": 1000000, "name": "Éducation/formation", "up_category_id": null},
     {"id": 1000100, "name": "Scolarité", "up_category_id": 1000000},
@@ -230,6 +231,7 @@
     {"id": 2012, "name": "Boulangerie Le fournil de Moissac"},
     {"id": 2013, "name": "Pâtisserie Au plaisir de Chinon"},
     {"id": 2014, "name": "Boulangerie Courgeon"},
+    {"id": 2015, "name": "Boulangerie La Pointe (Préfailles)"},
 
     {"id": 3000, "name": "Boucherie Portheaul"},
     {"id": 3001, "name": "Gaudin traiteur"},
@@ -364,6 +366,7 @@
 
     {"id": 31000, "name": "IKEA"},
     {"id": 31001, "name": "Conforama"},
+    {"id": 31002, "name": "Briloner"},
 
     {"id": 32000, "name": "PAJE"},
     {"id": 32001, "name": "CAF"},
@@ -375,6 +378,7 @@
     {"id": 33004, "name": "Photobox"},
 
     {"id": 34000, "name": "Régie centralisée Saint-Germain-en-Laye"},
+    {"id": 34001, "name": "Trésor public"},
 
     {"id": 35000, "name": "Station-service Total"},
     {"id": 35001, "name": "Station-service Relais des lions (Port-Marly)"},
@@ -386,14 +390,17 @@
     {"id": 35007, "name": "Station-service MEDEA (Montignac-Lascaux)"},
     {"id": 35008, "name": "Station-service Les Eyzies)"},
     {"id": 35009, "name": "Station-service Carrefour"},
+    {"id": 35010, "name": "Station-service Leclerc (Pornic)"},
 
     {"id": 36000, "name": "Total Daltys (autoroute)"},
     {"id": 36001, "name": "Distributeur Aire de Plaines Beauce (autoroute)"},
     {"id": 36002, "name": "Distributeur piscine St-Germain-en-Laye"},
+    {"id": 36003, "name": "Distributeur BP Perche"},
 
     {"id": 37000, "name": "Opticien Krys"},
 
     {"id": 38000, "name": "Le grand bazar (Préfailles)"},
+    {"id": 38001, "name": "Les Malles du Matelot (Préfailles)"},
 
     {"id": 39000, "name": "Norauto"},
 
@@ -435,6 +442,7 @@
     {"id": 54000, "name": "Plage de Montaigu"},
 
     {"id": 55000, "name": "Fleuriste La main verte (Chinon)"},
+    {"id": 55001, "name": "Fleuriste Fleurs et plus (Chatou)"},
 
     {"id": 56000, "name": "Cagnotte Leetchi"},
 
@@ -446,7 +454,7 @@
     {"id": 3, "pattern": "(MONOP|MONOPRIX)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100100], "store_id": 1002},
     {"id": 4, "pattern": "(PICARD)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100100], "store_id": 1003},
     {"id": 5, "pattern": "(CARREFOUR CHAMB|CARREFOUR|OOSHOP)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100100], "store_id": 1004},
-    {"id": 6, "pattern": "(E LECLERC|E\\.LECLERC|CENTRE LECLERC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100100], "store_id": 1005},
+    {"id": 6, "pattern": "(E LECLERC|E\\.LECLERC|CENTRE LECLERC|LECLERC NFC)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100100], "store_id": 1005},
     {"id": 7, "pattern": "(INTERMARCHE|ITM BUXEROLLES)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100100], "store_id": 1006},
     {"id": 8, "pattern": "(AUCHAN SUPER MA|AUCHAN SUPER SC|AUCHAN)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100100], "store_id": 1007},
     {"id": 9, "pattern": "(FRANPRIX)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100100], "store_id": 1008},
@@ -568,9 +576,9 @@
     {"id": 125, "pattern": "(DAC MEDEA)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35007},
     {"id": 126, "pattern": "(DAC CHRISFANIE)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35008},
     {"id": 127, "pattern": "(CARREFOUR DAC|CARREFOUR STATIO)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35009},
-    {"id": 128, "pattern": "(TOTALDALTYSA)($| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36000},
+    {"id": 128, "pattern": "(TOTALDALTYSA)($|11| )", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36000},
     {"id": 129, "pattern": "(KRYS JAMES OPT)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [300000,308000], "store_id": 37000},
-    {"id": 130, "pattern": "(LE GRAND BAZAR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": null, "store_id": 38000},
+    {"id": 130, "pattern": "(LE GRAND BAZAR)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,909000], "store_id": 38000},
     {"id": 131, "pattern": "(MOD AUTO|NORAUTO 09)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [600000,601000,601110], "store_id": 39000},
     {"id": 132, "pattern": "(COMMUNE DE MAISONS LAF)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [600000,601000,601030], "store_id": 12001},
     {"id": 133, "pattern": "(DECATHLON)($| )", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [900000,906000,906010], "store_id": 24001},
@@ -640,6 +648,13 @@
     {"id": 197, "pattern": "(COMMUNE DE MOISSAC)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,907000,907050], "store_id": 50004},
     {"id": 198, "pattern": "(ROUX PLAINES BEAUCE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36001},
     {"id": 199, "pattern": "(SC-AROMATIK\\.AUT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36002},
-    {"id": 200, "pattern": "(PAUL BEUSCHER)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,906000,906030], "store_id": 42001}
+    {"id": 200, "pattern": "(PAUL BEUSCHER)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,906000,906030], "store_id": 42001},
+    {"id": 201, "pattern": "(TRESO CONTROLE AUTOMAT)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601050], "store_id": 34001},
+    {"id": 202, "pattern": "(BOULAN LA POINT)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,100200], "store_id": 2015},
+    {"id": 203, "pattern": "(MALLES MATELOT)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,909000], "store_id": 38001},
+    {"id": 204, "pattern": "(LECLERC ST PORNI)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35010},
+    {"id": 205, "pattern": "(BRILONER LEUCHTEN GMBH)($| )", "fix_date": "none", "period": "month", "budget_id": 3, "categories_ids": [200000,201200], "store_id": 31002},
+    {"id": 206, "pattern": "(BP PERCHE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36003},
+    {"id": 207, "pattern": "(FLEURS ET PLUS)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [700000,700300], "store_id": 55001}
   ]
 }
