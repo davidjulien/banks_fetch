@@ -53,58 +53,75 @@ connect(ClientId, ClientCredential) ->
   ok = banks_fetch_http:set_options([{cookies,enabled}]),
 
   prometheus_counter:inc('bank_ing_connect_total_count'),
+  connect_aux(ClientId, ClientCredential).
+
+
+connect_aux({client_id, ClientIdVal} = ClientId, ClientCredential) ->
   case banks_fetch_http:request(get, {"https://m.ing.fr/", ?HEADERS}, [{timeout,60000}], []) of
     {ok, {{_Version0, 200, _ReasonPhrase0}, Headers0, _Body0}} ->
       connect_step2(ClientId, ClientCredential, Headers0);
-    {error, failed_connect} ->
+    {error, failed_connect} = Err ->
+      ok = lager:warning("~p/~s : network error : ~s", [?MODULE, ClientIdVal, Err]),
       prometheus_counter:inc('bank_ing_connect_network_error_count'),
       {error, network_error}
   end.
 
-connect_step2({client_id, ClientIdVal}, {client_credential, {ClientPassword, ClientBirthDate}}, Headers0) ->
+connect_step2({client_id, ClientIdVal} = ClientId, {client_credential, {_ClientPassword, ClientBirthDate}} = ClientCredential, Headers0) ->
   case lists:keyfind("ingdf-auth-token", 1, Headers0) of
     {_, AuthToken} ->
       prometheus_counter:inc('bank_ing_connect_already_count'),
       {ok, {bank_auth, ?MODULE, AuthToken}};
     false ->
       case banks_fetch_http:request(post, {"https://m.ing.fr/secure/api-v1/login/cif", ?HEADERS, "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(ClientIdVal)++"\",\"birthDate\":\""++ClientBirthDate++"\"}"}, [{timeout,60000}], []) of
+        {ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, _Body1}} ->
+          connect_step3(ClientId, ClientCredential);
+
         {ok,{{"HTTP/1.1",412,"Precondition Failed"}, _Headers1, BodyError}} ->
           ok = lager:warning("~p/~s : cif error : ~s", [?MODULE, ClientIdVal, BodyError]),
           decode_body_error(BodyError);
         {ok,{{"HTTP/1.1",500,"Internal Server Error"}, _Headers1, BodyError}} -> % maybe an invalid birthDate
           ok = lager:warning("~p/~s : internal errorr : ~s", [?MODULE, ClientIdVal, BodyError]),
           decode_body_error(BodyError);
-        {ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, _Body1}} ->
-          {ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = banks_fetch_http:request(post, {"https://m.ing.fr/secure/api-v1/login/keypad", ?HEADERS, "application/json;charset=UTF-8", "{\"keyPadSize\":{\"width\":2840,\"height\":1136}}"}, [{timeout,60000}], []),
-
-          JSON = jsx:decode(list_to_binary(Body2)),
-          {_, KeypadURL} = lists:keyfind(<<"keyPadUrl">>, 1, JSON),
-          {_, PinPositions} = lists:keyfind(<<"pinPositions">>, 1, JSON),
-
-          FullKeypadURL = "https://m.ing.fr/secure/api-v1"++binary_to_list(KeypadURL),
-          {ok, {{_Version3, 200, _ReasonPhrase3}, _Headers3, Body3}} = banks_fetch_http:request(get, {FullKeypadURL, lists:keyreplace("Accept", 1, ?HEADERS, {"Accept", "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"})}, [{timeout,60000}], []),
-
-          ClickPositions = banks_fetch_bank_ing_keypad:resolve_keypad(list_to_binary(Body3), PinPositions, ClientPassword),
-          ClickPositionsStr = binary_to_list(jsx:encode([{<<"clickPositions">>,ClickPositions}])),
-
-          case banks_fetch_http:request(post, {"https://m.ing.fr/secure/api-v1/login/sca/pin", ?HEADERS, "application/json;charset=UTF-8", ClickPositionsStr}, [], []) of
-            {ok,{{"HTTP/1.1",412,"Precondition Failed"}, _Headers4, BodyError}} ->
-              ok = lager:warning("~p/~s : pin error : ~", [?MODULE, ClientIdVal, BodyError]),
-              decode_body_error(BodyError);
-            {ok, {{_Version4, 200, _ReasonPhrase4}, Headers4, Body4}} ->
-              case lists:keyfind("ingdf-auth-token", 1, Headers4) of
-                {_, AuthToken} ->
-                  prometheus_counter:inc('bank_ing_connect_ok_count'),
-                  {ok, {bank_auth, ?MODULE, AuthToken}};
-                false ->
-                  prometheus_counter:inc('bank_ing_connect_sms_verification_count'),
-                  ok = lager:warning("~p/~s : sms verification: ~", [?MODULE, ClientIdVal, Body4]),
-                  JSON4 = jsx:decode(list_to_binary(Body4)),
-                  {<<"secretCode">>, SecretCode} = lists:keyfind(<<"secretCode">>, 1, JSON4),
-                  {error, {sms_verification, SecretCode}}
-              end
-          end
+        {error, _} = Err ->
+          ok = lager:warning("~p/~s : network error : ~s", [?MODULE, ClientIdVal, Err]),
+          prometheus_counter:inc('bank_ing_connect_network_error_count'),
+          {error, network_error}
       end
+  end.
+
+connect_step3({client_id, ClientIdVal} = _ClientId, {client_credential, {ClientPassword, _ClientBirthDate}} = _ClientCredential) ->
+  {ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = banks_fetch_http:request(post, {"https://m.ing.fr/secure/api-v1/login/keypad", ?HEADERS, "application/json;charset=UTF-8", "{\"keyPadSize\":{\"width\":2840,\"height\":1136}}"}, [{timeout,60000}], []),
+
+  JSON = jsx:decode(list_to_binary(Body2)),
+  {_, KeypadURL} = lists:keyfind(<<"keyPadUrl">>, 1, JSON),
+  {_, PinPositions} = lists:keyfind(<<"pinPositions">>, 1, JSON),
+
+  FullKeypadURL = "https://m.ing.fr/secure/api-v1"++binary_to_list(KeypadURL),
+  {ok, {{_Version3, 200, _ReasonPhrase3}, _Headers3, Body3}} = banks_fetch_http:request(get, {FullKeypadURL, lists:keyreplace("Accept", 1, ?HEADERS, {"Accept", "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"})}, [{timeout,60000}], []),
+
+  ClickPositions = banks_fetch_bank_ing_keypad:resolve_keypad(list_to_binary(Body3), PinPositions, ClientPassword),
+  ClickPositionsStr = binary_to_list(jsx:encode([{<<"clickPositions">>,ClickPositions}])),
+
+  case banks_fetch_http:request(post, {"https://m.ing.fr/secure/api-v1/login/sca/pin", ?HEADERS, "application/json;charset=UTF-8", ClickPositionsStr}, [], []) of
+    {ok,{{"HTTP/1.1",412,"Precondition Failed"}, _Headers4, BodyError}} ->
+      ok = lager:warning("~p/~s : pin error : ~", [?MODULE, ClientIdVal, BodyError]),
+      decode_body_error(BodyError);
+    {ok, {{_Version4, 200, _ReasonPhrase4}, Headers4, Body4}} ->
+      case lists:keyfind("ingdf-auth-token", 1, Headers4) of
+        {_, AuthToken} ->
+          prometheus_counter:inc('bank_ing_connect_ok_count'),
+          {ok, {bank_auth, ?MODULE, AuthToken}};
+        false ->
+          prometheus_counter:inc('bank_ing_connect_sms_verification_count'),
+          ok = lager:warning("~p/~s : sms verification: ~", [?MODULE, ClientIdVal, Body4]),
+          JSON4 = jsx:decode(list_to_binary(Body4)),
+          {<<"secretCode">>, SecretCode} = lists:keyfind(<<"secretCode">>, 1, JSON4),
+          {error, {sms_verification, SecretCode}}
+      end;
+    {error, _} = Err ->
+      ok = lager:warning("~p/~s : network error : ~s", [?MODULE, ClientIdVal, Err]),
+      prometheus_counter:inc('bank_ing_connect_network_error_count'),
+      {error, network_error}
   end.
 
 %% @doc internal function to decode error message in body

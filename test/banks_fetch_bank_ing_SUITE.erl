@@ -14,6 +14,8 @@
          should_not_authenticate_if_password_is_invalid/1,
          should_not_authenticate_if_account_is_locked/1,
          should_not_authenticate_if_invalid_birthdate/1,
+         should_not_authenticate_if_network_error_in_birthdate_validation/1,
+         should_not_authenticate_if_network_error_in_password_validation/1,
          should_not_authenticate_if_sms_verification/1,
 
          should_connect_without_net_keypad/1,
@@ -36,6 +38,8 @@ all() ->
    should_not_authenticate_if_password_is_invalid,
    should_not_authenticate_if_account_is_locked,
    should_not_authenticate_if_invalid_birthdate,
+   should_not_authenticate_if_network_error_in_birthdate_validation,
+   should_not_authenticate_if_network_error_in_password_validation,
    should_not_authenticate_if_sms_verification,
 
 
@@ -113,6 +117,16 @@ init_per_testcase(should_not_authenticate_if_invalid_birthdate, Config) ->
   meck:new(banks_fetch_bank_ing_keypad),
   meck:new(prometheus_counter),
   Config;
+init_per_testcase(should_not_authenticate_if_network_error_in_birthdate_validation, Config) ->
+  meck:new(banks_fetch_http),
+  meck:new(banks_fetch_bank_ing_keypad),
+  meck:new(prometheus_counter),
+  Config;
+init_per_testcase(should_not_authenticate_if_network_error_in_password_validation, Config) ->
+  meck:new(banks_fetch_http),
+  meck:new(banks_fetch_bank_ing_keypad),
+  meck:new(prometheus_counter),
+  Config;
 init_per_testcase(should_not_authenticate_if_sms_verification, Config) ->
   meck:new(banks_fetch_http),
   meck:new(banks_fetch_bank_ing_keypad),
@@ -179,6 +193,16 @@ end_per_testcase(should_not_authenticate_if_account_is_locked, _Config) ->
   meck:unload(prometheus_counter),
   ok;
 end_per_testcase(should_not_authenticate_if_invalid_birthdate, _Config) ->
+  meck:unload(banks_fetch_bank_ing_keypad),
+  meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
+  ok;
+end_per_testcase(should_not_authenticate_if_network_error_in_birthdate_validation, _Config) ->
+  meck:unload(banks_fetch_bank_ing_keypad),
+  meck:unload(banks_fetch_http),
+  meck:unload(prometheus_counter),
+  ok;
+end_per_testcase(should_not_authenticate_if_network_error_in_password_validation, _Config) ->
   meck:unload(banks_fetch_bank_ing_keypad),
   meck:unload(banks_fetch_http),
   meck:unload(prometheus_counter),
@@ -271,7 +295,6 @@ should_not_authenticate_if_connection_failed(_Config) ->
   2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
-
 
 
 should_not_authenticate_if_birthdate_and_client_id_mismatched(_Config) ->
@@ -375,6 +398,70 @@ should_not_authenticate_if_password_is_invalid(_Config) ->
 
   ok.
 
+should_not_authenticate_if_network_error_in_password_validation(_Config) ->
+  KeypadImage = "fake_keypadimage",
+  PinPositions = [1,2,3,4,5,6],
+  PinPositionsStr = "[1,2,3,4,5,6]",
+  ClickPositions = [[1,2],[3,4]],
+  ClickPositionsStr = "[[1,2],[3,4]]",
+
+  ct:comment("Connect to ing account"),
+
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_network_error_count'],ok}
+              ]),
+  meck:expect(banks_fetch_bank_ing_keypad, resolve_keypad, fun(MockKeypadImage, MockPinPositions, MockClientPassword) ->
+                                                               KeypadImage = binary_to_list(MockKeypadImage),
+                                                               PinPositions = MockPinPositions,
+                                                               ?CLIENT_PWD = MockClientPassword,
+                                                               ClickPositions
+                                                           end),
+
+  HttpExpectations = [
+                       % Main page
+                       { [get, {"https://m.ing.fr/", '_'}, '_', []],
+                         {ok, {{'fakeversion', 200, 'fakereason'}, [], 'fakebody'}}
+                       },
+                       % Login
+                       {
+                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(?CLIENT_ID_VAL)++"\",\"birthDate\":\""++?CLIENT_BIRTHDATE++"\"}"}, '_', []],
+                        {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', 'fakebody'}}
+                       },
+                       % Get keypad info
+                       {
+                        [post, {"https://m.ing.fr/secure/api-v1/login/keypad", '_', "application/json;charset=UTF-8", "{\"keyPadSize\":{\"width\":2840,\"height\":1136}}"}, '_', []],
+                        {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', "{\"keyPadUrl\":\"/keypad.png\",\"pinPositions\":"++PinPositionsStr++"}"}}
+                       },
+                       % Get keypad image
+                       {
+                        [get, {"https://m.ing.fr/secure/api-v1/keypad.png", '_'}, '_', []],
+                        {ok, {{'fakeversion', 200, 'fakereason'}, 'fakeheaders', KeypadImage}}
+                       },
+                       % Send keypad resolution -> raise wrong authentification
+                       {
+                        [post, {"https://m.ing.fr/secure/api-v1/login/sca/pin", '_', "application/json;charset=UTF-8", "{\"clickPositions\":"++ClickPositionsStr++"}"}, [], []],
+                        {error, network_error}
+                       }
+                      ],
+  NbrHttpExpectations = length(HttpExpectations),
+
+  meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
+  meck:expect(banks_fetch_http, request, HttpExpectations),
+
+  {error, network_error} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_BIRTHDATE}}),
+
+  ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
+  true = meck:validate(banks_fetch_http),
+  true = meck:validate(banks_fetch_bank_ing_keypad),
+  true = meck:validate(prometheus_counter),
+  NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
+
+  ok.
+
+
 should_not_authenticate_if_account_is_locked(_Config) ->
   ct:comment("Connect to ing account"),
 
@@ -448,6 +535,42 @@ should_not_authenticate_if_invalid_birthdate(_Config) ->
   2 = meck:num_calls(prometheus_counter, inc, '_'),
 
   ok.
+
+should_not_authenticate_if_network_error_in_birthdate_validation(_Config) ->
+  ct:comment("Connect to ing account"),
+
+  meck:expect(prometheus_counter, inc,
+              [
+               {['bank_ing_connect_total_count'],ok},
+               {['bank_ing_connect_network_error_count'],ok}
+              ]),
+  HttpExpectations = [
+                       % Main page
+                       { [get, {"https://m.ing.fr/", '_'}, '_', []],
+                         {ok, {{'fakeversion', 200, 'fakereason'}, [], 'fakebody'}}
+                       },
+                       % Login
+                       {
+                        [post, {"https://m.ing.fr/secure/api-v1/login/cif", '_', "application/json;charset=UTF-8", "{\"cif\":\""++binary_to_list(?CLIENT_ID_VAL)++"\",\"birthDate\":\""++?CLIENT_INVALID_BIRTHDATE++"\"}"}, '_', []],
+                        {error, network_error}
+                       }
+                      ],
+  NbrHttpExpectations = length(HttpExpectations),
+
+  meck:expect(banks_fetch_http, set_options, fun(MockOptions) -> [{cookies,enabled}] = MockOptions, ok end),
+  meck:expect(banks_fetch_http, request, HttpExpectations),
+
+  {error, network_error} = banks_fetch_bank_ing:connect(?CLIENT_ID, {client_credential, {?CLIENT_PWD, ?CLIENT_INVALID_BIRTHDATE}}),
+
+  ct:comment("Verify banks_fetch_http, ing_keypad and monitoring calls"),
+  true = meck:validate(banks_fetch_http),
+  true = meck:validate(banks_fetch_bank_ing_keypad),
+  true = meck:validate(prometheus_counter),
+  NbrHttpExpectations = meck:num_calls(banks_fetch_http, request, '_'),
+  2 = meck:num_calls(prometheus_counter, inc, '_'),
+
+  ok.
+
 
 should_not_authenticate_if_sms_verification(_Config) ->
   KeypadImage = "fake_keypadimage",
