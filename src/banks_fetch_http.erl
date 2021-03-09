@@ -119,4 +119,4 @@ monitoring_namespace(Request) ->
   convert_host(Host).
 
 convert_host(Host) ->
-  re:replace(Host, "\\.", "_", [global, {return, list}]).
+  re:replace(Host, "[\\.-]", "_", [global, {return, list}]).
