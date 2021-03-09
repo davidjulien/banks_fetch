@@ -290,5 +290,19 @@
                    <<"CREATE TYPE e_account_type AS ENUM ('current', 'savings', 'home_loan', 'purse');">>,
                    <<"ALTER TABLE accounts ALTER COLUMN type TYPE e_account_type USING (type::e_account_type);">>
                   ]
+                 },
+                 {<<"0.2.11">>, <<"0.2.12">>,
+                  [
+                   % Because ALTER TYPE e_transaction_type ADD VALUE; does not work in transaction block, we have to convert column type in transactions, change type and convert again to new type definition
+                   <<"ALTER TABLE transactions ALTER COLUMN \"type\" type VARCHAR(255);">>,
+                   <<"DROP TYPE IF EXISTS e_transaction_type">>,
+                   <<"CREATE TYPE e_transaction_type AS ENUM ('other','card_debit', 'card_withdrawal', 'check', 'sepa_debit','transfer','interests','bank_fees','stock');">>,
+                   <<"ALTER TABLE transactions ALTER COLUMN type TYPE e_transaction_type USING (type::e_transaction_type);">>,
+                   <<"INSERT INTO banks(id, name) VALUES('boursedirect','Bourse Direct');">>,
+                   <<"ALTER TABLE accounts ALTER COLUMN type TYPE VARCHAR(255);">>,
+                   <<"DROP TYPE IF EXISTS e_account_type">>,
+                   <<"CREATE TYPE e_account_type AS ENUM ('current', 'savings', 'home_loan', 'purse', 'markets');">>,
+                   <<"ALTER TABLE accounts ALTER COLUMN type TYPE e_account_type USING (type::e_account_type);">>
+                  ]
                  }
                 ]).

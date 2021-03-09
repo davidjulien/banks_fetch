@@ -496,6 +496,9 @@ should_nodb_start_with_db_upgrade(_Config) ->
                {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.11';">>, [], fake_connection],
                 {'comment', []}
                },
+               {[<<"COMMENT ON DATABASE banks_fetch_test IS '0.2.12';">>, [], fake_connection],
+                {'comment', []}
+               },
                {[meck_matcher:new(fun(<<"COMMENT ON DATABASE banks_fetch_test IS ", _/binary>>) -> true; (_) -> false end), [], fake_connection],
                 {error, unexpected_comment}},
                {[<<"COMMIT">>, [], fake_connection],
@@ -506,10 +509,10 @@ should_nodb_start_with_db_upgrade(_Config) ->
 
   {ok, _PID} = banks_fetch_storage:start_link({?DB_NAME,?DB_USER,?DB_PASSWORD}),
   % One COMMIT for each upgrade
-  meck:wait(13, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
+  meck:wait(14, pgsql_connection, extended_query, [<<"COMMIT">>, [], fake_connection], 3000),
   true = meck:validate(pgsql_connection),
   % 3 queries + number of queries to upgrade
-  101 = meck:num_calls(pgsql_connection, extended_query, '_'),
+  113 = meck:num_calls(pgsql_connection, extended_query, '_'),
 
   banks_fetch_storage:stop(),
 
@@ -693,10 +696,15 @@ should_nodb_store_accounts(_Config) ->
 
 should_db_get_banks(_Config) ->
   ct:comment("Get banks"),
-  Banks = banks_fetch_storage:get_banks(),
+  {value, Banks} = banks_fetch_storage:get_banks(),
 
   ct:comment("Verify returned banks"),
-  {value, [#{ id := <<"ing">>, name := <<"ING">> }, #{ id := <<"purse">>, name := <<"Purse">> }]} = Banks,
+  [
+   #{ id := <<"ing">>, name := <<"ING">> },
+   #{ id := <<"purse">>, name := <<"Purse">> },
+   #{ id := <<"boursedirect">>, name := <<"Bourse Direct">> }
+  ] = Banks,
+
   ok.
 
 should_db_get_budgets(_Config) ->
