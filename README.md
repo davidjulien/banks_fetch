@@ -8,6 +8,7 @@ Current status of banks modules :
 | Banks         | connect       | accounts  | transactions |
 | ------------- |:-------------:|:---------:|:------------:|
 | ING           | OK            | OK        | OK           |
+| Bourse Direct | OK            | OK        | OK           |
 
 
 Configuration
@@ -52,6 +53,12 @@ It will connect to your bank and fetch accounts data every 4 hours. Credential (
 
 It is possible to create a "virtual" purse account
 banks_fetch_client_manager:add_client({bank_id, <<"purse">>}, {client_id, <<"David">>}, {client_credential, {  {2021,1,26}, [{{bank_id,<<"ing">>},{client_id,<<"YOUR_CLIENT_ID">>},{account_id,<<"MAIN_ACCOUNT_ID">>}}]}}).
+
+For Bourse Direct:
+```erlang
+banks_fetch_client_manager:add_client({bank_id, <<"boursedirect">>}, {client_id, <<"YOUR_CLIENT_ID">>}, {client_credential, <<"YOUR_PASSWORD">>})
+.
+```
 
 Tests
 -----

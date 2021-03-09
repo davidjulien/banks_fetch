@@ -80,7 +80,7 @@
         store_id := none | non_neg_integer()
        }.
 
--type account_type() :: current | savings | home_loan | purse.
+-type account_type() :: current | savings | home_loan | purse | markets.
 -type account_ownership() :: single | joint.
 -type account() :: #{ id => unicode:unicode_binary(),
                       balance => float(),
@@ -94,7 +94,7 @@
                       client_id => client_id()
                     }.
 
--type transaction_type() :: 'card_debit' | 'card_withdrawal' | 'check' | 'sepa_debit' | 'transfer' | 'interests' | 'bank_fees' | 'other'.
+-type transaction_type() :: 'card_debit' | 'card_withdrawal' | 'check' | 'sepa_debit' | 'transfer' | 'interests' | 'bank_fees' | 'stock' | 'other'.
 -type transaction_period() :: 'month' | 'bimester' | 'quarter' | 'semester' | 'annual'.
 -type transaction() :: #{
         id := unicode:unicode_binary(),
@@ -153,4 +153,6 @@ fetch_transactions(Module, BankAuth, AccountId, FirstCallOrLastFetchedTransactio
 % Setup all banks modules
 -spec setup() -> ok.
 setup() ->
-  banks_fetch_bank_ing:setup().
+  ok = banks_fetch_bank_ing:setup(),
+  ok = banks_fetch_bank_boursedirect:setup(),
+  ok.
