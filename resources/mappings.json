@@ -270,6 +270,7 @@
     {"id": 12003, "name": "Stationnement Parking du Maine (Gare Montparnasse)"},
     {"id": 12004, "name": "Stationnement Rocamadour"},
     {"id": 12005, "name": "Stationnement Castelnaud"},
+    {"id": 12006, "name": "Stationnement Versailles"},
 
     {"id": 13000, "name": "Station-service Relais des Lions"},
     {"id": 13001, "name": "Station-service Relais Le Pecq"},
@@ -434,6 +435,7 @@
     {"id": 50004, "name": "Abbaye de Moissac"},
 
     {"id": 51000, "name": "Wanimo"},
+    {"id": 51001, "name": "Zooplus"},
 
     {"id": 52000, "name": "Nocibé"},
 
@@ -655,6 +657,8 @@
     {"id": 204, "pattern": "(LECLERC ST PORNI)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [600000,601000,601020], "store_id": 35010},
     {"id": 205, "pattern": "(BRILONER LEUCHTEN GMBH)($| )", "fix_date": "none", "period": "month", "budget_id": 3, "categories_ids": [200000,201200], "store_id": 31002},
     {"id": 206, "pattern": "(BP PERCHE)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [900000,903500], "store_id": 36003},
-    {"id": 207, "pattern": "(FLEURS ET PLUS)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [700000,700300], "store_id": 55001}
+    {"id": 207, "pattern": "(FLEURS ET PLUS)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [700000,700300], "store_id": 55001},
+    {"id": 208, "pattern": "(ZOOPLUS AG)$", "fix_date": "none", "period": "month", "budget_id": 1, "categories_ids": [100000,102100], "store_id": 51001},
+    {"id": 209, "pattern": "(COMMUNE DE VERSAILLES)$", "fix_date": "none", "period": "month", "budget_id": 2, "categories_ids": [600000,601000,601030], "store_id": 12006}
   ]
 }

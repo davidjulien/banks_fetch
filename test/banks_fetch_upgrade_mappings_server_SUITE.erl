@@ -197,8 +197,8 @@ should_test_local_mappings(Config) ->
   meck:expect(banks_fetch_storage, upgrade_mappings, fun(MockBudgets, MockCategories, MockStores, MockMappings) ->
                                                          check_data(MockBudgets, 5),
                                                          check_data(MockCategories, 174),
-                                                         check_data(MockStores, 199),
-                                                         check_data(MockMappings, 207),
+                                                         check_data(MockStores, 201),
+                                                         check_data(MockMappings, 209),
                                                          ok
                                                      end),
 
@@ -261,5 +261,3 @@ should_fetch_mappings_network_error_without_http_storage(_Config) ->
   true = meck:validate(timer),
 
   ok.
-
-
